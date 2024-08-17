@@ -1,3 +1,10 @@
 <resources>
-    <string name="app_name">MobileAnimeWallpaper</string>
+    <string name="app_name">Anime Wallpaper</string>
+    <string name="setting">Setting</string>
+    <string name="post">Post</string>
+    <string name="pool">Pool</string>
+    <string name="popular">Popular</string>
+    <string name="quality_origin">Origin</string>
+    <string name="quality_large">Large</string>
+    <string name="quality_sample">Sample</string>
 </resources>

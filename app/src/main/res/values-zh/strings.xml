@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">动漫壁纸</string>
+    <string name="setting">设置</string>
+    <string name="post">图像</string>
+    <string name="pool">图册</string>
+    <string name="popular">热门</string>
+    <string name="quality_origin">原画</string>
+    <string name="quality_large">大图</string>
+    <string name="quality_sample">简图</string>
+</resources>

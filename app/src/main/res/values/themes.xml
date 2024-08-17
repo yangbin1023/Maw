@@ -1,9 +1,16 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.MobileAnimeWallpaper" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.MobileAnimeWallpaper" parent="android:Theme.Material.Light.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!--状态栏背景颜色-->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <!--导航栏背景颜色-->
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
-    <style name="Theme.MobileAnimeWallpaper" parent="Base.Theme.MobileAnimeWallpaper" />
+    <style name="Theme.Maw" parent="Base.Theme.MobileAnimeWallpaper" />
+
+    <style name="Theme.Maw.Activity" parent="Theme.Maw">
+    </style>
 </resources>
