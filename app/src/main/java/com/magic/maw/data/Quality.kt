@@ -30,5 +30,13 @@ enum class Quality(val value: Int) {
             }
             return Sample
         }
+
+        fun String.toQuality(): Quality {
+            for (item in entries) {
+                if (item.name == this)
+                    return item
+            }
+            return Sample
+        }
     }
 }

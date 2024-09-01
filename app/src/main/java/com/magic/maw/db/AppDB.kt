@@ -6,15 +6,16 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.magic.maw.MyApp
+import com.magic.maw.data.DLInfo
 import com.magic.maw.data.TagInfo
-import com.magic.maw.db.converters.DateConverters
+import com.magic.maw.db.converters.DBConverters
 import com.magic.maw.db.dao.TagDao
 
 @Database(
-    entities = [TagInfo::class],
+    entities = [TagInfo::class, DLInfo::class],
     version = 1
 )
-@TypeConverters(DateConverters::class)
+@TypeConverters(DBConverters::class)
 abstract class AppDB : RoomDatabase() {
     abstract fun tagDao(): TagDao
 

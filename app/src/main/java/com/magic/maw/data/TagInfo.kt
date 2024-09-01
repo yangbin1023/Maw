@@ -50,9 +50,9 @@ enum class TagType(val value: Int) {
     }
 
     companion object {
-        fun getType(value: Int): TagType {
+        fun Int?.toTagType(): TagType {
             for (item in entries) {
-                if (item.value == value)
+                if (item.value == this)
                     return item
             }
             return None

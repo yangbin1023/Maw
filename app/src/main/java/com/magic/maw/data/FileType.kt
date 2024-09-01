@@ -17,4 +17,22 @@ enum class FileType(val value: Int) {
     fun isVideo(): Boolean {
         return this == Mp4 || this == Webm || this == Swf
     }
+
+    companion object {
+        fun getType(name: String): FileType? {
+            for (item in entries) {
+                if (item.name == name)
+                    return item
+            }
+            return null
+        }
+
+        fun String?.toFileType(): FileType? {
+            for (item in entries) {
+                if (item.name == this)
+                    return item
+            }
+            return null
+        }
+    }
 }

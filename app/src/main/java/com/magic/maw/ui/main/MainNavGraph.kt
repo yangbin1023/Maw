@@ -42,7 +42,15 @@ fun MainNavGraph(
             exitTransition = {
                 Log.d("MainNavGraph", "exitTransition: $this")
                 null
-            }
+            },
+            popEnterTransition = {
+                Log.d("MainNavGraph", "popEnterTransition: $this")
+                null
+            },
+            popExitTransition = {
+                Log.d("MainNavGraph", "popExitTransition: $this")
+                null
+            },
         ) {
             Log.d("MainNavGraph", "Post vm: $postViewModel, main vm: $mainViewModel")
             PostRoute(postViewModel, isExpandedScreen, openDrawer)

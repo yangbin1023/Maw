@@ -3,6 +3,7 @@ package com.magic.maw.data.yande
 import com.magic.maw.data.IData
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
+import com.magic.maw.data.TagType.Companion.toTagType
 import com.magic.maw.website.parser.YandeParser
 
 class YandeTag : IData<TagInfo> {
@@ -19,7 +20,7 @@ class YandeTag : IData<TagInfo> {
             source = YandeParser.SOURCE,
             tagId = id,
             name = name,
-            type = TagType.getType(type),
+            type = type.toTagType(),
             count = count
         )
     }

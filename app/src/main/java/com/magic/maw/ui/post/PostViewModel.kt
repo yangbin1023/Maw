@@ -16,16 +16,11 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "PostViewModel"
 
-class PostUiState() {
-
-}
-
 class PostViewModel(
     val dataList: SnapshotStateList<PostData> = SnapshotStateList(),
     private val requestOption: RequestOption = RequestOption(),
 ) : ViewModel() {
     private val dataIdSet = HashSet<Int>()
-    private var _uiState = mutableStateOf(PostUiState())
     private val parser = BaseParser.getParser(YandeParser.SOURCE)
 
     init {
@@ -44,48 +39,46 @@ class PostViewModel(
         }
     }
 
-    fun refresh(focus: Boolean = false) {
+    fun refresh(focus: Boolean = false) = viewModelScope.launch {
         refreshing = true
-        viewModelScope.launch {
-            try {
-                val list = parser.requestPostData(requestOption.copy(page = parser.firstPageIndex))
+        try {
+            val list = parser.requestPostData(requestOption.copy(page = parser.firstPageIndex))
 
-                val tmpIdSet = HashSet<Int>()
-                val tmpList = ArrayList<PostData>()
-                if (focus) {
-                    for (item in list) {
-                        if (item.id > 0) {
-                            tmpList.add(item)
-                            tmpIdSet.add(item.id)
-                        }
-                    }
-                    synchronized(this@PostViewModel) {
-                        dataIdSet.clear()
-                        dataList.clear()
-                        noMore = false
-                        requestOption.page = parser.firstPageIndex
-                    }
-                } else {
-                    for (item in list) {
-                        if (item.id > 0 && !dataIdSet.contains(item.id)) {
-                            tmpList.add(item)
-                            tmpIdSet.add(item.id)
-                        }
+            val tmpIdSet = HashSet<Int>()
+            val tmpList = ArrayList<PostData>()
+            if (focus) {
+                for (item in list) {
+                    if (item.id > 0) {
+                        tmpList.add(item)
+                        tmpIdSet.add(item.id)
                     }
                 }
-
-                if (tmpList.isNotEmpty()) {
-                    synchronized(this@PostViewModel) {
-                        dataIdSet.addAll(tmpIdSet)
-                        dataList.addAll(0, tmpList)
+                synchronized(this@PostViewModel) {
+                    dataIdSet.clear()
+                    dataList.clear()
+                    noMore = false
+                    requestOption.page = parser.firstPageIndex
+                }
+            } else {
+                for (item in list) {
+                    if (item.id > 0 && !dataIdSet.contains(item.id)) {
+                        tmpList.add(item)
+                        tmpIdSet.add(item.id)
                     }
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "request failed", e)
-            } finally {
-                refreshing = false
-                loading = false
             }
+
+            if (tmpList.isNotEmpty()) {
+                synchronized(this@PostViewModel) {
+                    dataIdSet.addAll(tmpIdSet)
+                    dataList.addAll(0, tmpList)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "request failed", e)
+        } finally {
+            refreshing = false
+            loading = false
         }
     }
 

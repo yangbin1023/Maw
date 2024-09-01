@@ -107,6 +107,7 @@ dependencies {
     implementation(libs.mmkv)
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
+    implementation(libs.composeviews)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -4,11 +4,6 @@ import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.viewinterop.AndroidView
@@ -50,25 +45,3 @@ fun <T : ScrollableState> RefreshView(
         }
     }
 }
-
-//@Composable
-//fun rememberRefreshState(refreshing: Boolean, onRefresh: () -> Unit): RefreshState {
-//    val scope = rememberCoroutineScope()
-//    val onRefreshState = rememberUpdatedState(onRefresh)
-//
-//    val state = remember(scope) {
-//        RefreshState(refreshing, onRefreshState)
-//    }
-//
-//    SideEffect {
-//        state.refreshing = refreshing
-//    }
-//
-//    return state
-//}
-//
-//
-//class RefreshState internal constructor(
-//    internal var refreshing: Boolean,
-//    internal val onRefreshState: State<() -> Unit>
-//)

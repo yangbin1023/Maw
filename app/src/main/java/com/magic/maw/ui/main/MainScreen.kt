@@ -1,6 +1,5 @@
 package com.magic.maw.ui.main
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Row
@@ -37,7 +36,7 @@ fun MainScreen(mainViewModel: MainViewModel, windowSizeClass: WindowSizeClass) {
 
         val screenWidth = LocalConfiguration.current.screenWidthDp * LocalDensity.current.density
         val dragThreshold = screenWidth * 0.3f
-        val isExpandedScreen = false // windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+        val isExpandedScreen = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 
         ModalNavigationDrawer(
             drawerContent = {
@@ -50,12 +49,16 @@ fun MainScreen(mainViewModel: MainViewModel, windowSizeClass: WindowSizeClass) {
             drawerState = drawerState,
             gesturesEnabled = !isExpandedScreen
         ) {
-            Row(modifier = Modifier.pointerInput(Unit) {
-                // 限制侧边栏的滑动打开的范围，仅左侧十分之三范围滑动可打开Drawer
-                detectHorizontalDragGestures { change, dragAmount ->
-                    if (change.position.x < dragThreshold && dragAmount > 0) {
-                        drawerState.currentOffset
-                        coroutineScope.launch { drawerState.open() }
+            Row(modifier = Modifier.apply {
+                if (!isExpandedScreen) {
+                    pointerInput(Unit) {
+                        // 限制侧边栏的滑动打开的范围，仅左侧十分之三范围滑动可打开Drawer
+                        detectHorizontalDragGestures { change, dragAmount ->
+                            if (change.position.x < dragThreshold && dragAmount > 0) {
+                                drawerState.currentOffset
+                                coroutineScope.launch { drawerState.open() }
+                            }
+                        }
                     }
                 }
             }) {

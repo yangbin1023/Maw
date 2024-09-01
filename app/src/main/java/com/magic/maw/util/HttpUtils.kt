@@ -8,6 +8,7 @@ import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.Response
+import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.SocketTimeoutException
 import java.security.SecureRandom
@@ -95,6 +96,9 @@ object HttpUtils {
 //            println("proxy: $address")
 //            return Proxy(Proxy.Type.HTTP, address)
 //        }
+//        val address = InetSocketAddress("192.168.6.27", 1080)
+//        println("proxy: $address")
+//        return Proxy(Proxy.Type.HTTP, address)
         return null
     }
 
