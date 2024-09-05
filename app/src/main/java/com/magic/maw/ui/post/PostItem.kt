@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -31,12 +32,12 @@ import coil.request.ImageRequest
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.website.DLManager
+import com.magic.maw.website.loadDLFile
 import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
 fun PostItem(modifier: Modifier = Modifier, postData: PostData, staggered: Boolean) {
-    val coroutineScope = rememberCoroutineScope()
     Column(
         modifier = modifier
             .shadow(
@@ -52,30 +53,12 @@ fun PostItem(modifier: Modifier = Modifier, postData: PostData, staggered: Boole
                 .fillMaxWidth()
                 .aspectRatio(ratio)
         ) {
-            var filePath by rememberSaveable { mutableStateOf("") }
-            LaunchedEffect(key1 = coroutineScope) {
-                coroutineScope.launch {
-                    val tmpFile =
-                        File(DLManager.getDLFullPath(postData.source, postData.id, Quality.Preview))
-                    if (tmpFile.exists()) {
-                        filePath = tmpFile.absolutePath
-                    } else {
-                        DLManager.addTask(
-                            postData.source,
-                            postData.id,
-                            Quality.Preview,
-                            postData.previewInfo.url,
-                            success = {
-                                filePath = tmpFile.absolutePath
-                            }
-                        )
-                    }
-                }
+            var file by remember { mutableStateOf<File?>(null) }
+            LaunchedEffect(Unit) {
+                file = loadDLFile(postData, postData.previewInfo, Quality.Preview)
             }
-            val model: ImageRequest? = if (filePath.isNotEmpty()) {
-                ImageRequest.Builder(LocalContext.current).data(filePath).build()
-            } else null
-            if (model != null) {
+            file?.let {
+                val model = ImageRequest.Builder(LocalContext.current).data(it).build()
                 AsyncImage(
                     modifier = Modifier.fillMaxSize(),
                     model = model,

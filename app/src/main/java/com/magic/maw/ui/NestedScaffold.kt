@@ -5,8 +5,6 @@ import androidx.compose.foundation.clipScrollableContainer
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -16,13 +14,14 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -33,90 +32,100 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-typealias OnScrollStop = (NestedScaffoldState, Float) -> Boolean
+typealias OnScrollStop = (CoroutineScope, NestedScaffoldState, Float) -> Boolean
 
 class NestedScaffoldState(
     val maxPx: Float,
     val minPx: Float,
-    private val coroutineScope: CoroutineScope,
-    private val isEnable: () -> Boolean = { true },
-    private val onScrollStop: OnScrollStop? = null,
+    initialScrollValue: Float = 0f,
 ) {
-    private val scrollAnimate = Animatable(0f)
-
-    val enable: Boolean get() = isEnable.invoke()
+    private val scrollAnimate = Animatable(initialScrollValue)
 
     val scrollValue: Float get() = scrollAnimate.value
 
     val scrollPercent: Float get() = abs(scrollValue / (maxPx - minPx))
 
-    fun snapTo(value: Float) {
-        coroutineScope.launch {
-            scrollAnimate.snapTo(value)
-        }
+    suspend fun snapTo(value: Float) {
+        scrollAnimate.snapTo(value)
     }
 
-    fun animateTo(value: Float) {
-        coroutineScope.launch {
-            scrollAnimate.animateTo(value)
-        }
+    suspend fun animateTo(value: Float) {
+        scrollAnimate.animateTo(value)
     }
 
-    fun callOnScrollStop(delta: Float): Boolean {
-        return enable && onScrollStop?.invoke(this, delta) == true
+    companion object {
+        val Saver = listSaver(
+            save = { state ->
+                listOf(state.minPx, state.maxPx, state.scrollValue)
+            },
+            restore = {
+                NestedScaffoldState(it[0], it[1], it[2])
+            }
+        )
     }
 }
 
-private class NestedScaffoldConnection(val state: NestedScaffoldState) : NestedScrollConnection {
+private class NestedScaffoldConnection(
+    val state: NestedScaffoldState,
+    private val coroutineScope: CoroutineScope,
+    private val canScroll: () -> Boolean = { true },
+    private val onScrollStop: OnScrollStop? = null,
+) : NestedScrollConnection {
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        if (!state.enable)
+        if (!canScroll())
             return Offset.Zero
         val delta = available.y
         val newOffset = state.scrollValue + delta
         val targetOffset = newOffset.coerceIn(state.minPx, state.maxPx)
-        state.snapTo(targetOffset)
+        coroutineScope.launch { state.snapTo(targetOffset) }
         val preOffset = delta - (newOffset - targetOffset)
         println("delta: $delta, source: $source, preOffset: $preOffset")
         return available.copy(y = preOffset)
     }
 
     override suspend fun onPreFling(available: Velocity): Velocity {
-        return if (state.callOnScrollStop(available.y)) available else Velocity.Zero
+        return if (canScroll() && callOnScrollStop(available.y)) available else Velocity.Zero
+    }
+
+    private fun callOnScrollStop(delta: Float): Boolean {
+        return onScrollStop?.invoke(coroutineScope, state, delta) == true
+    }
+}
+
+@Composable
+fun rememberNestedScaffoldState(
+    maxDp: Dp = NestedScaffoldDefaults.TopBarMaxDp,
+    minDp: Dp = NestedScaffoldDefaults.TopBarMinDp,
+    initialScrollValue: Float = 0f
+): NestedScaffoldState {
+    if (minDp > maxDp) {
+        throw RuntimeException("The minimum height is greater than the maximum height.")
+    }
+    val maxPx = with(LocalDensity.current) { maxDp.toPx() }
+    val minPx = with(LocalDensity.current) { minDp.toPx() }
+    return rememberSaveable(saver = NestedScaffoldState.Saver) {
+        NestedScaffoldState(0f, minPx - maxPx, initialScrollValue)
     }
 }
 
 @Composable
 fun NestedScaffold(
     modifier: Modifier = Modifier,
-    isEnable: () -> Boolean = { true },
-    onScrollStop: OnScrollStop? = NestedScaffoldDefaults.defaultOnScrollStop,
     topBar: @Composable (IntOffset) -> Unit,
-    topBarMaxHeight: Dp = NestedScaffoldDefaults.TopBarMaxDp,
-    topBarMinHeight: Dp = NestedScaffoldDefaults.TopBarMinDp,
+    state: NestedScaffoldState = rememberNestedScaffoldState(),
+    coroutineScope: CoroutineScope = rememberCoroutineScope(),
+    canScroll: () -> Boolean = { true },
+    onScrollStop: OnScrollStop? = NestedScaffoldDefaults.defaultOnScrollStop,
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    if (topBarMinHeight > topBarMaxHeight) {
-        throw RuntimeException("The minimum height is greater than the maximum height.")
-    }
-    val maxPx = with(LocalDensity.current) { topBarMaxHeight.toPx() }
-    val minPx = with(LocalDensity.current) { topBarMinHeight.toPx() }
-
-    val coroutineScope = rememberCoroutineScope()
-
-    val state = remember(maxPx, minPx, coroutineScope) {
-        NestedScaffoldState(
-            maxPx = 0f,
-            minPx = minPx - maxPx,
+    val connection = remember(state, coroutineScope, canScroll, onScrollStop) {
+        NestedScaffoldConnection(
+            state = state,
             coroutineScope = coroutineScope,
-            isEnable = isEnable,
+            canScroll = canScroll,
             onScrollStop = onScrollStop
         )
     }
-    val connection = remember(state) {
-        NestedScaffoldConnection(state)
-    }
-
-    val density = LocalDensity.current
 
     Scaffold(
         modifier = modifier
@@ -126,6 +135,7 @@ fun NestedScaffold(
             topBar(IntOffset(0, state.scrollValue.roundToInt()))
         }
     ) { innerPadding ->
+        val density = LocalDensity.current
         val newPadding = remember(innerPadding) {
             object : PaddingValues {
                 override fun calculateBottomPadding(): Dp = innerPadding.calculateBottomPadding()
@@ -137,7 +147,7 @@ fun NestedScaffold(
                     innerPadding.calculateRightPadding(layoutDirection)
 
                 override fun calculateTopPadding(): Dp = with(density) {
-                    topBarMaxHeight - abs(state.scrollValue).roundToInt().toDp()
+                    (abs(state.maxPx - state.minPx) - abs(state.scrollValue)).roundToInt().toDp()
                 }
             }
         }
@@ -152,19 +162,20 @@ fun NestedRefreshScaffold(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
-    onScrollStop: OnScrollStop? = NestedScaffoldDefaults.defaultOnScrollStop,
     topBar: @Composable (IntOffset) -> Unit,
-    topBarMaxHeight: Dp = NestedScaffoldDefaults.TopBarMaxDp,
-    topBarMinHeight: Dp = NestedScaffoldDefaults.TopBarMinDp,
+    state: NestedScaffoldState = rememberNestedScaffoldState(),
+    coroutineScope: CoroutineScope = rememberCoroutineScope(),
+    canScroll: () -> Boolean = { true },
+    onScrollStop: OnScrollStop? = NestedScaffoldDefaults.defaultOnScrollStop,
     content: @Composable BoxScope.() -> Unit,
 ) {
     NestedScaffold(
         modifier = modifier,
-        isEnable = { refreshState.distanceFraction <= 0.0f },
-        onScrollStop = onScrollStop,
         topBar = topBar,
-        topBarMaxHeight = topBarMaxHeight,
-        topBarMinHeight = topBarMinHeight
+        state = state,
+        coroutineScope = coroutineScope,
+        canScroll = canScroll,
+        onScrollStop = onScrollStop,
     ) { innerPadding ->
         PullToRefreshBox(
             modifier = Modifier.padding(innerPadding),
@@ -177,18 +188,14 @@ fun NestedRefreshScaffold(
     }
 }
 
-private object NestedScaffoldDefaults {
+object NestedScaffoldDefaults {
     val TopBarMaxDp = 88.dp
     val TopBarMinDp = 0.dp
-    val defaultOnScrollStop: OnScrollStop = func@{ state, _ ->
+    val defaultOnScrollStop: OnScrollStop = func@{ scope, state, _ ->
         val percent = state.scrollPercent
         if (percent == 0f || percent == 1.0f)
             return@func false
-        if (percent > 0.5f) {
-            state.animateTo(state.minPx)
-        } else {
-            state.animateTo(state.maxPx)
-        }
+        scope.launch { state.animateTo(if (percent > 0.5f) state.minPx else state.maxPx) }
         true
     }
 }

@@ -1,18 +1,23 @@
 package com.magic.maw.ui.post
 
 import android.util.Log
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.google.gson.reflect.TypeToken
 import com.magic.maw.data.PostData
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
 import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.launch
+import java.lang.reflect.Type
+import kotlin.reflect.KClass
 
 private const val TAG = "PostViewModel"
 
@@ -22,6 +27,7 @@ class PostViewModel(
 ) : ViewModel() {
     private val dataIdSet = HashSet<Int>()
     private val parser = BaseParser.getParser(YandeParser.SOURCE)
+    internal val stateMap = HashMap<Type, Any>()
 
     init {
         requestOption.page = parser.firstPageIndex
@@ -31,15 +37,19 @@ class PostViewModel(
     var refreshing: Boolean by mutableStateOf(false)
     var staggered: Boolean by mutableStateOf(false)
     var loading: Boolean by mutableStateOf(false)
+    var loadFailed: Boolean by mutableStateOf(false)
+    var viewIndex: Int by mutableIntStateOf(-1)
 
     fun checkRefresh() {
-        if (dataList.isEmpty() && !noMore && !refreshing) {
+        if (dataList.isEmpty() && !noMore && !refreshing && !loadFailed) {
             Log.d(TAG, "check to refresh")
             refresh()
         }
     }
 
     fun refresh(focus: Boolean = false) = viewModelScope.launch {
+        if (focus)
+            loadFailed = false
         refreshing = true
         try {
             val list = parser.requestPostData(requestOption.copy(page = parser.firstPageIndex))
@@ -76,6 +86,7 @@ class PostViewModel(
             }
         } catch (e: Exception) {
             Log.e(TAG, "request failed", e)
+            loadFailed = true
         } finally {
             refreshing = false
             loading = false
@@ -134,4 +145,14 @@ class PostViewModel(
             }
         }
     }
+}
+
+@Composable
+internal inline fun <reified T : Any> PostViewModel.getState(onNew: @Composable () -> T): T {
+    val type = object : TypeToken<T>() {}.type
+    val state = stateMap[type]
+    (state as? T)?.let { return it }
+    val newOne = onNew()
+    stateMap[type] = newOne
+    return newOne
 }

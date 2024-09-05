@@ -5,9 +5,13 @@ import android.util.Log
 import cn.zhxu.okhttps.Download.Ctrl
 import cn.zhxu.okhttps.Process
 import com.magic.maw.MyApp
+import com.magic.maw.data.PostData
+import com.magic.maw.data.PostData.*
 import com.magic.maw.data.Quality
 import com.magic.maw.util.HttpUtils
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
+import kotlin.coroutines.resume
 
 typealias DLSuccess = (File) -> Unit
 typealias DLError = (Exception) -> Unit
@@ -33,14 +37,13 @@ object DLManager {
                 process?.let { addProcess(it) }
                 error?.let { addError(it) }
             } ?: let {
-                taskMap[url] = DLTask(
-                    source, id, quality, url
-                ).apply {
+                val task = DLTask(source, id, quality, url).apply {
                     success?.let { addSuccess(it) }
                     process?.let { addProcess(it) }
                     error?.let { addError(it) }
-                    startTask(this)
                 }
+                taskMap[url] = task
+                startTask(task)
             }
         }
     }
@@ -54,8 +57,12 @@ object DLManager {
         }
     }
 
-    fun getDLFullPath(source: String, id: Int, quality: Quality):String {
-        return getDLPath(MyApp.app, source, quality) + File.separator + getDLName(source, id, quality)
+    fun getDLFullPath(source: String, id: Int, quality: Quality): String {
+        return getDLPath(MyApp.app, source, quality) + File.separator + getDLName(
+            source,
+            id,
+            quality
+        )
     }
 
     fun getDLPath(context: Context, source: String, quality: Quality): String {
@@ -91,8 +98,9 @@ object DLManager {
                 }.toFile(tmpPath).setOnFailure {
                     task.onError(it.exception)
                 }.setOnSuccess {
-                    it.renameTo(File(path))
-                    task.onSuccess(it)
+                    val newFile = File(path)
+                    it.renameTo(newFile)
+                    task.onSuccess(newFile)
                 }.setOnComplete {
                     removeTask(task)
                     dispatchTask()
@@ -174,4 +182,27 @@ internal data class DLTask(
     override fun toString(): String {
         return "source: $source, id: $id, quality: $quality, url: $url"
     }
+}
+
+suspend fun loadDLFile(
+    postData: PostData,
+    info: Info,
+    quality: Quality
+): File? = suspendCancellableCoroutine func@{ cont ->
+    val file = File(DLManager.getDLFullPath(postData.source, postData.id, quality))
+    val resume: (File?) -> Unit = {
+        if (cont.isActive) cont.resume(it) else println("cancel load dl file: $postData")
+    }
+    if (file.exists()) {
+        resume.invoke(file)
+        return@func
+    }
+    DLManager.addTask(
+        source = postData.source,
+        id = postData.id,
+        quality = quality,
+        url = info.url,
+        success = { resume.invoke(it) },
+        error = { resume.invoke(null) }
+    )
 }

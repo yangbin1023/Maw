@@ -1,5 +1,8 @@
 package com.magic.maw.ui.post
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -15,7 +18,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
-import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,15 +28,20 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -43,6 +51,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.magic.maw.R
 import com.magic.maw.ui.NestedScaffold
+import com.magic.maw.ui.rememberNestedScaffoldState
 import com.magic.maw.ui.theme.TableLayout
 import com.magic.maw.ui.theme.WaterLayout
 import kotlinx.coroutines.launch
@@ -50,15 +59,44 @@ import kotlin.math.max
 
 private const val TAG = "PostRoute"
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostRoute(
     postViewModel: PostViewModel,
     isExpandedScreen: Boolean = false,
     openDrawer: () -> Unit,
 ) {
-    val lazyState = rememberLazyStaggeredGridState()
-    val refreshState = rememberPullToRefreshState()
+    AnimatedVisibility(
+        visible = postViewModel.viewIndex < 0,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        PostScreen(
+            postViewModel = postViewModel,
+            isExpandedScreen = isExpandedScreen,
+            openDrawer = openDrawer
+        )
+    }
+    AnimatedVisibility(
+        visible = postViewModel.viewIndex >= 0,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        ViewScreen(
+            postViewModel = postViewModel,
+            isExpandedScreen = isExpandedScreen
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PostScreen(
+    postViewModel: PostViewModel,
+    isExpandedScreen: Boolean,
+    openDrawer: () -> Unit
+) {
+    val lazyState = postViewModel.getState { rememberLazyStaggeredGridState() }
+    val refreshState = postViewModel.getState { rememberPullToRefreshState() }
     if (isExpandedScreen) {
         PostRefreshBody(
             postViewModel = postViewModel,
@@ -66,35 +104,93 @@ fun PostRoute(
             lazyState = lazyState
         )
     } else {
-        val scrollToTop: () -> Unit = {
-            postViewModel.viewModelScope.launch {
-                lazyState.scrollToItem(0, 0)
-            }
+        NestedScaffoldBody(
+            postViewModel = postViewModel,
+            lazyState = lazyState,
+            refreshState = refreshState,
+            openDrawer = openDrawer
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NestedScaffoldBody(
+    postViewModel: PostViewModel,
+    lazyState: LazyStaggeredGridState,
+    refreshState: PullToRefreshState,
+    openDrawer: () -> Unit
+) {
+    val state = postViewModel.getState { rememberNestedScaffoldState() }
+    val scrollToTop: () -> Unit = {
+        postViewModel.viewModelScope.launch {
+            lazyState.scrollToItem(0, 0)
         }
-        NestedScaffold(
-            topBar = { offset ->
-                PostTopBar(
-                    modifier = Modifier
-                        .offset { offset }
-                        .shadow(5.dp),
-                    postViewModel = postViewModel,
-                    scrollToTop = scrollToTop,
-                    openDrawer = openDrawer
-                )
-            },
-            isEnable = {
-                refreshState.distanceFraction <= 0 && postViewModel.dataList.isNotEmpty()
-            }
-        ) { innerPadding ->
-            PostRefreshBody(
+    }
+    NestedScaffold(
+        topBar = { offset ->
+            PostTopBar(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+                    .offset { offset }
+                    .shadow(5.dp),
                 postViewModel = postViewModel,
-                refreshState = refreshState,
-                lazyState = lazyState
+                scrollToTop = scrollToTop,
+                openDrawer = openDrawer
+            )
+        },
+        state = state,
+        canScroll = {
+            refreshState.distanceFraction <= 0 && postViewModel.dataList.isNotEmpty()
+        }
+    ) { innerPadding ->
+        PostRefreshBody(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            postViewModel = postViewModel,
+            refreshState = refreshState,
+            lazyState = lazyState
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ScaffoldBody(
+    postViewModel: PostViewModel,
+    lazyState: LazyStaggeredGridState,
+    refreshState: PullToRefreshState,
+    openDrawer: () -> Unit
+) {
+    val scrollToTop: () -> Unit = {
+        postViewModel.viewModelScope.launch {
+            lazyState.scrollToItem(0, 0)
+        }
+    }
+    val topAppBarState = postViewModel.getState { rememberTopAppBarState() }
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
+        state = topAppBarState,
+        canScroll = { postViewModel.dataList.isNotEmpty() }
+    )
+
+    Scaffold(
+        topBar = {
+            PostTopBar(
+                postViewModel = postViewModel,
+                scrollToTop = scrollToTop,
+                openDrawer = openDrawer,
+                scrollBehavior = if (postViewModel.dataList.isNotEmpty()) scrollBehavior else null
             )
         }
+    ) { innerPadding ->
+        PostRefreshBody(
+            modifier = Modifier
+                .padding(innerPadding)
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            postViewModel = postViewModel,
+            refreshState = refreshState,
+            lazyState = lazyState
+        )
     }
 }
 
@@ -105,7 +201,8 @@ private fun PostTopBar(
     modifier: Modifier = Modifier,
     enableShadow: Boolean = true,
     scrollToTop: () -> Unit = {},
-    openDrawer: () -> Unit = {}
+    openDrawer: () -> Unit = {},
+    scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     TopAppBar(
         title = { Text(text = stringResource(id = R.string.post)) },
@@ -135,7 +232,8 @@ private fun PostTopBar(
             ) {
                 Icon(imageVector = Icons.Default.Search, contentDescription = "")
             }
-        }
+        },
+        scrollBehavior = scrollBehavior
     )
 }
 
@@ -198,11 +296,13 @@ private fun PostBody(
             state = state,
             contentPadding = PaddingValues(contentPadding)
         ) {
-            items(postViewModel.dataList) {
+            itemsIndexed(postViewModel.dataList) { index, item ->
                 PostItem(
-                    modifier = Modifier.padding(contentPadding),
+                    modifier = Modifier
+                        .padding(contentPadding)
+                        .clickable { postViewModel.viewIndex = index },
                     staggered = postViewModel.staggered,
-                    postData = it
+                    postData = item
                 )
             }
 

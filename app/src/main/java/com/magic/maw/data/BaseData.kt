@@ -20,6 +20,10 @@ data class PostData(
 
     override val key: Int get() = id
 
+    override fun toString(): String {
+        return "source: $source, id: $id"
+    }
+
     data class Info(
         var width: Int = 0,
         var height: Int = 0,
