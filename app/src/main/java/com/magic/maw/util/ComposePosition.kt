@@ -1,4 +1,4 @@
-package com.magic.maw.ui
+package com.magic.maw.util
 
 import androidx.compose.foundation.gestures.Orientation
 

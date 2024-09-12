@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.magic.maw.R
+import com.magic.maw.ui.components.DrawerItem
 
 @Composable
 fun MainDrawer(

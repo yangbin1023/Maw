@@ -8,6 +8,7 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.magic.maw.R
+import com.magic.maw.ui.components.RailItem
 
 @Composable
 fun MainNavRail(

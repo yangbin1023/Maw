@@ -51,8 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.magic.maw.R
-import com.magic.maw.ui.NestedScaffold
-import com.magic.maw.ui.rememberNestedScaffoldState
+import com.magic.maw.ui.components.NestedScaffold
+import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.theme.TableLayout
 import com.magic.maw.ui.theme.WaterLayout
 import com.magic.maw.util.UiUtils.hideSystemBars

@@ -1,4 +1,4 @@
-package com.magic.maw.ui.main
+package com.magic.maw.ui.components
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes

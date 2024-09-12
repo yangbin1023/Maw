@@ -56,7 +56,7 @@ import com.jvziyaoyao.scale.zoomable.zoomable.ZoomableGestureScope
 import com.jvziyaoyao.scale.zoomable.zoomable.rememberZoomableState
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
-import com.magic.maw.ui.HideSystemBars
+import com.magic.maw.ui.components.HideSystemBars
 import com.magic.maw.website.loadDLFile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

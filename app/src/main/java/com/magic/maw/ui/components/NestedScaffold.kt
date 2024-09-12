@@ -1,4 +1,4 @@
-package com.magic.maw.ui
+package com.magic.maw.ui.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clipScrollableContainer
