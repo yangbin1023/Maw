@@ -102,13 +102,11 @@ dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.mmkv)
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
-    implementation(libs.composeviews)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -143,6 +141,4 @@ dependencies {
     implementation(libs.eventbus)
     implementation(libs.okhttp)
     implementation(libs.okhttps)
-    implementation(libs.lottie)
-    implementation(libs.subsampling.scale.image.view)
 }

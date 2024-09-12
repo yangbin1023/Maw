@@ -33,6 +33,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 typealias OnScrollStop = (CoroutineScope, NestedScaffoldState, Float) -> Boolean
+typealias OnScrollToCritical = () -> Unit
 
 class NestedScaffoldState(
     val maxPx: Float,
@@ -69,6 +70,8 @@ private class NestedScaffoldConnection(
     val state: NestedScaffoldState,
     private val coroutineScope: CoroutineScope,
     private val canScroll: () -> Boolean = { true },
+    private val onScrollToTop: OnScrollToCritical? = null,
+    private val onScrollToBottom: OnScrollToCritical? = null,
     private val onScrollStop: OnScrollStop? = null,
 ) : NestedScrollConnection {
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -77,10 +80,17 @@ private class NestedScaffoldConnection(
         val delta = available.y
         val newOffset = state.scrollValue + delta
         val targetOffset = newOffset.coerceIn(state.minPx, state.maxPx)
+        if (state.scrollValue != targetOffset) {
+            if (targetOffset == state.minPx) {
+                onScrollToTop?.invoke()
+            } else if (targetOffset == state.maxPx) {
+                onScrollToBottom?.invoke()
+            }
+        }
         coroutineScope.launch { state.snapTo(targetOffset) }
-        val preOffset = delta - (newOffset - targetOffset)
-        println("delta: $delta, source: $source, preOffset: $preOffset")
-        return available.copy(y = preOffset)
+        val consumedOffset = delta - (newOffset - targetOffset)
+        println("delta: $delta, source: $source, consumedOffset: $consumedOffset")
+        return available.copy(y = consumedOffset)
     }
 
     override suspend fun onPreFling(available: Velocity): Velocity {
@@ -115,14 +125,21 @@ fun NestedScaffold(
     state: NestedScaffoldState = rememberNestedScaffoldState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     canScroll: () -> Boolean = { true },
-    onScrollStop: OnScrollStop? = NestedScaffoldDefaults.defaultOnScrollStop,
+    onScrollToTop: OnScrollToCritical? = null,
+    onScrollToBottom: OnScrollToCritical? = null,
+    onScrollStop: OnScrollStop? = getDefaultOnScrollStop(onScrollToTop, onScrollToBottom),
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    val connection = remember(state, coroutineScope, canScroll, onScrollStop) {
+    val connection = remember(
+        state, coroutineScope, canScroll,
+        onScrollToTop, onScrollToBottom, onScrollStop
+    ) {
         NestedScaffoldConnection(
             state = state,
             coroutineScope = coroutineScope,
             canScroll = canScroll,
+            onScrollToTop = onScrollToTop,
+            onScrollToBottom = onScrollToBottom,
             onScrollStop = onScrollStop
         )
     }
@@ -166,7 +183,9 @@ fun NestedRefreshScaffold(
     state: NestedScaffoldState = rememberNestedScaffoldState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     canScroll: () -> Boolean = { true },
-    onScrollStop: OnScrollStop? = NestedScaffoldDefaults.defaultOnScrollStop,
+    onScrollToTop: OnScrollToCritical? = null,
+    onScrollToBottom: OnScrollToCritical? = null,
+    onScrollStop: OnScrollStop? = getDefaultOnScrollStop(onScrollToTop, onScrollToBottom),
     content: @Composable BoxScope.() -> Unit,
 ) {
     NestedScaffold(
@@ -175,6 +194,8 @@ fun NestedRefreshScaffold(
         state = state,
         coroutineScope = coroutineScope,
         canScroll = canScroll,
+        onScrollToTop = onScrollToTop,
+        onScrollToBottom = onScrollToBottom,
         onScrollStop = onScrollStop,
     ) { innerPadding ->
         PullToRefreshBox(
@@ -186,6 +207,25 @@ fun NestedRefreshScaffold(
             content()
         }
     }
+}
+
+private fun getDefaultOnScrollStop(
+    onScrollToTop: OnScrollToCritical? = null,
+    onScrollToBottom: OnScrollToCritical? = null
+): OnScrollStop = func@{ scope, state, _ ->
+    val percent = state.scrollPercent
+    if (percent == 0f || percent == 1.0f)
+        return@func false
+    scope.launch {
+        if (percent > 0.5f) {
+            state.animateTo(state.minPx)
+            onScrollToTop?.invoke()
+        } else {
+            state.animateTo(state.maxPx)
+            onScrollToBottom?.invoke()
+        }
+    }
+    true
 }
 
 object NestedScaffoldDefaults {

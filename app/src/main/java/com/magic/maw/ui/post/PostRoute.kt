@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,6 +55,8 @@ import com.magic.maw.ui.NestedScaffold
 import com.magic.maw.ui.rememberNestedScaffoldState
 import com.magic.maw.ui.theme.TableLayout
 import com.magic.maw.ui.theme.WaterLayout
+import com.magic.maw.util.UiUtils.hideSystemBars
+import com.magic.maw.util.UiUtils.showSystemBars
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
@@ -127,6 +130,7 @@ private fun NestedScaffoldBody(
             lazyState.scrollToItem(0, 0)
         }
     }
+    val context = LocalContext.current
     NestedScaffold(
         topBar = { offset ->
             PostTopBar(
@@ -141,7 +145,9 @@ private fun NestedScaffoldBody(
         state = state,
         canScroll = {
             refreshState.distanceFraction <= 0 && postViewModel.dataList.isNotEmpty()
-        }
+        },
+        onScrollToTop = { context.hideSystemBars() },
+        onScrollToBottom = { context.showSystemBars() },
     ) { innerPadding ->
         PostRefreshBody(
             modifier = Modifier
@@ -270,7 +276,14 @@ private fun PostEmptyView(modifier: Modifier = Modifier, postViewModel: PostView
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(text = "没有数据", modifier = Modifier.clickable() {
+        val text = if (postViewModel.refreshing) {
+            "正在加载"
+        } else if (postViewModel.loadFailed) {
+            "加载失败"
+        } else {
+            "没有数据"
+        }
+        Text(text = text, modifier = Modifier.clickable() {
             postViewModel.refresh()
         })
     }

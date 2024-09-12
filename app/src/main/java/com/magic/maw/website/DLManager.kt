@@ -1,6 +1,7 @@
 package com.magic.maw.website
 
 import android.content.Context
+import android.os.Environment
 import android.util.Log
 import cn.zhxu.okhttps.Download.Ctrl
 import cn.zhxu.okhttps.Process
@@ -66,7 +67,15 @@ object DLManager {
     }
 
     fun getDLPath(context: Context, source: String, quality: Quality): String {
-        return context.externalCacheDir!!.absolutePath + File.separator + quality.name + File.separator + source
+        return getDiskCachePath(context) + File.separator + quality.name + File.separator + source
+    }
+
+    fun getDiskCachePath(context: Context): String {
+        return if (Environment.MEDIA_MOUNTED == Environment.getExternalStorageState() || !Environment.isExternalStorageRemovable()) {
+            context.externalCacheDir?.path ?: context.cacheDir.path
+        } else {
+            context.cacheDir.path
+        }
     }
 
     fun getDLName(source: String, id: Int, quality: Quality): String {
