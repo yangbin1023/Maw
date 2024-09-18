@@ -7,8 +7,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationRail
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.magic.maw.R
+import com.magic.maw.ui.SettingActivity
 import com.magic.maw.ui.components.RailItem
+import com.magic.maw.util.UiUtils.startActivity
 
 @Composable
 fun MainNavRail(
@@ -25,6 +28,7 @@ fun MainNavRail(
             )
         }
     ) {
+        val context = LocalContext.current
         Spacer(Modifier.weight(1f))
 
         RailItem(
@@ -49,7 +53,7 @@ fun MainNavRail(
             labelRes = R.string.setting,
             iconRes = R.drawable.ic_setting,
             selected = currentRoute == MainRoutes.SETTING,
-            onClick = { onNavigate(MainRoutes.SETTING) }
+            onClick = { context.startActivity(SettingActivity::class.java) }
         )
         Spacer(Modifier.weight(1.2f))
     }

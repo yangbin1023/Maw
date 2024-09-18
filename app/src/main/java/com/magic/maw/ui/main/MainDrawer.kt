@@ -8,9 +8,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.magic.maw.R
+import com.magic.maw.ui.SettingActivity
 import com.magic.maw.ui.components.DrawerItem
+import com.magic.maw.util.UiUtils.startActivity
 
 @Composable
 fun MainDrawer(
@@ -20,6 +23,7 @@ fun MainDrawer(
     closeDrawer: () -> Unit
 ) {
     BoxWithConstraints {
+        val context = LocalContext.current
         val targetWidth = maxWidth * 0.85f
         val sheetModifier = if (targetWidth < 360.dp) {
             val minWidth = if (targetWidth > 240.dp) 240.dp else targetWidth
@@ -58,7 +62,7 @@ fun MainDrawer(
                 labelRes = R.string.setting,
                 iconRes = R.drawable.ic_setting,
                 selected = currentRoute == MainRoutes.SETTING,
-                onClick = { onNavigate(MainRoutes.SETTING);closeDrawer() }
+                onClick = { context.startActivity(SettingActivity::class.java) }
             )
         }
     }

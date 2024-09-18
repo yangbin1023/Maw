@@ -1,13 +1,13 @@
 package com.magic.maw.website.parser
 
 import com.magic.maw.data.PostData
-import com.magic.maw.website.RequestCallback
 import com.magic.maw.website.RequestOption
 import java.lang.ref.SoftReference
 
 abstract class BaseParser {
     protected abstract val baseUrl: String
     abstract val source: String
+    abstract val supportRating: Int
     open val firstPageIndex: Int = 1
 
     abstract suspend fun requestPostData(option: RequestOption): List<PostData>

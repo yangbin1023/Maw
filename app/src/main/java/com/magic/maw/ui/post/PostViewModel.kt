@@ -12,12 +12,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.gson.reflect.TypeToken
 import com.magic.maw.data.PostData
+import com.magic.maw.util.configFlow
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
-import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.launch
 import java.lang.reflect.Type
-import kotlin.reflect.KClass
 
 private const val TAG = "PostViewModel"
 
@@ -26,11 +25,12 @@ class PostViewModel(
     private val requestOption: RequestOption = RequestOption(),
 ) : ViewModel() {
     private val dataIdSet = HashSet<Int>()
-    private val parser = BaseParser.getParser(YandeParser.SOURCE)
+    private var parser = BaseParser.getParser(configFlow.value.source.lowercase())
     internal val stateMap = HashMap<Type, Any>()
 
     init {
         requestOption.page = parser.firstPageIndex
+        requestOption.ratings = configFlow.value.websiteConfig.rating
     }
 
     var noMore: Boolean by mutableStateOf(false)
@@ -47,8 +47,9 @@ class PostViewModel(
         }
     }
 
-    fun refresh(focus: Boolean = false) = viewModelScope.launch {
-        if (focus)
+    fun refresh() = viewModelScope.launch {
+        val force = checkForceRefresh()
+        if (force)
             loadFailed = false
         refreshing = true
         try {
@@ -56,7 +57,7 @@ class PostViewModel(
 
             val tmpIdSet = HashSet<Int>()
             val tmpList = ArrayList<PostData>()
-            if (focus) {
+            if (force) {
                 for (item in list) {
                     if (item.id > 0) {
                         tmpList.add(item)
@@ -93,45 +94,60 @@ class PostViewModel(
         }
     }
 
-    fun loadMore() {
+    fun loadMore() = viewModelScope.launch {
         if (refreshing || loading)
-            return
+            return@launch
         loading = true
-        viewModelScope.launch {
-            val list: List<PostData>
-            try {
-                list = parser.requestPostData(requestOption.copy(page = requestOption.page + 1))
-                if (refreshing) {
-                    loading = false
-                    return@launch
-                }
-            } catch (e: Exception) {
+        val list: List<PostData>
+        try {
+            list = parser.requestPostData(requestOption.copy(page = requestOption.page + 1))
+            if (refreshing) {
                 loading = false
-                Log.e(TAG, "load more failed: " + e.message, e)
                 return@launch
             }
-
-            val tmpIdSet = HashSet<Int>()
-            val tmpList = ArrayList<PostData>()
-            for (item in list) {
-                if (item.id > 0) {
-                    tmpList.add(item)
-                    tmpIdSet.add(item.id)
-                }
-            }
-
-            requestOption.page++
-
-            if (tmpList.isNotEmpty()) {
-                synchronized(this@PostViewModel) {
-                    dataIdSet.addAll(tmpIdSet)
-                    dataList.addAll(tmpList)
-                }
-            } else {
-                noMore = true
-            }
+        } catch (e: Exception) {
             loading = false
+            Log.e(TAG, "load more failed: " + e.message, e)
+            return@launch
         }
+
+        val tmpIdSet = HashSet<Int>()
+        val tmpList = ArrayList<PostData>()
+        for (item in list) {
+            if (item.id > 0) {
+                tmpList.add(item)
+                tmpIdSet.add(item.id)
+            }
+        }
+
+        requestOption.page++
+
+        if (tmpList.isNotEmpty()) {
+            synchronized(this@PostViewModel) {
+                dataIdSet.addAll(tmpIdSet)
+                dataList.addAll(tmpList)
+            }
+        } else {
+            noMore = true
+        }
+        loading = false
+    }
+
+    private fun checkForceRefresh(): Boolean {
+        var force = false
+        if (parser.source.lowercase() != configFlow.value.source.lowercase()) {
+            parser = BaseParser.getParser(configFlow.value.source)
+            force = true
+        }
+        if (requestOption.ratings != configFlow.value.websiteConfig.rating) {
+            force = true
+            requestOption.ratings = configFlow.value.websiteConfig.rating
+        }
+        if (force) {
+            requestOption.page = parser.firstPageIndex
+            println("Force refresh. requestOption.ratings: ${requestOption.ratings}")
+        }
+        return force
     }
 
     companion object {

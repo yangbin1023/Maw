@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="website">
+        <item>Yande</item>
+        <item>Konachan</item>
+        <item>Danbooru</item>
+    </string-array>
+</resources>

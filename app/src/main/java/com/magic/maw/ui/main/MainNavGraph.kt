@@ -71,13 +71,5 @@ fun MainNavGraph(
                 )
             }
         }
-        composable(route = MainRoutes.SETTING) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Text(
-                    text = stringResource(id = R.string.setting),
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-        }
     }
 }

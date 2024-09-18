@@ -3,6 +3,7 @@ package com.magic.maw.util
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Point
@@ -80,6 +81,10 @@ object UiUtils {
             insets
         }
         showInCutout(window)
+    }
+
+    fun Context.startActivity(activityClass: Class<*>) {
+        startActivity(Intent(this, activityClass))
     }
 
     fun Context.findActivity(): Activity? {

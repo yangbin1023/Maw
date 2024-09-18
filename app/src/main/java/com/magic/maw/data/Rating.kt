@@ -27,6 +27,10 @@ enum class Rating(val value: Int) {
         }
     }
 
+    override fun toString(): String {
+        return name
+    }
+
     companion object {
         fun Int.toRating(): Rating {
             for (item in entries) {
@@ -34,6 +38,15 @@ enum class Rating(val value: Int) {
                     return item
             }
             return None
+        }
+
+        fun Int.getRatings(): Array<Rating> {
+            val ratings = mutableListOf<Rating>()
+            for (item in entries) {
+                if (item != None && hasRating(item))
+                    ratings.add(item)
+            }
+            return ratings.toTypedArray()
         }
 
         fun Int.addRating(rating: Rating): Int {
