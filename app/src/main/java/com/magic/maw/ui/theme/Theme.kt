@@ -2,7 +2,6 @@ package com.magic.maw.ui.theme
 
 import android.app.Activity
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -42,7 +41,10 @@ fun MawTheme(content: @Composable () -> Unit) {
         val window = (view.context as Activity).window
         SideEffect {
             window.statusBarColor = Color.Transparent.toArgb()
-            WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
+            WindowCompat.getInsetsController(window, window.decorView).apply {
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
+            }
         }
     }
 
