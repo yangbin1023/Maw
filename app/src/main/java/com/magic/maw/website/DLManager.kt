@@ -113,7 +113,6 @@ object DLManager {
                 }.setOnComplete {
                     removeTask(task)
                     dispatchTask()
-                    Log.e(TAG, "task complete: $task")
                 }.start()
                 synchronized(taskMap) {
                     if (taskMap[task.url] != task) {
@@ -150,7 +149,6 @@ internal data class DLTask(
                 item.invoke(file)
             }
         }
-        Log.d(TAG, "download file success: $file, list size: ${successList.size}")
     }
 
     fun onProcess(process: Process) {

@@ -24,11 +24,12 @@ class PostViewModel(
     val dataList: SnapshotStateList<PostData> = SnapshotStateList(),
     private val requestOption: RequestOption = RequestOption(),
 ) : ViewModel() {
+    private var parser: BaseParser
     private val dataIdSet = HashSet<Int>()
-    private var parser = BaseParser.getParser(configFlow.value.source.lowercase())
     internal val stateMap = HashMap<Type, Any>()
 
     init {
+        parser = BaseParser.getParser(configFlow.value.source.lowercase())
         requestOption.page = parser.firstPageIndex
         requestOption.ratings = configFlow.value.websiteConfig.rating
     }

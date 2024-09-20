@@ -17,8 +17,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,9 +29,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
-import com.magic.maw.website.DLManager
 import com.magic.maw.website.loadDLFile
-import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
@@ -48,15 +44,17 @@ fun PostItem(modifier: Modifier = Modifier, postData: PostData, staggered: Boole
     ) {
         val info = postData.originalInfo
         val ratio = getPostRatio(staggered, info.width, info.height)
+        var localData by remember { mutableStateOf(postData) }
+        var file by remember { mutableStateOf<File?>(null) }
+        if (localData != postData) {
+            localData = postData
+            file = null
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(ratio)
         ) {
-            var file by remember { mutableStateOf<File?>(null) }
-            LaunchedEffect(Unit) {
-                file = loadDLFile(postData, postData.previewInfo, Quality.Preview)
-            }
             file?.let {
                 val model = ImageRequest.Builder(LocalContext.current).data(it).build()
                 AsyncImage(
@@ -66,6 +64,8 @@ fun PostItem(modifier: Modifier = Modifier, postData: PostData, staggered: Boole
                     contentScale = ContentScale.Crop,
                     contentDescription = null,
                 )
+            } ?: LaunchedEffect(Unit) {
+                file = loadDLFile(postData, postData.previewInfo, Quality.Preview)
             }
         }
 

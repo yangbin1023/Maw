@@ -314,8 +314,8 @@ private fun PostBody(
                     modifier = Modifier
                         .padding(contentPadding)
                         .clickable { postViewModel.viewIndex = index },
-                    staggered = postViewModel.staggered,
-                    postData = item
+                    postData = item,
+                    staggered = postViewModel.staggered
                 )
             }
 
