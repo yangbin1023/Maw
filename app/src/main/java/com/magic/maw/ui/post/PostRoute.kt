@@ -1,6 +1,5 @@
 package com.magic.maw.ui.post
 
-import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -48,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -62,6 +61,7 @@ import com.magic.maw.ui.components.NestedScaffold
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.theme.TableLayout
 import com.magic.maw.ui.theme.WaterLayout
+import com.magic.maw.util.UiUtils.getStatusBarHeight
 import com.magic.maw.util.UiUtils.hideSystemBars
 import com.magic.maw.util.UiUtils.showSystemBars
 import kotlinx.coroutines.launch
@@ -93,7 +93,7 @@ fun PostRoute(
         PostScreen(
             postViewModel = postViewModel,
             isExpandedScreen = isExpandedScreen,
-            onSystemBarsHide = onSystemBarsHide,                                                
+            onSystemBarsHide = onSystemBarsHide,
             openDrawer = openDrawer
         )
     }
@@ -151,16 +151,6 @@ private fun NestedScaffoldBody(
     val scrollToTop: () -> Unit = {
         postViewModel.viewModelScope.launch {
             lazyState.scrollToItem(0, 0)
-        }
-    }
-    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
-    var currentOrientation by remember { mutableStateOf(isPortrait) }
-    if (currentOrientation != isPortrait) {
-        currentOrientation = isPortrait
-        if (state.scrollValue == state.minPx) {
-            onSystemBarsHide.invoke(true)
-        } else if (state.scrollValue == state.maxPx) {
-            onSystemBarsHide.invoke(false)
         }
     }
     LaunchedEffect(state) {
@@ -278,6 +268,7 @@ private fun PostTopBar(
                 Icon(imageVector = Icons.Default.Search, contentDescription = "")
             }
         },
+        windowInsets = WindowInsets(top = LocalContext.current.getStatusBarHeight()),
         scrollBehavior = scrollBehavior
     )
 }

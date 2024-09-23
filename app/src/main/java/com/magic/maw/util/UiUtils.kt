@@ -11,6 +11,11 @@ import android.os.Build
 import android.util.Size
 import android.view.Window
 import android.view.WindowManager
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
@@ -116,5 +121,25 @@ object UiUtils {
             show(WindowInsetsCompat.Type.navigationBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         }
+    }
+
+    fun Context.getStatusBarHeight(): Int {
+        findActivity()?.window?.let { window ->
+            ViewCompat.getRootWindowInsets(window.decorView)?.let { insets ->
+                // 这里使用getInsetsIgnoringVisibility而不用getInsets的原因是
+                // 若当前隐藏系统栏，使用getInsets获取到的top为0，
+                // 使用getInsetsIgnoringVisibility则不受系统栏状态的影响
+                return insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars()).top
+            }
+        }
+        return 0
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun getTopBarHeight(): Dp {
+        val height = LocalContext.current.getStatusBarHeight()
+        val heightDp = with(LocalDensity.current) { (if (height > 0) height else 24).toDp() }
+        return heightDp + TopAppBarDefaults.TopAppBarExpandedHeight
     }
 }

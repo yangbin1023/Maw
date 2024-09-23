@@ -14,7 +14,7 @@ fun runCmd(cmd: String, workDir: File = file("./")): String {
 val tagVersion: String
     get() {
         val tag = try {
-            runCmd("git describe --tags --exact-match")
+            runCmd("git describe --tags")
         } catch (e: Exception) {
             println(e)
             "v0.0"

@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import com.magic.maw.util.UiUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -104,7 +105,7 @@ private class NestedScaffoldConnection(
 
 @Composable
 fun rememberNestedScaffoldState(
-    maxDp: Dp = NestedScaffoldDefaults.TopBarMaxDp,
+    maxDp: Dp = UiUtils.getTopBarHeight(),
     minDp: Dp = NestedScaffoldDefaults.TopBarMinDp,
     initialScrollValue: Float = 0f
 ): NestedScaffoldState {
@@ -209,7 +210,7 @@ fun NestedRefreshScaffold(
     }
 }
 
-private fun getDefaultOnScrollStop(
+fun getDefaultOnScrollStop(
     onScrollToTop: OnScrollToCritical? = null,
     onScrollToBottom: OnScrollToCritical? = null
 ): OnScrollStop = func@{ scope, state, _ ->
@@ -229,7 +230,6 @@ private fun getDefaultOnScrollStop(
 }
 
 object NestedScaffoldDefaults {
-    val TopBarMaxDp = 88.dp
     val TopBarMinDp = 0.dp
     val defaultOnScrollStop: OnScrollStop = func@{ scope, state, _ ->
         val percent = state.scrollPercent

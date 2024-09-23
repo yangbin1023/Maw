@@ -58,6 +58,7 @@ import com.jvziyaoyao.scale.zoomable.zoomable.ZoomableGestureScope
 import com.jvziyaoyao.scale.zoomable.zoomable.rememberZoomableState
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
+import com.magic.maw.util.UiUtils
 import com.magic.maw.website.loadDLFile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -75,9 +76,10 @@ fun ViewScreen(
     val onExit: () -> Unit = {
         postViewModel.viewIndex = -1
     }
+    val topBarMaxHeight = UiUtils.getTopBarHeight()
     var topAppBarHide by remember { mutableStateOf(systemBarsHide.invoke()) }
     val topAppBarOffset by animateDpAsState(
-        targetValue = if (topAppBarHide) (-88).dp else 0.dp,
+        targetValue = if (topAppBarHide) -topBarMaxHeight else 0.dp,
         label = "showTopAppBar"
     )
     LaunchedEffect(Unit) {
