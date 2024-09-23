@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -313,9 +314,20 @@ private fun PostEmptyView(modifier: Modifier = Modifier, postViewModel: PostView
         } else {
             "没有数据"
         }
-        Text(text = text, modifier = Modifier.clickable() {
-            postViewModel.refresh()
-        })
+        Text(
+            text = text,
+            modifier = Modifier
+                .padding(15.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        if (!postViewModel.refreshing) {
+                            postViewModel.refresh()
+                        }
+                    }
+                )
+        )
     }
 }
 
