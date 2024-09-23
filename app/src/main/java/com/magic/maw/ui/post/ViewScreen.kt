@@ -3,6 +3,7 @@ package com.magic.maw.ui.post
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -24,6 +25,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -56,7 +58,6 @@ import com.jvziyaoyao.scale.zoomable.zoomable.ZoomableGestureScope
 import com.jvziyaoyao.scale.zoomable.zoomable.rememberZoomableState
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
-import com.magic.maw.ui.components.HideSystemBars
 import com.magic.maw.website.loadDLFile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -64,21 +65,30 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 @Composable
-fun ViewScreen(postViewModel: PostViewModel, isExpandedScreen: Boolean) {
+fun ViewScreen(
+    postViewModel: PostViewModel,
+    isExpandedScreen: Boolean,
+    systemBarsHide: () -> Boolean = { false },
+    onSystemBarsHide: (Boolean) -> Unit = {}
+) {
     val pagerState = rememberPagerState(postViewModel.viewIndex) { postViewModel.dataList.size }
     val onExit: () -> Unit = {
         postViewModel.viewIndex = -1
     }
-    var topAppBarHide by remember { mutableStateOf(false) }
+    var topAppBarHide by remember { mutableStateOf(systemBarsHide.invoke()) }
     val topAppBarOffset by animateDpAsState(
-        targetValue = if (topAppBarHide) (-88).dp else (-24).dp,
+        targetValue = if (topAppBarHide) (-88).dp else 0.dp,
         label = "showTopAppBar"
     )
     LaunchedEffect(Unit) {
         delay(1500)
         topAppBarHide = true
+        println("ViewScreen hide")
     }
-    HideSystemBars()
+    LaunchedEffect(topAppBarHide) {
+        onSystemBarsHide.invoke(topAppBarHide)
+    }
+    println("ViewScreen rebuild")
     Box(modifier = Modifier.fillMaxSize()) {
         ViewContent(
             postViewModel = postViewModel,
@@ -91,12 +101,8 @@ fun ViewScreen(postViewModel: PostViewModel, isExpandedScreen: Boolean) {
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .offset {
-                    IntOffset(
-                        0,
-                        topAppBarOffset
-                            .toPx()
-                            .toInt()
-                    )
+                    val y = topAppBarOffset.toPx()
+                    IntOffset(0, y.toInt())
                 }
                 .shadow(5.dp),
             postViewModel = postViewModel,
@@ -147,6 +153,7 @@ private fun BoxScope.ViewContent(
         state = pagerState,
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .align(Alignment.Center),
     ) { index ->
         if (index >= postViewModel.dataList.size || index < 0) {

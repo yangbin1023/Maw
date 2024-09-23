@@ -33,27 +33,13 @@ fun MainNavGraph(
         startDestination = startDestination,
         modifier = modifier
     ) {
-        composable(
-            route = MainRoutes.POST,
-            enterTransition = {
-                Log.d("MainNavGraph", "enterTransition: $this")
-                null
-            },
-            exitTransition = {
-                Log.d("MainNavGraph", "exitTransition: $this")
-                null
-            },
-            popEnterTransition = {
-                Log.d("MainNavGraph", "popEnterTransition: $this")
-                null
-            },
-            popExitTransition = {
-                Log.d("MainNavGraph", "popExitTransition: $this")
-                null
-            },
-        ) {
+        composable(route = MainRoutes.POST) {
             Log.d("MainNavGraph", "Post vm: $postViewModel, main vm: $mainViewModel")
-            PostRoute(postViewModel, isExpandedScreen, openDrawer)
+            PostRoute(
+                postViewModel = postViewModel,
+                isExpandedScreen = isExpandedScreen,
+                openDrawer = openDrawer
+            )
         }
         composable(route = MainRoutes.POOL) {
             Box(modifier = Modifier.fillMaxSize()) {

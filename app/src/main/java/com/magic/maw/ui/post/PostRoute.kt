@@ -1,5 +1,6 @@
 package com.magic.maw.ui.post
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,10 +39,16 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -68,6 +75,16 @@ fun PostRoute(
     isExpandedScreen: Boolean = false,
     openDrawer: () -> Unit,
 ) {
+    val context = LocalContext.current
+    var systemBarsHide by remember { mutableStateOf(false) }
+    val onSystemBarsHide: (Boolean) -> Unit = {
+        systemBarsHide = it
+        if (systemBarsHide) {
+            context.hideSystemBars()
+        } else {
+            context.showSystemBars()
+        }
+    }
     AnimatedVisibility(
         visible = postViewModel.viewIndex < 0,
         enter = fadeIn(),
@@ -76,6 +93,7 @@ fun PostRoute(
         PostScreen(
             postViewModel = postViewModel,
             isExpandedScreen = isExpandedScreen,
+            onSystemBarsHide = onSystemBarsHide,                                                
             openDrawer = openDrawer
         )
     }
@@ -86,7 +104,9 @@ fun PostRoute(
     ) {
         ViewScreen(
             postViewModel = postViewModel,
-            isExpandedScreen = isExpandedScreen
+            isExpandedScreen = isExpandedScreen,
+            systemBarsHide = { systemBarsHide },
+            onSystemBarsHide = onSystemBarsHide
         )
     }
 }
@@ -96,7 +116,8 @@ fun PostRoute(
 private fun PostScreen(
     postViewModel: PostViewModel,
     isExpandedScreen: Boolean,
-    openDrawer: () -> Unit
+    onSystemBarsHide: (Boolean) -> Unit = {},
+    openDrawer: () -> Unit,
 ) {
     val lazyState = postViewModel.getState { rememberLazyStaggeredGridState() }
     val refreshState = postViewModel.getState { rememberPullToRefreshState() }
@@ -111,6 +132,7 @@ private fun PostScreen(
             postViewModel = postViewModel,
             lazyState = lazyState,
             refreshState = refreshState,
+            onSystemBarsHide = onSystemBarsHide,
             openDrawer = openDrawer
         )
     }
@@ -122,7 +144,8 @@ private fun NestedScaffoldBody(
     postViewModel: PostViewModel,
     lazyState: LazyStaggeredGridState,
     refreshState: PullToRefreshState,
-    openDrawer: () -> Unit
+    onSystemBarsHide: (Boolean) -> Unit = {},
+    openDrawer: () -> Unit = {}
 ) {
     val state = postViewModel.getState { rememberNestedScaffoldState() }
     val scrollToTop: () -> Unit = {
@@ -130,7 +153,23 @@ private fun NestedScaffoldBody(
             lazyState.scrollToItem(0, 0)
         }
     }
-    val context = LocalContext.current
+    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+    var currentOrientation by remember { mutableStateOf(isPortrait) }
+    if (currentOrientation != isPortrait) {
+        currentOrientation = isPortrait
+        if (state.scrollValue == state.minPx) {
+            onSystemBarsHide.invoke(true)
+        } else if (state.scrollValue == state.maxPx) {
+            onSystemBarsHide.invoke(false)
+        }
+    }
+    LaunchedEffect(state) {
+        if (state.scrollValue == state.minPx) {
+            onSystemBarsHide.invoke(true)
+        } else if (state.scrollValue == state.maxPx) {
+            onSystemBarsHide.invoke(false)
+        }
+    }
     NestedScaffold(
         topBar = { offset ->
             PostTopBar(
@@ -146,8 +185,8 @@ private fun NestedScaffoldBody(
         canScroll = {
             refreshState.distanceFraction <= 0 && postViewModel.dataList.isNotEmpty()
         },
-        onScrollToTop = { context.hideSystemBars() },
-        onScrollToBottom = { context.showSystemBars() },
+        onScrollToTop = { onSystemBarsHide.invoke(true) },
+        onScrollToBottom = { onSystemBarsHide.invoke(false) },
     ) { innerPadding ->
         PostRefreshBody(
             modifier = Modifier
