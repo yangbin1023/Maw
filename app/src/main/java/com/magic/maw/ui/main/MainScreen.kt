@@ -47,7 +47,7 @@ fun MainScreen(mainViewModel: MainViewModel, windowSizeClass: WindowSizeClass) {
                 )
             },
             drawerState = drawerState,
-            gesturesEnabled = !isExpandedScreen
+            gesturesEnabled = !isExpandedScreen && mainViewModel.gesturesEnabled
         ) {
             Row(modifier = Modifier.apply {
                 if (!isExpandedScreen) {

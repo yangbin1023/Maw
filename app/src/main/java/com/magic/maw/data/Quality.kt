@@ -4,10 +4,10 @@ import android.content.Context
 import com.magic.maw.R
 
 enum class Quality(val value: Int) {
-    Preview(1),
-    Sample(2),
-    Large(3),
-    File(4);
+    Preview(1 shl 0),
+    Sample(1 shl 1),
+    Large(1 shl 2),
+    File(1 shl 3);
 
     fun same(type: Int): Boolean {
         return value == type
@@ -16,8 +16,8 @@ enum class Quality(val value: Int) {
     fun toResString(context: Context): String {
         val resources = context.resources
         return when (this) {
-            Large -> resources.getString(R.string.quality_origin)
-            File -> resources.getString(R.string.quality_large)
+            Large -> resources.getString(R.string.quality_large)
+            File -> resources.getString(R.string.quality_origin)
             else -> resources.getString(R.string.quality_sample)
         }
     }
@@ -37,6 +37,10 @@ enum class Quality(val value: Int) {
                     return item
             }
             return Sample
+        }
+
+        fun getQualities(): Array<Quality> {
+            return arrayOf(Preview, Sample, Large, File)
         }
     }
 }

@@ -70,3 +70,16 @@ data class WebsiteConfig(
     val rating: Int = Rating.Safe.value,
     val quality: Int = Quality.Sample.value
 )
+
+fun Int.hasFlag(flag: Int): Boolean = (this and flag) == flag
+fun Int.addFlags(flags: Int): Int = this or flags
+fun Int.removeFlags(flags: Int): Int = this and flags.inv()
+fun Int.toFlags(): IntArray {
+    val list = ArrayList<Int>()
+    for (i in 0 until Int.SIZE_BITS) {
+        if ((this shr i).hasFlag(1)) {
+            list.add(1 shl i)
+        }
+    }
+    return list.toIntArray()
+}

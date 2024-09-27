@@ -3,22 +3,30 @@ package com.magic.maw.ui.post
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,12 +46,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
@@ -58,6 +69,11 @@ import com.jvziyaoyao.scale.zoomable.zoomable.ZoomableGestureScope
 import com.jvziyaoyao.scale.zoomable.zoomable.rememberZoomableState
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
+import com.magic.maw.ui.components.ScrollableView
+import com.magic.maw.ui.components.ScrollableViewState
+import com.magic.maw.ui.components.rememberScrollableViewState
+import com.magic.maw.ui.theme.ViewDetailBarExpand
+import com.magic.maw.ui.theme.ViewDetailBarFold
 import com.magic.maw.util.UiUtils
 import com.magic.maw.website.loadDLFile
 import kotlinx.coroutines.delay
@@ -78,20 +94,20 @@ fun ViewScreen(
     }
     val topBarMaxHeight = UiUtils.getTopBarHeight()
     var topAppBarHide by remember { mutableStateOf(systemBarsHide.invoke()) }
+    val targetOffset = if (topAppBarHide) -topBarMaxHeight else 0.dp
     val topAppBarOffset by animateDpAsState(
-        targetValue = if (topAppBarHide) -topBarMaxHeight else 0.dp,
+        targetValue = targetOffset,
         label = "showTopAppBar"
     )
+    val scrollableViewState = rememberScrollableViewState()
     LaunchedEffect(Unit) {
         delay(1500)
         topAppBarHide = true
-        println("ViewScreen hide")
     }
     LaunchedEffect(topAppBarHide) {
         onSystemBarsHide.invoke(topAppBarHide)
     }
-    println("ViewScreen rebuild")
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         ViewContent(
             postViewModel = postViewModel,
             pagerState = pagerState,
@@ -111,7 +127,39 @@ fun ViewScreen(
             pagerState = pagerState,
             onExit = onExit
         )
-
+        scrollableViewState.updateData(
+            density = LocalDensity.current,
+            maxDraggableHeight = maxHeight - topBarMaxHeight - targetOffset
+        )
+        ScrollableView(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter),
+            state = scrollableViewState,
+            toolbarModifier = Modifier.let {
+                if (scrollableViewState.expand) {
+                    it.background(ViewDetailBarExpand)
+                } else {
+                    it.background(
+                        Brush.verticalGradient(listOf(Color.Transparent, ViewDetailBarFold))
+                    )
+                }
+            },
+            toolbar = {
+                ScrollableBar(
+                    postViewModel = postViewModel,
+                    pagerState = pagerState,
+                    scrollableViewState = it
+                )
+            },
+            contentModifier = Modifier.background(ViewDetailBarFold),
+            content = {
+                ScrollableContent(
+                    postViewModel = postViewModel,
+                    pagerState = pagerState
+                )
+            }
+        )
         BackHandler(enabled = postViewModel.viewIndex >= 0) { onExit.invoke() }
     }
 }
@@ -153,6 +201,7 @@ private fun BoxScope.ViewContent(
 ) {
     HorizontalPager(
         state = pagerState,
+        beyondViewportPageCount = 1,
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -163,13 +212,11 @@ private fun BoxScope.ViewContent(
             return@HorizontalPager
         }
         val data = postViewModel.dataList[index]
-        val info = data.sampleInfo ?: data.largeInfo ?: data.originalInfo
-        val quality = when (info) {
-            data.sampleInfo -> Quality.Sample
-            data.largeInfo -> Quality.Large
-            else -> Quality.File
+        val info = data.getInfo(data.quality) ?: let {
+            data.quality = Quality.File
+            data.originalInfo
         }
-        ViewScreenItem(data, info, quality, onTab)
+        ViewScreenItem(data, info, data.quality, onTab)
     }
 }
 
@@ -277,5 +324,66 @@ private fun LoadingView(progress: Float? = null) {
         progress?.let {
             CircularProgressIndicator(progress = { it })
         } ?: CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun BoxScope.ScrollableBar(
+    modifier: Modifier = Modifier,
+    postViewModel: PostViewModel,
+    pagerState: PagerState,
+    scrollableViewState: ScrollableViewState,
+) {
+    Box(
+        modifier = modifier
+            .align(Alignment.Center)
+            .padding(horizontal = 15.dp)
+            .fillMaxSize(),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        val scope = rememberCoroutineScope()
+        val expandIconDegree by animateFloatAsState(
+            targetValue = if (scrollableViewState.expand) 90f else 270f, label = ""
+        )
+        Icon(
+            modifier = Modifier
+                .rotate(expandIconDegree)
+                .height(40.dp)
+                .width(40.dp)
+                .align(Alignment.CenterEnd)
+                .clickable {
+                    scrollableViewState.expand = !scrollableViewState.expand
+                    scope.launch { scrollableViewState.animateToExpand() }
+                },
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null
+        )
+
+        if (postViewModel.dataList.size <= pagerState.currentPage)
+            return
+        val data = postViewModel.dataList[pagerState.currentPage]
+        val info = data.originalInfo
+        val quality = data.quality
+        val context = LocalContext.current
+        val text = "${data.id} (${info.width}x${info.height}) ${quality.toResString(context)}"
+        Text(
+            modifier = Modifier.align(Alignment.CenterStart),
+            text = text
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.ScrollableContent(
+    modifier: Modifier = Modifier,
+    postViewModel: PostViewModel,
+    pagerState: PagerState,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+    ) {
+
     }
 }

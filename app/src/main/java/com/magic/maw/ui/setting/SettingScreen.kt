@@ -31,6 +31,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.magic.maw.R
+import com.magic.maw.data.Quality
+import com.magic.maw.data.Quality.Companion.toQuality
 import com.magic.maw.data.Rating.Companion.getRatings
 import com.magic.maw.data.Rating.Companion.hasRating
 import com.magic.maw.ui.components.DialogSettingItem
@@ -178,6 +180,37 @@ private fun SettingBody(
         }
 
         // 质量
+        val currentQuality = websiteConfig.quality.toQuality()
+        val qualitySettingItems = listOf(
+            stringResource(R.string.quality_sample),
+            stringResource(R.string.quality_large),
+            stringResource(R.string.quality_origin)
+        )
+        val qualitySelectIndex = when (currentQuality) {
+            Quality.Large -> 1
+            Quality.File -> 2
+            else -> 0
+        }
+        DialogSettingItem(
+            title = stringResource(id = R.string.quality),
+            tips = currentQuality.toResString(LocalContext.current)
+        ) { onDismiss ->
+            SingleChoiceDialog(
+                title = stringResource(id = R.string.rating),
+                options = qualitySettingItems,
+                selectedOptionIndex = qualitySelectIndex,
+                onDismissRequest = onDismiss,
+                onOptionSelected = throttle(func = { index: Int ->
+                    val quality = when (index) {
+                        1 -> Quality.Large
+                        2 -> Quality.File
+                        else -> Quality.Sample
+                    }
+                    configFlow.updateWebConfig(websiteConfig.copy(quality = quality.value))
+                    onDismiss.invoke()
+                })
+            )
+        }
 
         // 深色模式
         val darkSettingItems = arrayOf(

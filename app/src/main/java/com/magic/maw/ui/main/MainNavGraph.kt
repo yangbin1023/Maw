@@ -28,6 +28,7 @@ fun MainNavGraph(
 ) {
     val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
     postViewModel.checkRefresh()
+    mainViewModel.gesturesEnabled = postViewModel.viewIndex == -1
     NavHost(
         navController = navController,
         startDestination = startDestination,

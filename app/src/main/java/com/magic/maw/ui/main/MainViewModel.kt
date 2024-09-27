@@ -30,7 +30,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 //            _staggered.value = value
 //        }
 
-    var staggered: Boolean by mutableStateOf(true)
+    var gesturesEnabled: Boolean by mutableStateOf(true)
 }
 
 object MainRoutes {
