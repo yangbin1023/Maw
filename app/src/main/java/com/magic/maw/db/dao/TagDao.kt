@@ -3,6 +3,7 @@ package com.magic.maw.db.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
 import java.util.Date
@@ -26,6 +27,9 @@ interface TagDao {
 
     @Query("SELECT id FROM tag_info WHERE source = :source AND tag_id = :tagId")
     fun getId(source: String, tagId: Int): Int?
+
+    @Update
+    fun update(info: TagInfo)
 
     @Query("UPDATE tag_info SET tag_id = :tagId, name = :name, count = :count, type = :type, update_time = :now, read_time = :now WHERE id = :id")
     fun update(id: Int, tagId: Int, name: String, count: Int, type: TagType, now: Date = Date())

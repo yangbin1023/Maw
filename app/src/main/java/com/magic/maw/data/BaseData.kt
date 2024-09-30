@@ -3,6 +3,16 @@ package com.magic.maw.data
 import com.magic.maw.data.Quality.Companion.toQuality
 import com.magic.maw.util.configFlow
 
+data class BaseData(
+    val source: String,
+    val id: Int,
+    val quality: Quality
+) {
+    override fun toString(): String {
+        return "${source}_${id}_${quality.name.lowercase()}"
+    }
+}
+
 data class PostData(
     val source: String,
     val id: Int,
@@ -18,7 +28,7 @@ data class PostData(
     var sampleInfo: Info? = null,
     var largeInfo: Info? = null,
     var originalInfo: Info = Info()
-) : IKey<Int> {
+) {
     private var currentQuality: Quality = Quality.Preview
 
     var quality: Quality
@@ -41,8 +51,6 @@ data class PostData(
             }
             return Quality.File
         }
-
-    override val key: Int get() = id
 
     override fun toString(): String {
         return "source: $source, id: $id"
@@ -70,5 +78,3 @@ data class PostData(
         }
     }
 }
-
-typealias PostList = DataList<Int, PostData>

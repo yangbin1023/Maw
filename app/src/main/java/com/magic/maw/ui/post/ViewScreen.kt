@@ -38,11 +38,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
@@ -75,9 +76,11 @@ import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
 import com.magic.maw.util.UiUtils
-import com.magic.maw.website.loadDLFile
+import com.magic.maw.website.LoadStatus
+import com.magic.maw.website.loadDLFileWithTask
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -99,7 +102,6 @@ fun ViewScreen(
         targetValue = targetOffset,
         label = "showTopAppBar"
     )
-    val scrollableViewState = rememberScrollableViewState()
     LaunchedEffect(Unit) {
         delay(1500)
         topAppBarHide = true
@@ -127,38 +129,10 @@ fun ViewScreen(
             pagerState = pagerState,
             onExit = onExit
         )
-        scrollableViewState.updateData(
-            density = LocalDensity.current,
+        ViewDetailBar(
+            postViewModel = postViewModel,
+            pagerState = pagerState,
             maxDraggableHeight = maxHeight - topBarMaxHeight - targetOffset
-        )
-        ScrollableView(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter),
-            state = scrollableViewState,
-            toolbarModifier = Modifier.let {
-                if (scrollableViewState.expand) {
-                    it.background(ViewDetailBarExpand)
-                } else {
-                    it.background(
-                        Brush.verticalGradient(listOf(Color.Transparent, ViewDetailBarFold))
-                    )
-                }
-            },
-            toolbar = {
-                ScrollableBar(
-                    postViewModel = postViewModel,
-                    pagerState = pagerState,
-                    scrollableViewState = it
-                )
-            },
-            contentModifier = Modifier.background(ViewDetailBarFold),
-            content = {
-                ScrollableContent(
-                    postViewModel = postViewModel,
-                    pagerState = pagerState
-                )
-            }
         )
         BackHandler(enabled = postViewModel.viewIndex >= 0) { onExit.invoke() }
     }
@@ -211,6 +185,9 @@ private fun BoxScope.ViewContent(
             onExit.invoke()
             return@HorizontalPager
         }
+        if (postViewModel.dataList.size - index < 5) {
+            postViewModel.loadMore()
+        }
         val data = postViewModel.dataList[index]
         val info = data.getInfo(data.quality) ?: let {
             data.quality = Quality.File
@@ -220,13 +197,7 @@ private fun BoxScope.ViewContent(
     }
 }
 
-private suspend fun loadModel(
-    context: Context,
-    data: PostData,
-    info: PostData.Info,
-    quality: Quality
-): Pair<Any?, Size?> {
-    val file = loadDLFile(data, info, quality) ?: return Pair(null, null)
+private suspend fun loadModel(context: Context, file: File): Pair<Any?, Size?> {
     try {
         createSamplingDecoder(file)?.let {
             return Pair(it, it.intrinsicSize)
@@ -246,12 +217,8 @@ private suspend fun loadPainter(context: Context, data: Any) = suspendCoroutine 
         .data(data)
         .size(coil.size.Size.ORIGINAL)
         .target(
-            onSuccess = {
-                c.resume(it)
-            },
-            onError = {
-                c.resume(null)
-            }
+            onSuccess = { c.resume(it) },
+            onError = { c.resume(null) }
         )
         .build()
     context.imageLoader.enqueue(imageRequest)
@@ -262,38 +229,48 @@ private fun ViewScreenItem(
     data: PostData, info: PostData.Info, quality: Quality,
     onTab: () -> Unit = {},
 ) {
+    val task = loadDLFileWithTask(data, quality)
+    val status by task.statusFlow.collectAsState()
+    if (status !is LoadStatus.Success) {
+        LaunchedEffect(data, quality) { task.start() }
+    }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val size = Size(info.width.toFloat(), info.height.toFloat())
     var model by remember { mutableStateOf<Pair<Any?, Size?>>(Pair(null, size)) }
-    var loadFailed by rememberSaveable { mutableStateOf(false) }
-    val context = LocalContext.current
-    LaunchedEffect(Unit) {
-        model = loadModel(context, data, info, quality)
-        loadFailed = model.first == null
-        println("model: $model")
-    }
-    DisposableEffect(Unit) { onDispose { (model.first as? SamplingDecoder)?.release() } }
-    val coroutineScope = rememberCoroutineScope()
-    if (loadFailed) {
-        ErrorPlaceHolder()
-    } else if (model.first != null) {
-        val zoomableViewState = rememberZoomableState(contentSize = model.second)
-        val processor = if (model.first is SamplingDecoder) {
-            ModelProcessor(samplingProcessorPair)
-        } else {
-            ModelProcessor()
+    when (status) {
+        is LoadStatus.Waiting -> LoadingView()
+        is LoadStatus.Loading -> LoadingView { (status as LoadStatus.Loading).process }
+        is LoadStatus.Error -> ErrorPlaceHolder()
+        is LoadStatus.Success -> {
+            if (model.first == null && model.second == null) {
+                // 解码失败
+                ErrorPlaceHolder()
+            } else if (model.first == null) {
+                LaunchedEffect(status) {
+                    model = loadModel(context, (status as LoadStatus.Success<File>).result)
+                }
+                LoadingView()
+            } else if (model.second != null) {
+                val zoomableViewState = rememberZoomableState(contentSize = model.second)
+                val processor = if (model.first is SamplingDecoder) {
+                    ModelProcessor(samplingProcessorPair)
+                } else {
+                    ModelProcessor()
+                }
+                DisposableEffect(Unit) { onDispose { (model.first as? SamplingDecoder)?.release() } }
+                ImageViewer(
+                    model = model.first,
+                    state = zoomableViewState,
+                    processor = processor,
+                    detectGesture = ZoomableGestureScope(onDoubleTap = {
+                        coroutineScope.launch { zoomableViewState.toggleScale(it) }
+                    }, onTap = {
+                        onTab.invoke()
+                    })
+                )
+            }
         }
-        ImageViewer(
-            model = model.first,
-            state = zoomableViewState,
-            processor = processor,
-            detectGesture = ZoomableGestureScope(onDoubleTap = {
-                coroutineScope.launch { zoomableViewState.toggleScale(it) }
-            }, onTap = {
-                onTab.invoke()
-            })
-        )
-    } else {
-        LoadingView()
     }
 }
 
@@ -319,12 +296,60 @@ private fun ErrorPlaceHolder() {
 }
 
 @Composable
-private fun LoadingView(progress: Float? = null) {
+private fun LoadingView() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        progress?.let {
-            CircularProgressIndicator(progress = { it })
-        } ?: CircularProgressIndicator()
+        CircularProgressIndicator()
     }
+}
+
+@Composable
+private fun LoadingView(progress: () -> Float) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(progress = progress)
+    }
+}
+
+@Composable
+private fun BoxScope.ViewDetailBar(
+    modifier: Modifier = Modifier,
+    postViewModel: PostViewModel,
+    pagerState: PagerState,
+    maxDraggableHeight: Dp,
+) {
+    val scrollableViewState = rememberScrollableViewState()
+    scrollableViewState.updateData(
+        density = LocalDensity.current,
+        maxDraggableHeight = maxDraggableHeight
+    )
+    ScrollableView(
+        modifier = modifier
+            .fillMaxWidth()
+            .align(Alignment.BottomCenter),
+        state = scrollableViewState,
+        toolbarModifier = Modifier.let {
+            if (scrollableViewState.expand) {
+                it.background(ViewDetailBarExpand)
+            } else {
+                it.background(
+                    Brush.verticalGradient(listOf(Color.Transparent, ViewDetailBarFold))
+                )
+            }
+        },
+        toolbar = {
+            ScrollableBar(
+                postViewModel = postViewModel,
+                pagerState = pagerState,
+                scrollableViewState = it
+            )
+        },
+        contentModifier = Modifier.background(ViewDetailBarFold),
+        content = {
+            ScrollableContent(
+                postViewModel = postViewModel,
+                pagerState = pagerState
+            )
+        }
+    )
 }
 
 @Composable

@@ -9,6 +9,7 @@ import com.magic.maw.MyApp
 import com.magic.maw.data.DLInfo
 import com.magic.maw.data.TagInfo
 import com.magic.maw.db.converters.DBConverters
+import com.magic.maw.db.dao.DLDao
 import com.magic.maw.db.dao.TagDao
 
 @Database(
@@ -18,6 +19,7 @@ import com.magic.maw.db.dao.TagDao
 @TypeConverters(DBConverters::class)
 abstract class AppDB : RoomDatabase() {
     abstract fun tagDao(): TagDao
+    abstract fun dlDao(): DLDao
 
     companion object {
         private val db: AppDB by lazy {
@@ -25,6 +27,7 @@ abstract class AppDB : RoomDatabase() {
         }
 
         val tagDao get() = db.tagDao()
+        val dlDao get() = db.dlDao()
 
         private fun build(context: Context): AppDB {
             val db = Room.databaseBuilder(context, AppDB::class.java, "app.db")

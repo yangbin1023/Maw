@@ -22,8 +22,11 @@ enum class TagType(val value: Int) {
     Circle(5),
     Faults(6);
 
-    fun getColor(): Color {
-        return when (this) {
+    /**
+     * 标签颜色
+     */
+    val tagColor: Color
+        get() = when (this) {
             General -> tag_general
             Artist -> tag_artist
             Copyright -> tag_copyright
@@ -32,13 +35,12 @@ enum class TagType(val value: Int) {
             Faults -> tag_faults
             else -> tag_none
         }
-    }
 
     /**
-     * 用于标签排序时的优先级
+     * 标签优先级
      */
-    fun getPriority(): Int {
-        return when (this) {
+    val priority: Int
+        get() = when (this) {
             Artist -> 1
             Copyright -> 2
             Character -> 3
@@ -47,7 +49,6 @@ enum class TagType(val value: Int) {
             General -> 6
             else -> 7
         }
-    }
 
     companion object {
         fun Int?.toTagType(): TagType {
