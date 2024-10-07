@@ -20,8 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +40,7 @@ import coil.request.ImageRequest
 import com.magic.maw.R
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
+import com.magic.maw.ui.components.CountSingleton
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.loadDLFile
 import java.io.File
@@ -109,57 +108,29 @@ private fun getPostRatio(staggered: Boolean, width: Int, height: Int): Float {
     }
 }
 
-private val lock = Any()
-private var inited: Boolean by mutableStateOf(false)
-private var count: Int = 0
-private var colorState: State<Color> = mutableStateOf(Color.Transparent)
-
-private fun startWaitAnimate(): Boolean = synchronized(lock) {
-    count++
-    if (inited)
-        return false
-    inited = true
-    return true
-}
-
-private fun stopWaitAnimate() = synchronized(lock) {
-    count--
-    if (count <= 0) {
-        count = 0
-        inited = false
-        colorState = mutableStateOf(Color.Transparent)
+private val waitAnimate by lazy {
+    CountSingleton(Color.Transparent) {
+        val infiniteTransition = rememberInfiniteTransition(label = "postItem")
+        val targetColor = MaterialTheme.colorScheme.onSurface.copy(0.15f)
+        infiniteTransition.animateColor(
+            initialValue = targetColor,
+            targetValue = targetColor.copy(0.05f),
+            animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse),
+            label = "postItemColor"
+        )
     }
-}
-
-@Composable
-private fun WaitingAnimateInit() {
-    val infiniteTransition = rememberInfiniteTransition(label = "postItem")
-    val targetColor = MaterialTheme.colorScheme.onSurface.copy(0.15f)
-    colorState = infiniteTransition.animateColor(
-        initialValue = targetColor,
-        targetValue = targetColor.copy(0.05f),
-        animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse),
-        label = "postItemColor"
-    )
 }
 
 @Composable
 private fun BoxScope.WaitingView(modifier: Modifier = Modifier) {
-    var initMethod by remember { mutableStateOf(false) }
-    DisposableEffect(Unit) {
-        initMethod = startWaitAnimate()
-        onDispose { stopWaitAnimate() }
-    }
-    if (initMethod) {
-        WaitingAnimateInit()
-        initMethod = false
-    }
+    waitAnimate.OnEffect()
+    val tintColor by waitAnimate.value
     Icon(
         modifier = modifier
             .align(Alignment.Center)
             .fillMaxSize(0.6f),
         imageVector = ImageVector.vectorResource(R.drawable.ic_image),
         contentDescription = null,
-        tint = colorState.value
+        tint = tintColor
     )
 }

@@ -5,12 +5,14 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,17 +25,21 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -46,6 +52,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
@@ -55,9 +62,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import coil.imageLoader
 import coil.request.ImageRequest
@@ -70,8 +81,11 @@ import com.jvziyaoyao.scale.zoomable.zoomable.ZoomableGestureScope
 import com.jvziyaoyao.scale.zoomable.zoomable.rememberZoomableState
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
+import com.magic.maw.data.TagInfo
+import com.magic.maw.data.TagType
 import com.magic.maw.ui.components.ScrollableView
 import com.magic.maw.ui.components.ScrollableViewState
+import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
@@ -240,7 +254,7 @@ private fun ViewScreenItem(
     var model by remember { mutableStateOf<Pair<Any?, Size?>>(Pair(null, size)) }
     when (status) {
         is LoadStatus.Waiting -> LoadingView()
-        is LoadStatus.Loading -> LoadingView { (status as LoadStatus.Loading).process }
+        is LoadStatus.Loading -> LoadingView { (status as? LoadStatus.Loading)?.process ?: 0.99f }
         is LoadStatus.Error -> ErrorPlaceHolder()
         is LoadStatus.Success -> {
             if (model.first == null && model.second == null) {
@@ -296,16 +310,11 @@ private fun ErrorPlaceHolder() {
 }
 
 @Composable
-private fun LoadingView() {
+private fun LoadingView(progress: (() -> Float)? = null) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun LoadingView(progress: () -> Float) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(progress = progress)
+        progress?.let {
+            CircularProgressIndicator(progress = it)
+        } ?: CircularProgressIndicator()
     }
 }
 
@@ -407,8 +416,84 @@ private fun BoxScope.ScrollableContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .align(Alignment.TopCenter)
             .verticalScroll(rememberScrollState())
     ) {
+        val data = postViewModel.dataList[pagerState.currentPage]
+        for (tagInfo in data.tags) {
+            TagInfoItem(info = tagInfo)
+        }
+    }
+}
 
+@Composable
+private fun TagInfoItem(
+    modifier: Modifier = Modifier,
+    info: TagInfo,
+    onClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .padding(start = 5.dp, end = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(modifier = Modifier.weight(1f)) {
+            TagItem(
+                text = info.name,
+                type = info.type,
+                onClick = onClick
+            )
+            Spacer(modifier = Modifier.weight(1f))
+        }
+        Row(
+            modifier = Modifier
+                .border(
+                    width = 1.dp,
+                    color = Color.White,
+                    shape = CircleShape
+                )
+                .padding(vertical = 2.dp, horizontal = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                modifier = Modifier.size(21.dp),
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = Color.White
+            )
+            Text(
+                modifier = Modifier.padding(horizontal = 1.dp),
+                text = info.count.toString(),
+                color = Color.White,
+                fontSize = 18.sp
+            )
+        }
+    }
+}
+
+@Composable
+@Preview
+private fun TagInfoItemPreview() {
+    Column {
+        TagInfoItem(
+            info = TagInfo(
+                id = 10,
+                source = "yande",
+                name = "tokifokiz_bosotto_roshia-go_deklahsdf_hfkeu-nasfhuhsfjieadsf",
+                type = TagType.Artist,
+                count = 64810
+            )
+        )
+        TagInfoItem(
+            info = TagInfo(
+                id = 10,
+                source = "yande",
+                name = "tokifokiz_bosottosf",
+                type = TagType.Copyright,
+                count = 6516
+            )
+        )
     }
 }

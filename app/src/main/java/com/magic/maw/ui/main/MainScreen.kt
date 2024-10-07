@@ -36,7 +36,7 @@ fun MainScreen(mainViewModel: MainViewModel, windowSizeClass: WindowSizeClass) {
 
         val screenWidth = LocalConfiguration.current.screenWidthDp * LocalDensity.current.density
         val dragThreshold = screenWidth * 0.3f
-        val isExpandedScreen = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+        val isExpandedScreen = false//windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 
         ModalNavigationDrawer(
             drawerContent = {

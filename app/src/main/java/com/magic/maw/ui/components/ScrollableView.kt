@@ -18,6 +18,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,28 +50,32 @@ fun ScrollableView(
     content: @Composable BoxScope.() -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    Column(
-        modifier = modifier.fillMaxWidth()
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = Color.Transparent,
+        contentColor = contentColorFor(MaterialTheme.colorScheme.surface),
     ) {
-        Box(
-            modifier = toolbarModifier
-                .fillMaxWidth()
-                .height(state.toolbarHeightDp.dp)
-                .draggable(
-                    state = rememberDraggableState { scope.launch { state.onDelta(it) } },
-                    orientation = Orientation.Vertical,
-                    onDragStopped = { state.onDragEnd() }
-                )
-        ) {
-            toolbar(state)
-        }
-        Box(
-            modifier = contentModifier
-                .fillMaxWidth()
-                .height(with(LocalDensity.current) { state.offsetValue.toDp() }),
-            contentAlignment = Alignment.TopStart
-        ) {
-            content()
+        Column {
+            Box(
+                modifier = toolbarModifier
+                    .fillMaxWidth()
+                    .height(state.toolbarHeightDp.dp)
+                    .draggable(
+                        state = rememberDraggableState { scope.launch { state.onDelta(it) } },
+                        orientation = Orientation.Vertical,
+                        onDragStopped = { state.onDragEnd() }
+                    )
+            ) {
+                toolbar(state)
+            }
+            Box(
+                modifier = contentModifier
+                    .fillMaxWidth()
+                    .height(with(LocalDensity.current) { state.offsetValue.toDp() }),
+                contentAlignment = Alignment.TopStart
+            ) {
+                content()
+            }
         }
     }
 }
