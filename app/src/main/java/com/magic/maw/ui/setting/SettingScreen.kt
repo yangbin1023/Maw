@@ -16,8 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,11 +36,10 @@ import com.magic.maw.data.Rating.Companion.hasRating
 import com.magic.maw.ui.components.DialogSettingItem
 import com.magic.maw.ui.components.MenuSettingItem
 import com.magic.maw.ui.components.MultipleChoiceDialog
-import com.magic.maw.ui.components.ShowSystemBars
+import com.magic.maw.ui.components.SettingItem
 import com.magic.maw.ui.components.SingleChoiceDialog
 import com.magic.maw.ui.components.SwitchSettingItem
 import com.magic.maw.ui.components.throttle
-import com.magic.maw.ui.theme.MawTheme
 import com.magic.maw.ui.theme.supportDynamicColor
 import com.magic.maw.util.configFlow
 import com.magic.maw.util.updateWebConfig
@@ -51,34 +48,18 @@ import kotlinx.coroutines.flow.update
 
 private const val TAG = "SettingScreen"
 
-@Composable
-fun SettingScreen(
-    windowSizeClass: WindowSizeClass,
-    onFinish: () -> Unit,
-    systemBarShown: Boolean = true
-) {
-    MawTheme {
-        val isExpandedScreen = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
-        SettingContent(isExpandedScreen = isExpandedScreen, onFinish = onFinish)
-
-        if (!systemBarShown) {
-            ShowSystemBars()
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingContent(
+fun SettingScreen(
     isExpandedScreen: Boolean,
-    onFinish: () -> Unit,
+    onFinish: (() -> Unit)? = null,
 ) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
     Scaffold(topBar = {
         SettingTopBar(
             enableShadow = false,
-            onFinish = onFinish,
+            onFinish = onFinish ?: {},
             scrollBehavior = scrollBehavior
         )
     }) { innerPadding ->
@@ -233,5 +214,10 @@ private fun SettingBody(
                 checked = config.dynamicColor,
                 onCheckedChange = { configFlow.update { s -> s.copy(dynamicColor = it) } })
         }
+
+        // 版本
+        val context = LocalContext.current
+        val appInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        SettingItem(title = stringResource(id = R.string.version), tips = appInfo.versionName)
     }
 }

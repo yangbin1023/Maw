@@ -23,6 +23,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updatePadding
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 
 object UiUtils {
     fun dp2px(context: Context, value: Float): Int {
@@ -142,4 +144,7 @@ object UiUtils {
         val heightDp = with(LocalDensity.current) { (if (height > 0) height else 24).toDp() }
         return heightDp + TopAppBarDefaults.TopAppBarExpandedHeight
     }
+
+    val NavController.currentRoute: String?
+        @Composable get() = currentBackStackEntryAsState().value?.destination?.route
 }

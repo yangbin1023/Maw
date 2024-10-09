@@ -23,4 +23,5 @@
     <string name="rating">分级</string>
     <string name="all">全部</string>
     <string name="quality">质量</string>
+    <string name="version">版本</string>
 </resources>

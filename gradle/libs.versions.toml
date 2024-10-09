@@ -55,7 +55,6 @@ eventbus = { group = "org.greenrobot", name = "eventbus", version.ref = "eventbu
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttps = { group = "cn.zhxu", name = "okhttps", version.ref = "okhttps" }
 
-
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
 mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
