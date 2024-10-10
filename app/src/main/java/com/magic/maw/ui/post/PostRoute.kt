@@ -308,11 +308,11 @@ private fun PostEmptyView(modifier: Modifier = Modifier, postViewModel: PostView
         verticalArrangement = Arrangement.Center
     ) {
         val text = if (postViewModel.refreshing) {
-            "正在加载"
+            stringResource(R.string.loading)
         } else if (postViewModel.loadFailed) {
-            "加载失败"
+            stringResource(R.string.loading_failed)
         } else {
-            "没有数据"
+            stringResource(R.string.no_data)
         }
         Text(
             text = text,
@@ -364,7 +364,7 @@ private fun PostBody(
             if (postViewModel.noMore) {
                 item(span = StaggeredGridItemSpan.FullLine) {
                     Text(
-                        text = "没有更多数据",
+                        text = stringResource(R.string.no_more_data),
                         modifier = Modifier
                             .height(PostDefaults.NoMoreItemHeight)
                             .wrapContentSize(Alignment.Center)

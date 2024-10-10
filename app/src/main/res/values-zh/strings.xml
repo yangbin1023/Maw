@@ -24,4 +24,8 @@
     <string name="all">全部</string>
     <string name="quality">质量</string>
     <string name="version">版本</string>
+    <string name="loading">正在加载</string>
+    <string name="loading_failed">加载失败</string>
+    <string name="no_data">无数据</string>
+    <string name="no_more_data">没有更多数据</string>
 </resources>

@@ -4,10 +4,8 @@ import android.content.Context
 import android.os.Environment
 import android.util.Log
 import cn.zhxu.okhttps.Download.Ctrl
-import cn.zhxu.okhttps.Process
 import com.magic.maw.MyApp
 import com.magic.maw.data.PostData
-import com.magic.maw.data.PostData.*
 import com.magic.maw.data.Quality
 import com.magic.maw.util.HttpUtils
 import com.magic.maw.website.DLManager.addTask
@@ -20,10 +18,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
 import kotlin.coroutines.resume
-
-typealias DLSuccess = (File) -> Unit
-typealias DLError = (Exception) -> Unit
-typealias DLProcess = (Process) -> Unit
 
 private const val TAG = "DLManager"
 
