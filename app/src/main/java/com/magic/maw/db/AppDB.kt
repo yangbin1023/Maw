@@ -38,3 +38,9 @@ abstract class AppDB : RoomDatabase() {
         }
     }
 }
+
+fun TagDao.updateOrInsert(tagInfo: TagInfo) {
+    get(tagInfo.source, tagInfo.name)?.let {
+        update(tagInfo.copy(id = it.id))
+    } ?: insert(tagInfo)
+}

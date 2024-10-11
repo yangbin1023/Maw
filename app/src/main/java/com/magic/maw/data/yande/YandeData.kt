@@ -6,14 +6,16 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
 import com.magic.maw.data.TagInfo
 import com.magic.maw.website.parser.YandeParser
+import kotlinx.serialization.Serializable
 
+@Serializable
 class YandeData : IData<PostData> {
     var id: Int = 0
     var tags: String? = null
     var created_at: Long? = null
     var updated_at: Long? = null //单位秒
     var creator_id: Int? = null
-    var approver_id: String? = null //基本为null
+    var approver_id: Int? = null //基本为null
     var author: String? = null
     var change: Int? = null
     var source: String? = null
@@ -39,23 +41,24 @@ class YandeData : IData<PostData> {
     var rating: String? = null //分级 "s" 安全
     var is_rating_locked: Boolean? = null
     var has_children: Boolean? = null
-    var parent_id: String? = null
+    var parent_id: Int? = null
     var status: String? = null
     var is_pending: Boolean? = null
     var width: Int? = null
     var height: Int? = null
     var is_held: Boolean? = null
     var frames_pending_string: String? = null
-    var frames_pending //类型未知，数组
-            : Array<Any> = arrayOf()
+//    var frames_pending //类型未知，数组
+//            : Array<Any> = arrayOf()
     var frames_string: String? = null
-    var frames //类型未知，数组
-            : Array<Any> = arrayOf()
+//    var frames //类型未知，数组
+//            : Array<Any> = arrayOf()
     var is_note_locked: Boolean? = null
     var last_noted_at: Int? = null
     var last_commented_at: Int? = null
     var flag_detail: FlagDetail? = null
 
+    @Serializable
     class FlagDetail {
         var post_id: Int? = null
         var reason: String? = null
@@ -88,13 +91,10 @@ class YandeData : IData<PostData> {
         data.srcUrl = source
         data.rating = getRating()
         data.uploadTime = updated_at
-        val tagNames = tags?.split(" ")
-        if (!tagNames.isNullOrEmpty()) {
-            val tagList = ArrayList<TagInfo>()
+        tags?.split(" ")?.toSet()?.let { tagNames ->
             for (tagName in tagNames) {
-                tagList.add(TagInfo(source = YandeParser.SOURCE, name = tagName))
+                data.tags.add(TagInfo(source = YandeParser.SOURCE, name = tagName))
             }
-            data.tags = tagList
         }
         file_ext?.let {
             if (it == "png")

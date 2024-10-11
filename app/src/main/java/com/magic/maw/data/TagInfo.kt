@@ -76,5 +76,12 @@ data class TagInfo(
     @ColumnInfo("update_time")
     val updateTime: Date = Date(),
     @ColumnInfo("read_time")
-    val readTime: Date = Date(),
-)
+    var readTime: Date = Date(),
+) : Comparable<TagInfo> {
+    override fun compareTo(other: TagInfo): Int {
+        return if (type != other.type)
+            type.priority compareTo other.type.priority
+        else
+            name compareTo other.name
+    }
+}

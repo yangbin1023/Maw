@@ -22,6 +22,9 @@ interface TagDao {
     @Query("SELECT * FROM tag_info WHERE source = :source AND read_time > :readDate")
     fun getAllByReadDate(source: String, readDate: Date): List<TagInfo>
 
+    @Query("SELECT * FROM tag_info WHERE source = :source AND name = :name")
+    fun get(source: String, name: String): TagInfo?
+
     @Query("SELECT * FROM tag_info WHERE source = :source AND tag_id = :tagId")
     fun get(source: String, tagId: Int): TagInfo?
 

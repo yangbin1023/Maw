@@ -28,4 +28,8 @@
     <string name="loading_failed">加载失败</string>
     <string name="no_data">无数据</string>
     <string name="no_more_data">没有更多数据</string>
+    <string name="tags">标签</string>
+    <string name="others">其他</string>
+    <string name="author">作者</string>
+    <string name="source">来源</string>
 </resources>

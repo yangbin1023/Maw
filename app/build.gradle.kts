@@ -29,6 +29,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.google.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -102,11 +103,18 @@ dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.gson)
+//    implementation(libs.retrofit)
+//    implementation(libs.retrofit.gson)
     implementation(libs.mmkv)
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
+    implementation(libs.ktor.client.core)
+//    implementation(libs.ktor.client.json)
+    implementation(libs.ktor.client.okhttp)
+//    implementation(libs.ktor.client.serialization.jvm)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -3,7 +3,6 @@ package com.magic.maw
 import android.app.Activity
 import android.app.Application
 import com.magic.maw.website.parser.BaseParser
-import com.magic.maw.website.parser.BaseParser.Companion.getParser
 import com.magic.maw.website.parser.YandeParser
 import com.tencent.mmkv.MMKV
 import java.util.Stack
@@ -20,7 +19,7 @@ class MyApp : Application() {
 
     private fun init() {
         _app = this
-        _parser = getParser(YandeParser.SOURCE)
+        _parser = BaseParser.get(YandeParser.SOURCE)
         MMKV.initialize(this)
     }
 

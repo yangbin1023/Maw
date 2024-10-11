@@ -1,5 +1,6 @@
 package com.magic.maw.data
 
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.magic.maw.data.Quality.Companion.toQuality
 import com.magic.maw.util.configFlow
 
@@ -23,7 +24,7 @@ data class PostData(
     var uploadTime: Long? = null,
     var rating: Rating = Rating.None,
     var fileType: FileType = FileType.Jpeg,
-    var tags: List<TagInfo> = emptyList(),
+    var tags: MutableList<TagInfo> = ArrayList(),
     var previewInfo: Info = Info(),
     var sampleInfo: Info? = null,
     var largeInfo: Info? = null,
@@ -63,6 +64,15 @@ data class PostData(
             Quality.Large -> largeInfo
             Quality.File -> originalInfo
             else -> null
+        }
+    }
+
+    fun updateTag(tagInfo: TagInfo) {
+        for ((index, tag) in tags.withIndex()) {
+            if (tag.name == tagInfo.name) {
+                tags[index] = tagInfo
+                return
+            }
         }
     }
 

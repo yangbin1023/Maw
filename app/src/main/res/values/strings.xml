@@ -27,4 +27,8 @@
     <string name="loading_failed">Loading failed</string>
     <string name="no_data">No data</string>
     <string name="no_more_data">No more data</string>
+    <string name="tags">Tags</string>
+    <string name="others">Others</string>
+    <string name="author">Author</string>
+    <string name="source">Source</string>
 </resources>

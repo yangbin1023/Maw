@@ -1,5 +1,6 @@
 package com.magic.maw.ui.setting
 
+import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,6 +22,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -33,6 +35,7 @@ import com.magic.maw.data.Quality
 import com.magic.maw.data.Quality.Companion.toQuality
 import com.magic.maw.data.Rating.Companion.getRatings
 import com.magic.maw.data.Rating.Companion.hasRating
+import com.magic.maw.data.yande.YandeData
 import com.magic.maw.ui.components.DialogSettingItem
 import com.magic.maw.ui.components.MenuSettingItem
 import com.magic.maw.ui.components.MultipleChoiceDialog
@@ -41,10 +44,16 @@ import com.magic.maw.ui.components.SingleChoiceDialog
 import com.magic.maw.ui.components.SwitchSettingItem
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.supportDynamicColor
+import com.magic.maw.util.client
 import com.magic.maw.util.configFlow
 import com.magic.maw.util.updateWebConfig
 import com.magic.maw.website.parser.BaseParser
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "SettingScreen"
 
@@ -126,7 +135,7 @@ private fun SettingBody(
         }
 
         // 分级
-        val parser = BaseParser.getParser(config.source.lowercase())
+        val parser = BaseParser.get(config.source.lowercase())
         val websiteConfig = config.websiteConfig
         val supportRatings = parser.supportRating.getRatings()
         val selectedRatings = websiteConfig.rating.getRatings()
@@ -219,5 +228,22 @@ private fun SettingBody(
         val context = LocalContext.current
         val appInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         SettingItem(title = stringResource(id = R.string.version), tips = appInfo.versionName)
+
+//        val scope = rememberCoroutineScope()
+//
+//        // Test
+//        SettingItem(title = "test") {
+//            scope.launch {
+//                withContext(Dispatchers.IO) {
+//                    try {
+//                        val url = "https://konachan.com/post.json"
+//                        val response = client.get(url).body<ArrayList<YandeData>>()
+//                        Log.d(TAG, "response: $response")
+//                    } catch (e: Exception) {
+//                        Log.e(TAG, "request failed. ${e.message}")
+//                    }
+//                }
+//            }
+//        }
     }
 }

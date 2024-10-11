@@ -2,45 +2,70 @@ package com.magic.maw.website.parser
 
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
+import com.magic.maw.data.TagInfo
 import com.magic.maw.data.yande.YandeData
-import com.magic.maw.util.HttpUtils
-import com.magic.maw.util.JsonUtils
+import com.magic.maw.data.yande.YandeTag
+import com.magic.maw.util.client
+import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.RequestOption
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import com.magic.maw.website.TagManager
+import io.ktor.client.call.body
+import io.ktor.client.request.get
 
 class YandeParser : BaseParser() {
     override val baseUrl: String get() = "https://yande.re"
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
+    override val tagManager: TagManager = TagManager.get(source)
 
-    override suspend fun requestPostData(option: RequestOption): List<PostData> =
-        suspendCancellableCoroutine { cont ->
-            HttpUtils.getHttp().async(getPostUrl(option)).setOnResponse { response ->
-                try {
-                    var list: List<PostData> = emptyList()
-                    JsonUtils.fromJson2List<YandeData>(response.body.toString())?.let { yandeList ->
-                        val postList = ArrayList<PostData>()
-                        for (item in yandeList) {
-                            postList.add(item.toData() ?: continue)
-                        }
-                        list = postList
-                    }
-                    if (cont.isActive) {
-                        cont.resume(list)
-                    }
-                } catch (e: Throwable) {
-                    if (cont.isActive) {
-                        cont.resumeWithException(e)
-                    }
+    override suspend fun requestPostData(option: RequestOption): List<PostData> {
+        val yandeList: ArrayList<YandeData> = client.get(getPostUrl(option)).body()
+        val list: ArrayList<PostData> = ArrayList()
+        for (item in yandeList) {
+            val data = item.toData() ?: continue
+            for ((index, tag) in data.tags.withIndex()) {
+                (tagManager.getInfoStatus(tag.name).value as? LoadStatus.Success)?.let {
+                    data.tags[index] = it.result
                 }
-            }.setOnException {
-                if (cont.isActive) {
-                    cont.resumeWithException(it)
-                }
-            }.get()
+            }
+            data.tags.sort()
+            list.add(data)
         }
+        return list
+    }
+
+    override suspend fun requestTagInfo(name: String): TagInfo? {
+        if (name.isEmpty())
+            return null
+        var page = firstPageIndex
+        val tagMap = HashMap<String, TagInfo>()
+        var targetInfo: TagInfo? = null
+        var retryCount = 0
+        do {
+            try {
+                val url = getTagUrl(name, page, 20)
+                val yandeList: ArrayList<YandeTag> = client.get(url).body()
+                var found = false
+                for (yandeTag in yandeList) {
+                    val tag = yandeTag.toData() ?: continue
+                    if (tag.name == name) {
+                        found = true
+                        targetInfo = tag
+                    }
+                    tagMap[tag.name] = tag
+                }
+                retryCount = 0
+                if (yandeList.isEmpty() || found)
+                    break
+            } catch (e: Exception) {
+                retryCount++
+                if (retryCount >= 3) break else continue
+            }
+            page++
+        } while (true)
+        tagManager.addAll(tagMap)
+        return targetInfo
+    }
 
     override fun getPostUrl(option: RequestOption): String {
         val tags = ArrayList<String>().apply { addAll(option.tags) }
@@ -49,6 +74,11 @@ class YandeParser : BaseParser() {
         return "$baseUrl/post.json?page=${option.page}&limit=40&tags=$tagStr".apply {
             println("post url: $this")
         }
+    }
+
+    override fun getTagUrl(name: String, page: Int, limit: Int): String {
+        val limit2 = if (limit < 5) 5 else limit
+        return "$baseUrl/tag.json?name=$name&page=$page&limit=$limit2&order=count"
     }
 
     private fun getRatingTag(ratings: Int): String {

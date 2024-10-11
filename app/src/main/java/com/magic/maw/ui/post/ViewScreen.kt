@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -82,12 +83,15 @@ import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
 import com.magic.maw.ui.components.ScrollableView
 import com.magic.maw.ui.components.ScrollableViewState
+import com.magic.maw.ui.components.SettingItem
 import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
 import com.magic.maw.util.UiUtils
+import com.magic.maw.util.configFlow
 import com.magic.maw.website.LoadStatus
+import com.magic.maw.website.TagManager
 import com.magic.maw.website.loadDLFileWithTask
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -251,7 +255,7 @@ private fun ViewScreenItem(
     var model by remember { mutableStateOf<Pair<Any?, Size?>>(Pair(null, size)) }
     when (status) {
         is LoadStatus.Waiting -> LoadingView()
-        is LoadStatus.Loading -> LoadingView { (status as? LoadStatus.Loading)?.process ?: 0.99f }
+        is LoadStatus.Loading -> LoadingView { (status as? LoadStatus.Loading)?.progress ?: 0.99f }
         is LoadStatus.Error -> ErrorPlaceHolder()
         is LoadStatus.Success -> {
             if (model.first == null && model.second == null) {
@@ -410,17 +414,55 @@ private fun BoxScope.ScrollableContent(
     postViewModel: PostViewModel,
     pagerState: PagerState,
 ) {
+    val scope = rememberCoroutineScope()
+    val config by configFlow.collectAsState()
+    val tagManager = TagManager.get(config.source)
     Column(
         modifier = modifier
             .fillMaxWidth()
             .align(Alignment.TopCenter)
             .verticalScroll(rememberScrollState())
     ) {
+        ContentHeader(stringResource(R.string.tags))
+
         val data = postViewModel.dataList[pagerState.currentPage]
+        var tagChanged = false
+        for (tagInfo in data.tags) {
+            if (tagInfo.type == TagType.None) {
+                val info by tagManager.getInfoStatus(tagInfo.name, scope).collectAsState()
+                (info as? LoadStatus.Success)?.let {
+                    data.updateTag(it.result)
+                    tagChanged = true
+                }
+            }
+        }
+        if (tagChanged) {
+            data.tags.sort()
+            tagChanged = false
+        }
         for (tagInfo in data.tags) {
             TagInfoItem(info = tagInfo)
         }
+
+        ContentHeader(stringResource(R.string.others))
+
+        SettingItem(title = stringResource(R.string.author), tips = data.uploader)
+        SettingItem(title = stringResource(R.string.rating), tips = data.rating.name)
+//        SettingItem(title = stringResource(R.string.source), tips = data.srcUrl)
     }
+}
+
+@Composable
+private fun ContentHeader(title: String) {
+    Text(
+        modifier = Modifier.padding(top = 10.dp, start = 15.dp, end = 15.dp, bottom = 5.dp),
+        text = title,
+        fontSize = 20.sp
+    )
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
+        thickness = 2.dp
+    )
 }
 
 @Composable
@@ -474,6 +516,7 @@ private fun TagInfoItem(
 @Preview
 private fun TagInfoItemPreview() {
     Column {
+        ContentHeader(stringResource(R.string.tags))
         TagInfoItem(
             info = TagInfo(
                 id = 10,

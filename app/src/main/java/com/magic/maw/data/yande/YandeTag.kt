@@ -2,10 +2,11 @@ package com.magic.maw.data.yande
 
 import com.magic.maw.data.IData
 import com.magic.maw.data.TagInfo
-import com.magic.maw.data.TagType
 import com.magic.maw.data.TagType.Companion.toTagType
 import com.magic.maw.website.parser.YandeParser
+import kotlinx.serialization.Serializable
 
+@Serializable
 class YandeTag : IData<TagInfo> {
     var id: Int = 0
     var name: String = ""

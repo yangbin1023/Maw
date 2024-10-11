@@ -29,7 +29,7 @@ class PostViewModel(
     internal val stateMap = HashMap<Type, Any>()
 
     init {
-        parser = BaseParser.getParser(configFlow.value.source.lowercase())
+        parser = BaseParser.get(configFlow.value.source.lowercase())
         requestOption.page = parser.firstPageIndex
         requestOption.ratings = configFlow.value.websiteConfig.rating
     }
@@ -137,7 +137,7 @@ class PostViewModel(
     private fun checkForceRefresh(): Boolean {
         var force = false
         if (parser.source.lowercase() != configFlow.value.source.lowercase()) {
-            parser = BaseParser.getParser(configFlow.value.source)
+            parser = BaseParser.get(configFlow.value.source)
             force = true
         }
         if (requestOption.ratings != configFlow.value.websiteConfig.rating) {

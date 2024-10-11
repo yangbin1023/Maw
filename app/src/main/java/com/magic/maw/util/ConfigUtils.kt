@@ -6,15 +6,12 @@ import com.magic.maw.data.Quality
 import com.magic.maw.data.Rating
 import com.magic.maw.ui.theme.supportDynamicColor
 import com.magic.maw.website.parser.YandeParser
-import com.tencent.mmkv.MMKV
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-private val kv by lazy { MMKV.mmkvWithID("config") }
 
 val configFlow = createStorageFlow("config") { Config() }
 

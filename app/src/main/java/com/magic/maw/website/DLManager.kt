@@ -7,17 +7,21 @@ import cn.zhxu.okhttps.Download.Ctrl
 import com.magic.maw.MyApp
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
-import com.magic.maw.util.HttpUtils
+import com.magic.maw.util.client
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
-import com.magic.maw.website.DLManager.removeTask
+import io.ktor.client.plugins.onDownload
+import io.ktor.client.request.get
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.util.cio.writeChannel
+import io.ktor.utils.io.copyAndClose
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
-import kotlin.coroutines.resume
 
 private const val TAG = "DLManager"
 
@@ -110,58 +114,54 @@ data class DLTask(
     val path: String = "",
     val statusFlow: MutableStateFlow<LoadStatus<File>> = MutableStateFlow(LoadStatus.Waiting),
 ) {
+    private var response: HttpResponse? = null
     private var ctrl: Ctrl? = null
     private var lastUpdateProcessTime: Long = 0
 
     fun cancel() = synchronized(this) {
-        ctrl?.cancel()
+        try {
+            ctrl?.cancel()
+        } catch (_: Throwable) {
+        }
         ctrl = null
+        try {
+            response?.cancel()
+        } catch (_: Throwable) {
+        }
+        response = null
     }
 
     override fun toString(): String {
         return "source: $source, id: $id, quality: $quality, url: $url"
     }
 
-    suspend fun start() = suspendCancellableCoroutine { cont ->
-        val onComplete: (Exception?) -> Unit = {
-            removeTask(this)
-            if (cont.isActive) {
-                it?.let {
-                    statusFlow.value = LoadStatus.Error(it)
-                    Log.d(TAG, "start dl task failed: ${it.message}", it)
-                }
-                cont.resume(Unit)
-            }
-        }
+    suspend fun start() {
         if (statusFlow.value is LoadStatus.Success)
-            onComplete(null)
-        HttpUtils.getHttp("dl").async(url).setOnResponse { response ->
-            try {
-                val tmpPath = "${path}_tmp"
-                val ctrl = response.body.stepRate(0.01).setOnProcess {
-                    val now = System.currentTimeMillis()
-                    if (now - lastUpdateProcessTime > 10) {
-                        statusFlow.value = LoadStatus.Loading(it.rate.toFloat().coerceIn(0f, 1f))
-                        lastUpdateProcessTime = now
+            return
+        try {
+            val channel = client.get(url) {
+                onDownload { currentLen, contentLen ->
+                    val progress = contentLen?.let { currentLen.toFloat() / it.toFloat() } ?: 0f
+                    val status = statusFlow.value
+                    if (status is LoadStatus.Error) {
+                        cancel()
+                    } else if (status !is LoadStatus.Success) {
+                        statusFlow.value = LoadStatus.Loading(progress)
                     }
-                }.toFile(tmpPath).setOnFailure {
-                    onComplete.invoke(it.exception)
-                }.setOnSuccess {
-                    val newFile = File(path)
-                    it.renameTo(newFile)
-                    statusFlow.value = LoadStatus.Success(newFile)
-                }.setOnComplete {
-                    onComplete.invoke(null)
-                }.start()
-                synchronized(this) {
-                    this.ctrl = ctrl
                 }
-            } catch (e: Exception) {
-                onComplete.invoke(e)
+            }.apply {
+                response = this
+            }.bodyAsChannel()
+            val file = File(path)
+            channel.copyAndClose(file.writeChannel())
+            statusFlow.value = LoadStatus.Success(file)
+            Log.d(TAG, "download success, $url")
+        } catch (e: Exception) {
+            if (statusFlow.value !is LoadStatus.Success) {
+                statusFlow.value = LoadStatus.Error(e)
             }
-        }.setOnException {
-            onComplete.invoke(it)
-        }.get()
+            Log.d(TAG, "download failed, $url")
+        }
     }
 }
 

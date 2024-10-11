@@ -8,7 +8,6 @@ import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.Response
-import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.SocketTimeoutException
 import java.security.SecureRandom
