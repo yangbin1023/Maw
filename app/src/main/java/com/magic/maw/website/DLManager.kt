@@ -153,6 +153,7 @@ data class DLTask(
                 response = this
             }.bodyAsChannel()
             val file = File(path)
+            file.parentFile?.apply { if (!exists()) mkdirs() }
             channel.copyAndClose(file.writeChannel())
             statusFlow.value = LoadStatus.Success(file)
             Log.d(TAG, "download success, $url")
