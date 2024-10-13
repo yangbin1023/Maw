@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -45,6 +46,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -94,6 +96,7 @@ import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.loadDLFileWithTask
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.coroutines.resume
@@ -108,7 +111,7 @@ fun ViewScreen(
 ) {
     val pagerState = rememberPagerState(postViewModel.viewIndex) { postViewModel.dataList.size }
     val onExit: () -> Unit = {
-        postViewModel.viewIndex = -1
+        postViewModel.showView.update { false }
     }
     val topBarMaxHeight = UiUtils.getTopBarHeight()
     var topAppBarHide by remember { mutableStateOf(systemBarsHide.invoke()) }
@@ -149,7 +152,7 @@ fun ViewScreen(
             pagerState = pagerState,
             maxDraggableHeight = maxHeight - topBarMaxHeight - targetOffset
         )
-        BackHandler(enabled = postViewModel.viewIndex >= 0) { onExit.invoke() }
+        BackHandler(enabled = postViewModel.showView.collectAsState().value) { onExit.invoke() }
     }
 }
 
@@ -198,6 +201,9 @@ private fun BoxScope.ViewContent(
     ) { index ->
         if (index >= postViewModel.dataList.size || index < 0) {
             onExit.invoke()
+            return@HorizontalPager
+        }
+        if (index != pagerState.currentPage) {
             return@HorizontalPager
         }
         if (postViewModel.dataList.size - index < 5) {
@@ -253,11 +259,13 @@ private fun ViewScreenItem(
     val coroutineScope = rememberCoroutineScope()
     val size = Size(info.width.toFloat(), info.height.toFloat())
     var model by remember { mutableStateOf<Pair<Any?, Size?>>(Pair(null, size)) }
+    var retryCount by remember { mutableIntStateOf(0) }
     when (status) {
         is LoadStatus.Waiting -> LoadingView()
         is LoadStatus.Loading -> LoadingView { (status as? LoadStatus.Loading)?.progress ?: 0.99f }
-        is LoadStatus.Error -> ErrorPlaceHolder()
+        is LoadStatus.Error -> ErrorPlaceHolder(onRetry = { retryCount++ })
         is LoadStatus.Success -> {
+            retryCount = 0
             if (model.first == null && model.second == null) {
                 // 解码失败
                 ErrorPlaceHolder()
@@ -290,14 +298,19 @@ private fun ViewScreenItem(
 }
 
 @Composable
-private fun ErrorPlaceHolder() {
+private fun ErrorPlaceHolder(onRetry: () -> Unit = {}) {
     Column(
         modifier = Modifier
-            .fillMaxSize(),
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onRetry
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        val color = Color.White.copy(0.4F)
+        val color = MaterialTheme.colorScheme.onSurface.copy(0.4F)
         Icon(
             modifier = Modifier
                 .size(40.dp),

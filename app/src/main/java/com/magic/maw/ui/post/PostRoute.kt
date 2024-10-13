@@ -1,8 +1,11 @@
 package com.magic.maw.ui.post
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +44,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -86,10 +90,13 @@ fun PostRoute(
             context.showSystemBars()
         }
     }
+    val showView by postViewModel.showView.collectAsState()
+    val fadeIn = fadeIn(animationSpec = tween(500))
+    val fadeOut = fadeOut(animationSpec = tween(500))
     AnimatedVisibility(
-        visible = postViewModel.viewIndex < 0,
-        enter = fadeIn(),
-        exit = fadeOut()
+        visible = !showView,
+        enter = fadeIn,
+        exit = fadeOut
     ) {
         PostScreen(
             postViewModel = postViewModel,
@@ -99,9 +106,9 @@ fun PostRoute(
         )
     }
     AnimatedVisibility(
-        visible = postViewModel.viewIndex >= 0,
-        enter = fadeIn(),
-        exit = fadeOut()
+        visible = showView,
+        enter = slideInHorizontally(animationSpec = tween(500), initialOffsetX = { it }) + fadeIn,
+        exit = slideOutHorizontally(animationSpec = tween(500), targetOffsetX = { it }) + fadeOut
     ) {
         ViewScreen(
             postViewModel = postViewModel,
@@ -338,14 +345,10 @@ private fun PostBody(
     state: LazyStaggeredGridState = rememberLazyStaggeredGridState()
 ) {
     BoxWithConstraints(modifier = modifier) {
-        if (state.isScrollInProgress) {
-            checkLoadMore(postViewModel, state)
-        }
 
-        val columns = max((maxWidth / 200.dp).toInt(), 2)
+        val columns = max((maxWidth / 210.dp).toInt(), 2)
         val contentPadding = getContentPadding(columns = columns)
 
-        StaggeredGridCells.Adaptive(200.dp)
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(columns),
             state = state,
@@ -357,8 +360,12 @@ private fun PostBody(
                         .padding(contentPadding)
                         .clickable { postViewModel.viewIndex = index },
                     postData = item,
+                    postViewModel = postViewModel,
                     staggered = postViewModel.staggered
                 )
+                if ((postViewModel.dataList.size - index) < columns * 3) {
+                    checkLoadMore(postViewModel, state)
+                }
             }
 
             if (postViewModel.noMore) {

@@ -32,6 +32,7 @@ val client by lazy {
         }
         engine {
             config {
+                hostnameVerifier { _, _ -> true }
 //                proxy()
             }
         }

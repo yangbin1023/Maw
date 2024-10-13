@@ -90,7 +90,6 @@ private class NestedScaffoldConnection(
         }
         coroutineScope.launch { state.snapTo(targetOffset) }
         val consumedOffset = delta - (newOffset - targetOffset)
-        println("delta: $delta, source: $source, consumedOffset: $consumedOffset")
         return available.copy(y = consumedOffset)
     }
 

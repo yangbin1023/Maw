@@ -103,7 +103,6 @@ object DLManager {
             }
         }
     }
-
 }
 
 data class DLTask(
@@ -116,7 +115,6 @@ data class DLTask(
 ) {
     private var response: HttpResponse? = null
     private var ctrl: Ctrl? = null
-    private var lastUpdateProcessTime: Long = 0
 
     fun cancel() = synchronized(this) {
         try {
@@ -161,8 +159,9 @@ data class DLTask(
             if (statusFlow.value !is LoadStatus.Success) {
                 statusFlow.value = LoadStatus.Error(e)
             }
-            Log.d(TAG, "download failed, $url")
+            Log.d(TAG, "download failed, $url, ${e.message}")
         }
+        DLManager.removeTask(this)
     }
 }
 

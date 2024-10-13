@@ -36,17 +36,18 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.magic.maw.R
 import com.magic.maw.data.PostData
-import com.magic.maw.data.Quality
 import com.magic.maw.ui.components.CountSingleton
 import com.magic.maw.website.LoadStatus
-import com.magic.maw.website.loadDLFile
-import java.io.File
 
 @Composable
-fun PostItem(modifier: Modifier = Modifier, postData: PostData, staggered: Boolean) {
+fun PostItem(
+    modifier: Modifier = Modifier,
+    postData: PostData,
+    postViewModel: PostViewModel,
+    staggered: Boolean
+) {
     var localData by remember { mutableStateOf(postData) }
     if (localData != postData) {
         localData = postData
@@ -61,24 +62,26 @@ fun PostItem(modifier: Modifier = Modifier, postData: PostData, staggered: Boole
     ) {
         val info = localData.originalInfo
         val ratio = getPostRatio(staggered, info.width, info.height)
-        val status by loadDLFile(localData, Quality.Preview).collectAsState()
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(ratio)
         ) {
-            if (status is LoadStatus.Success<File>) {
-                val result = (status as LoadStatus.Success<File>).result
-                val model = ImageRequest.Builder(LocalContext.current).data(result).build()
-                AsyncImage(
-                    modifier = Modifier.fillMaxSize(),
-                    model = model,
-                    alignment = Alignment.Center,
-                    contentScale = ContentScale.Crop,
-                    contentDescription = null,
-                )
-            } else {
-                WaitingView()
+            val modelFlow = postViewModel.getPreviewModel(LocalContext.current, postData)
+            val modelStatus by modelFlow.collectAsState()
+            when (modelStatus) {
+                is LoadStatus.Success<Any> -> {
+                    val model = (modelStatus as? LoadStatus.Success<Any>)?.result
+                    AsyncImage(
+                        modifier = Modifier.fillMaxSize(),
+                        model = model,
+                        alignment = Alignment.Center,
+                        contentScale = ContentScale.Crop,
+                        contentDescription = null,
+                    )
+                }
+
+                else -> WaitingView()
             }
         }
 
@@ -87,7 +90,7 @@ fun PostItem(modifier: Modifier = Modifier, postData: PostData, staggered: Boole
         Text(
             text = "${info.width} x ${info.height}",
             fontSize = 15.sp,
-            color = postData.rating.getColor(),
+            color = localData.rating.getColor(),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(1.dp)
@@ -123,14 +126,14 @@ private val waitAnimate by lazy {
 
 @Composable
 private fun BoxScope.WaitingView(modifier: Modifier = Modifier) {
-    waitAnimate.OnEffect()
-    val tintColor by waitAnimate.value
+//    waitAnimate.OnEffect()
+//    val tintColor by waitAnimate.value
     Icon(
         modifier = modifier
             .align(Alignment.Center)
             .fillMaxSize(0.6f),
         imageVector = ImageVector.vectorResource(R.drawable.ic_image),
         contentDescription = null,
-        tint = tintColor
+        tint = MaterialTheme.colorScheme.onSurface.copy(0.08f)
     )
 }

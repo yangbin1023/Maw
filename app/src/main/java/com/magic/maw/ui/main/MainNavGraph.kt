@@ -16,6 +16,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,7 +43,7 @@ fun MainNavGraph(
 ) {
     val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
     postViewModel.checkRefresh()
-    mainViewModel.gesturesEnabled = postViewModel.viewIndex == -1
+    mainViewModel.gesturesEnabled = !postViewModel.showView.collectAsState().value
     NavHost(
         navController = navController,
         startDestination = startDestination,
