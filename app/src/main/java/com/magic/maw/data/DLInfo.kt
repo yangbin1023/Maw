@@ -6,7 +6,6 @@ import androidx.room.PrimaryKey
 import java.io.File
 import java.util.Date
 
-
 enum class DLState(val value: Int) {
     None(0),
     Waiting(1),

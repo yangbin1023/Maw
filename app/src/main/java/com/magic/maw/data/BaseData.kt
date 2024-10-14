@@ -1,6 +1,5 @@
 package com.magic.maw.data
 
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.magic.maw.data.Quality.Companion.toQuality
 import com.magic.maw.util.configFlow
 
