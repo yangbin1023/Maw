@@ -37,6 +37,7 @@ import com.magic.maw.ui.components.DialogSettingItem
 import com.magic.maw.ui.components.MenuSettingItem
 import com.magic.maw.ui.components.MultipleChoiceDialog
 import com.magic.maw.ui.components.SettingItem
+import com.magic.maw.ui.components.ShowSystemBars
 import com.magic.maw.ui.components.SingleChoiceDialog
 import com.magic.maw.ui.components.SwitchSettingItem
 import com.magic.maw.ui.components.throttle
@@ -56,6 +57,7 @@ fun SettingScreen(
 ) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
+    ShowSystemBars()
     Scaffold(topBar = {
         SettingTopBar(
             enableShadow = false,
@@ -220,21 +222,5 @@ private fun SettingBody(
         val appInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         SettingItem(title = stringResource(id = R.string.version), tips = appInfo.versionName)
 
-//        val scope = rememberCoroutineScope()
-//
-//        // Test
-//        SettingItem(title = "test") {
-//            scope.launch {
-//                withContext(Dispatchers.IO) {
-//                    try {
-//                        val url = "https://konachan.com/post.json"
-//                        val response = client.get(url).body<ArrayList<YandeData>>()
-//                        Log.d(TAG, "response: $response")
-//                    } catch (e: Exception) {
-//                        Log.e(TAG, "request failed. ${e.message}")
-//                    }
-//                }
-//            }
-//        }
     }
 }

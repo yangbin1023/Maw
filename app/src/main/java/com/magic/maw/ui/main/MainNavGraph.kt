@@ -79,16 +79,10 @@ fun MainNavGraph(
             }
         }
         composable(route = MainRoutes.SETTING) {
-            Surface(
-                modifier = modifier.fillMaxSize(),
-                color = Color.Transparent,
-                contentColor = contentColorFor(MaterialTheme.colorScheme.surface),
-            ) {
-                SettingScreen(
-                    isExpandedScreen = isExpandedScreen,
-                    onFinish = { navController.popBackStack() }
-                )
-            }
+            SettingScreen(
+                isExpandedScreen = isExpandedScreen,
+                onFinish = { navController.popBackStack() }
+            )
         }
     }
 }
