@@ -3,7 +3,6 @@ package com.magic.maw.website
 import android.content.Context
 import android.os.Environment
 import android.util.Log
-import cn.zhxu.okhttps.Download.Ctrl
 import com.magic.maw.MyApp
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
@@ -114,14 +113,8 @@ data class DLTask(
     val statusFlow: MutableStateFlow<LoadStatus<File>> = MutableStateFlow(LoadStatus.Waiting),
 ) {
     private var response: HttpResponse? = null
-    private var ctrl: Ctrl? = null
 
     fun cancel() = synchronized(this) {
-        try {
-            ctrl?.cancel()
-        } catch (_: Throwable) {
-        }
-        ctrl = null
         try {
             response?.cancel()
         } catch (_: Throwable) {

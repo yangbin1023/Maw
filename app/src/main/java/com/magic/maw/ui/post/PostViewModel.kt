@@ -11,7 +11,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import coil.request.ImageRequest
-import com.google.gson.reflect.TypeToken
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.util.configFlow
@@ -24,7 +23,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
-import java.lang.reflect.Type
 
 private const val TAG = "PostViewModel"
 
@@ -35,7 +33,7 @@ class PostViewModel(
     private var parser: BaseParser
     private val dataIdSet = HashSet<Int>()
     private val modelMap = HashMap<Int, Any?>()
-    internal val stateMap = HashMap<Type, Any>()
+    internal val stateMap = HashMap<String, Any>()
     var showView = MutableStateFlow(false)
 
     init {
@@ -208,7 +206,7 @@ class PostViewModel(
 
 @Composable
 internal inline fun <reified T : Any> PostViewModel.getState(onNew: @Composable () -> T): T {
-    val type = object : TypeToken<T>() {}.type
+    val type = T::class.java.name
     val state = stateMap[type]
     (state as? T)?.let { return it }
     val newOne = onNew()

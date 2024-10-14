@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 
 val configFlow = createStorageFlow("config") { Config() }
 
@@ -20,13 +22,13 @@ private inline fun <reified T : Any> createStorageFlow(
     crossinline init: () -> T
 ): MutableStateFlow<T> {
     val jsonStr = kv.decodeString(key, null)
-    val valueStr = jsonStr?.let { JsonUtils.fromJson<T>(it) }
+    val valueStr = jsonStr?.let { json.decodeFromString<T>(jsonStr) }
 
     val flow = MutableStateFlow(valueStr ?: init())
     MainScope().launch {
         flow.drop(1).collect {
             withContext(Dispatchers.IO) {
-                kv.encode(key, JsonUtils.toJson(it))
+                kv.encode(key, json.encodeToString(it))
             }
         }
     }
@@ -46,6 +48,7 @@ fun MutableStateFlow<Config>.updateWebConfig(websiteConfig: WebsiteConfig) {
     }
 }
 
+@Serializable
 data class Config(
     val source: String = YandeParser.SOURCE,
     val yandeConfig: WebsiteConfig = WebsiteConfig(),
@@ -63,6 +66,7 @@ data class Config(
         get() = if (darkMode == 0) isSystemInDarkTheme() else darkMode == 1
 }
 
+@Serializable
 data class WebsiteConfig(
     val rating: Int = Rating.Safe.value,
     val quality: Int = Quality.Sample.value

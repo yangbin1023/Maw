@@ -1,5 +1,6 @@
 package com.magic.maw.ui.post
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -384,11 +385,12 @@ private fun PostBody(
 
 @Composable
 private fun getContentPadding(columns: Int): Dp {
-    val density = LocalDensity.current.density
-    val defaultPadding = (PostDefaults.ContentPadding.value * density).toInt()
+    val density = LocalDensity.current
+    val defaultPadding = with(density) { PostDefaults.ContentPadding.toPx().toInt() }
     val remainder = if (defaultPadding % columns >= columns / 2) columns else 0
     val targetPadding = defaultPadding / columns * columns + remainder
-    return (targetPadding / density).dp
+    Log.d(TAG, "target padding: $targetPadding, columns: $columns")
+    return with(density) { targetPadding.toDp() }
 }
 
 private fun checkRefresh(postViewModel: PostViewModel) {

@@ -101,6 +101,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlin.math.abs
 
 @Composable
 fun ViewScreen(
@@ -203,7 +204,7 @@ private fun BoxScope.ViewContent(
             onExit.invoke()
             return@HorizontalPager
         }
-        if (index != pagerState.currentPage) {
+        if (abs(pagerState.currentPage - index) > 1) {
             return@HorizontalPager
         }
         if (postViewModel.dataList.size - index < 5) {
