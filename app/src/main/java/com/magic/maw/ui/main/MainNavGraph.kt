@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import com.magic.maw.R
 import com.magic.maw.ui.post.PostRoute
 import com.magic.maw.ui.post.PostViewModel
+import com.magic.maw.ui.search.SearchScreen
 import com.magic.maw.ui.setting.SettingScreen
 
 @Composable
@@ -36,7 +37,8 @@ fun MainNavGraph(
     isExpandedScreen: Boolean = false,
     navController: NavHostController = rememberNavController(),
     startDestination: String = MainRoutes.POST,
-    openDrawer: () -> Unit
+    openDrawer: () -> Unit,
+    openSearch: () -> Unit
 ) {
     val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
     postViewModel.checkRefresh()
@@ -52,13 +54,16 @@ fun MainNavGraph(
             PostRoute(
                 postViewModel = postViewModel,
                 isExpandedScreen = isExpandedScreen,
-                openDrawer = openDrawer
+                openDrawer = openDrawer,
+                openSearch = openSearch
             )
         }
         composable(route = MainRoutes.POOL) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
                 Text(
                     text = stringResource(id = R.string.pool),
                     modifier = Modifier.align(Alignment.Center)
@@ -66,9 +71,11 @@ fun MainNavGraph(
             }
         }
         composable(route = MainRoutes.POPULAR) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
                 Text(
                     text = stringResource(id = R.string.popular),
                     modifier = Modifier.align(Alignment.Center)
@@ -81,24 +88,30 @@ fun MainNavGraph(
                 onFinish = { navController.popBackStack() }
             )
         }
+        composable(route = MainRoutes.SEARCH) {
+            SearchScreen(onFinish = { navController.popBackStack() })
+        }
     }
 }
 
-private val defaultEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition =
-    {
-        val base = fadeIn(animationSpec = tween(700))
-        if (targetState.destination.route == MainRoutes.SETTING) {
-            slideInHorizontally(animationSpec = tween(700), initialOffsetX = { it }) + base
-        } else {
-            base
-        }
-    }
+typealias AnimatedScope = AnimatedContentTransitionScope<NavBackStackEntry>
 
-private val defaultExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+private val defaultEnter: AnimatedScope.() -> EnterTransition = {
+    val base = fadeIn(animationSpec = tween(700))
+    val slideIn = slideInHorizontally(animationSpec = tween(700), initialOffsetX = { it })
+    when (targetState.destination.route) {
+        MainRoutes.SETTING -> slideIn + base
+        MainRoutes.SEARCH -> slideIn + base
+        else -> base
+    }
+}
+
+private val defaultExit: AnimatedScope.() -> ExitTransition = {
     val base = fadeOut(animationSpec = tween(700))
-    if (initialState.destination.route == MainRoutes.SETTING) {
-        slideOutHorizontally(animationSpec = tween(700), targetOffsetX = { it }) + base
-    } else {
-        base
+    val slideOut = slideOutHorizontally(animationSpec = tween(700), targetOffsetX = { it })
+    when (initialState.destination.route) {
+        MainRoutes.SETTING -> slideOut + base
+        MainRoutes.SEARCH -> slideOut + base
+        else -> base
     }
 }

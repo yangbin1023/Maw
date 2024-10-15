@@ -22,6 +22,7 @@ object MainRoutes {
     const val POOL = "pool"
     const val POPULAR = "popular"
     const val SETTING = "setting"
+    const val SEARCH = "search"
 }
 
 fun NavController.onNavigate(targetRoute: String) {

@@ -33,7 +33,10 @@ fun MainScreen(mainViewModel: MainViewModel, windowSizeClass: WindowSizeClass) {
         val screenWidth = LocalConfiguration.current.screenWidthDp * LocalDensity.current.density
         val dragThreshold = screenWidth * 0.3f
         val isExpandedScreen = false//windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
-        val isSetting = currentRoute == MainRoutes.SETTING
+        val gesturesEnabled = !isExpandedScreen
+                && mainViewModel.gesturesEnabled
+                && currentRoute != MainRoutes.SETTING
+                && currentRoute != MainRoutes.SEARCH
 
         ModalNavigationDrawer(
             drawerContent = {
@@ -44,7 +47,7 @@ fun MainScreen(mainViewModel: MainViewModel, windowSizeClass: WindowSizeClass) {
                 )
             },
             drawerState = drawerState,
-            gesturesEnabled = !isExpandedScreen && mainViewModel.gesturesEnabled && !isSetting
+            gesturesEnabled = gesturesEnabled
         ) {
             Row(modifier = Modifier.apply {
                 if (!isExpandedScreen) {
@@ -69,7 +72,8 @@ fun MainScreen(mainViewModel: MainViewModel, windowSizeClass: WindowSizeClass) {
                     mainViewModel = mainViewModel,
                     isExpandedScreen = isExpandedScreen,
                     navController = navController,
-                    openDrawer = { coroutineScope.launch { drawerState.open() } }
+                    openDrawer = { coroutineScope.launch { drawerState.open() } },
+                    openSearch = { navController.navigate(MainRoutes.SEARCH) }
                 )
             }
 

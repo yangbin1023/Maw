@@ -80,6 +80,7 @@ fun PostRoute(
     postViewModel: PostViewModel,
     isExpandedScreen: Boolean = false,
     openDrawer: () -> Unit,
+    openSearch: () -> Unit,
 ) {
     val context = LocalContext.current
     var systemBarsHide by remember { mutableStateOf(false) }
@@ -103,7 +104,8 @@ fun PostRoute(
             postViewModel = postViewModel,
             isExpandedScreen = isExpandedScreen,
             onSystemBarsHide = onSystemBarsHide,
-            openDrawer = openDrawer
+            openDrawer = openDrawer,
+            openSearch = openSearch
         )
     }
     AnimatedVisibility(
@@ -127,6 +129,7 @@ private fun PostScreen(
     isExpandedScreen: Boolean,
     onSystemBarsHide: (Boolean) -> Unit = {},
     openDrawer: () -> Unit,
+    openSearch: () -> Unit,
 ) {
     val lazyState = postViewModel.getState { rememberLazyStaggeredGridState() }
     val refreshState = postViewModel.getState { rememberPullToRefreshState() }
@@ -142,7 +145,8 @@ private fun PostScreen(
             lazyState = lazyState,
             refreshState = refreshState,
             onSystemBarsHide = onSystemBarsHide,
-            openDrawer = openDrawer
+            openDrawer = openDrawer,
+            openSearch = openSearch
         )
     }
 }
@@ -154,7 +158,8 @@ private fun NestedScaffoldBody(
     lazyState: LazyStaggeredGridState,
     refreshState: PullToRefreshState,
     onSystemBarsHide: (Boolean) -> Unit = {},
-    openDrawer: () -> Unit = {}
+    openDrawer: () -> Unit = {},
+    openSearch: () -> Unit = {},
 ) {
     val state = postViewModel.getState { rememberNestedScaffoldState() }
     val scrollToTop: () -> Unit = {
@@ -177,7 +182,8 @@ private fun NestedScaffoldBody(
                     .shadow(5.dp),
                 postViewModel = postViewModel,
                 scrollToTop = scrollToTop,
-                openDrawer = openDrawer
+                openDrawer = openDrawer,
+                openSearch = openSearch
             )
         },
         state = state,
@@ -246,6 +252,7 @@ private fun PostTopBar(
     enableShadow: Boolean = true,
     scrollToTop: () -> Unit = {},
     openDrawer: () -> Unit = {},
+    openSearch: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     TopAppBar(
@@ -271,7 +278,7 @@ private fun PostTopBar(
                 Icon(imageVector = imageVector, contentDescription = "")
             }
             IconButton(
-                onClick = {},
+                onClick = openSearch,
                 modifier = Modifier.width(PostDefaults.ActionsIconWidth)
             ) {
                 Icon(imageVector = Icons.Default.Search, contentDescription = "")
@@ -393,12 +400,6 @@ private fun getContentPadding(columns: Int): Dp {
     return with(density) { targetPadding.toDp() }
 }
 
-private fun checkRefresh(postViewModel: PostViewModel) {
-    if (postViewModel.dataList.isEmpty() && !postViewModel.noMore && !postViewModel.refreshing) {
-        postViewModel.refresh()
-    }
-}
-
 private fun checkLoadMore(postViewModel: PostViewModel, state: LazyStaggeredGridState) {
     if (postViewModel.noMore || postViewModel.loading) {
         return
@@ -411,13 +412,6 @@ private fun checkLoadMore(postViewModel: PostViewModel, state: LazyStaggeredGrid
             postViewModel.loadMore()
         }
     }
-}
-
-@Preview("PostRouteExpanded", widthDp = 800, heightDp = 600)
-@Composable
-fun PostRoutePreview() {
-    val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
-    PostRoute(postViewModel, true) {}
 }
 
 object PostDefaults {

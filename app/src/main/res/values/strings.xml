@@ -31,4 +31,5 @@
     <string name="others">Others</string>
     <string name="author">Author</string>
     <string name="source">Source</string>
+    <string name="search_tags">Search tags</string>
 </resources>
