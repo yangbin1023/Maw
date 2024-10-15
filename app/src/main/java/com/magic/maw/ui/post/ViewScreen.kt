@@ -94,12 +94,10 @@ import com.magic.maw.util.UiUtils
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.TagManager
-import com.magic.maw.website.loadDLFileWithTask
-import kotlinx.coroutines.Dispatchers
+import com.magic.maw.website.loadDLFile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -255,11 +253,7 @@ private fun ViewScreenItem(
     quality: Quality,
     onTab: () -> Unit = {},
 ) {
-    val task = loadDLFileWithTask(data, quality)
-    val status by task.statusFlow.collectAsState()
-    if (status !is LoadStatus.Success) {
-        LaunchedEffect(task) { withContext(Dispatchers.IO) { task.start() } }
-    }
+    val status by loadDLFile(data, quality).collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val size = Size(info.width.toFloat(), info.height.toFloat())
