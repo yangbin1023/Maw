@@ -1,7 +1,9 @@
 package com.magic.maw.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,30 +28,35 @@ import androidx.compose.ui.unit.sp
 import com.magic.maw.R
 import com.magic.maw.data.TagType
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TagItem(
     modifier: Modifier = Modifier,
     type: TagType = TagType.None,
     text: String,
     onClick: (() -> Unit)? = null,
-    delete: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
+    deleteEnable: Boolean = false,
     onDeleteClick: (() -> Unit)? = null
 ) {
     Box(modifier = modifier.padding(vertical = 2.dp, horizontal = 5.dp)) {
-        val boxStartPadding = TagItemDefaults.itemHeight / 2
-        val boxEndPadding = if (delete) {
+        val boxStartPadding = TagItemDefaults.itemHeight / 3f
+        val boxEndPadding = if (deleteEnable) {
             (TagItemDefaults.itemHeight - TagItemDefaults.iconSize) / 2
         } else {
             boxStartPadding
         }
-        val textEndPadding = if (delete) 5.dp else 0.dp
-        val tagModifier = onClick?.let {
-            Modifier.clickable(
+        val textEndPadding = if (deleteEnable) 5.dp else 0.dp
+        val tagModifier = if (onClick != null || onLongClick != null) {
+            Modifier.combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = it
+                onLongClick = onLongClick,
+                onClick = onClick ?: {}
             )
-        } ?: Modifier
+        } else {
+            Modifier
+        }
         Row(
             modifier = tagModifier
                 .background(type.tagColor, shape = CircleShape)
@@ -67,7 +74,7 @@ fun TagItem(
                 overflow = TextOverflow.Ellipsis,
                 softWrap = false
             )
-            if (delete) {
+            if (deleteEnable) {
                 val deleteModifier = onDeleteClick?.let {
                     Modifier.clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -97,7 +104,7 @@ private fun TagItemPreview() {
         TagItem(text = "genshin_impact", type = TagType.Character)
         TagItem(text = "genshin_impact", type = TagType.Circle)
         TagItem(text = "genshin_impact", type = TagType.Faults)
-        TagItem(text = "genshin_impact", type = TagType.Faults, delete = true)
+        TagItem(text = "genshin_impact", type = TagType.Faults, deleteEnable = true)
     }
 }
 
