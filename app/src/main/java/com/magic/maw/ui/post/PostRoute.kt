@@ -71,7 +71,9 @@ import com.magic.maw.util.UiUtils.getStatusBarHeight
 import com.magic.maw.util.UiUtils.hideSystemBars
 import com.magic.maw.util.UiUtils.showSystemBars
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 private const val TAG = "PostRoute"
 
@@ -206,46 +208,6 @@ private fun NestedScaffoldBody(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScaffoldBody(
-    postViewModel: PostViewModel,
-    lazyState: LazyStaggeredGridState,
-    refreshState: PullToRefreshState,
-    openDrawer: () -> Unit
-) {
-    val scrollToTop: () -> Unit = {
-        postViewModel.viewModelScope.launch {
-            lazyState.scrollToItem(0, 0)
-        }
-    }
-    val topAppBarState = postViewModel.getState { rememberTopAppBarState() }
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
-        state = topAppBarState,
-        canScroll = { postViewModel.dataList.isNotEmpty() }
-    )
-
-    Scaffold(
-        topBar = {
-            PostTopBar(
-                postViewModel = postViewModel,
-                scrollToTop = scrollToTop,
-                openDrawer = openDrawer,
-                scrollBehavior = if (postViewModel.dataList.isNotEmpty()) scrollBehavior else null
-            )
-        }
-    ) { innerPadding ->
-        PostRefreshBody(
-            modifier = Modifier
-                .padding(innerPadding)
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            postViewModel = postViewModel,
-            refreshState = refreshState,
-            lazyState = lazyState
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 private fun PostTopBar(
     postViewModel: PostViewModel,
     modifier: Modifier = Modifier,
@@ -355,7 +317,7 @@ private fun PostBody(
     BoxWithConstraints(modifier = modifier) {
 
         val columns = max((maxWidth / 210.dp).toInt(), 2)
-        val contentPadding = getContentPadding(columns = columns)
+        val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
 
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(columns),
@@ -391,13 +353,25 @@ private fun PostBody(
 }
 
 @Composable
-private fun getContentPadding(columns: Int): Dp {
-    val density = LocalDensity.current
-    val defaultPadding = with(density) { PostDefaults.ContentPadding.toPx().toInt() }
-    val remainder = if (defaultPadding % columns >= columns / 2) columns else 0
-    val targetPadding = defaultPadding / columns * columns + remainder
-    Log.d(TAG, "target padding: $targetPadding, columns: $columns")
-    return with(density) { targetPadding.toDp() }
+private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensity.current) {
+    val totalWidth = maxWidth.toPx().toInt()
+    val targetSpace = (PostDefaults.ContentPadding * 2).toPx().roundToInt()
+    val itemMaxWidth = totalWidth / columns
+    var currentSpace = Int.MAX_VALUE
+    for (space in 1 until itemMaxWidth) {
+        if ((totalWidth - space * (columns + 1)) % columns == 0) {
+            if (abs(space - targetSpace) < abs(currentSpace - targetSpace)) {
+                currentSpace = space
+            } else {
+                break
+            }
+        }
+    }
+    if (currentSpace == Int.MAX_VALUE) {
+        currentSpace = targetSpace
+        Log.w(TAG, "No suitable space found")
+    }
+    currentSpace.toDp() / 2
 }
 
 private fun checkLoadMore(postViewModel: PostViewModel, state: LazyStaggeredGridState) {
