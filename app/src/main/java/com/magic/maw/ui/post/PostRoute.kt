@@ -34,15 +34,12 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,15 +50,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.magic.maw.R
 import com.magic.maw.ui.components.NestedScaffold
 import com.magic.maw.ui.components.rememberNestedScaffoldState
@@ -71,7 +65,9 @@ import com.magic.maw.util.UiUtils.getStatusBarHeight
 import com.magic.maw.util.UiUtils.hideSystemBars
 import com.magic.maw.util.UiUtils.showSystemBars
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 private const val TAG = "PostRoute"
 
@@ -200,46 +196,6 @@ private fun NestedScaffoldBody(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScaffoldBody(
-    postViewModel: PostViewModel,
-    lazyState: LazyStaggeredGridState,
-    refreshState: PullToRefreshState,
-    openDrawer: () -> Unit
-) {
-    val scrollToTop: () -> Unit = {
-        postViewModel.viewModelScope.launch {
-            lazyState.scrollToItem(0, 0)
-        }
-    }
-    val topAppBarState = postViewModel.getState { rememberTopAppBarState() }
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
-        state = topAppBarState,
-        canScroll = { postViewModel.dataList.isNotEmpty() }
-    )
-
-    Scaffold(
-        topBar = {
-            PostTopBar(
-                postViewModel = postViewModel,
-                scrollToTop = scrollToTop,
-                openDrawer = openDrawer,
-                scrollBehavior = if (postViewModel.dataList.isNotEmpty()) scrollBehavior else null
-            )
-        }
-    ) { innerPadding ->
-        PostRefreshBody(
-            modifier = Modifier
-                .padding(innerPadding)
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            postViewModel = postViewModel,
-            refreshState = refreshState,
-            lazyState = lazyState
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 private fun PostTopBar(
     postViewModel: PostViewModel,
     modifier: Modifier = Modifier,
@@ -348,7 +304,7 @@ private fun PostBody(
     BoxWithConstraints(modifier = modifier) {
 
         val columns = max((maxWidth / 210.dp).toInt(), 2)
-        val contentPadding = getContentPadding(columns = columns)
+        val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
 
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(columns),
@@ -384,19 +340,25 @@ private fun PostBody(
 }
 
 @Composable
-private fun getContentPadding(columns: Int): Dp {
-    val density = LocalDensity.current
-    val defaultPadding = with(density) { PostDefaults.ContentPadding.toPx().toInt() }
-    val remainder = if (defaultPadding % columns >= columns / 2) columns else 0
-    val targetPadding = defaultPadding / columns * columns + remainder
-    Log.d(TAG, "target padding: $targetPadding, columns: $columns")
-    return with(density) { targetPadding.toDp() }
-}
-
-private fun checkRefresh(postViewModel: PostViewModel) {
-    if (postViewModel.dataList.isEmpty() && !postViewModel.noMore && !postViewModel.refreshing) {
-        postViewModel.refresh()
+private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensity.current) {
+    val totalWidth = maxWidth.toPx().toInt()
+    val targetSpace = (PostDefaults.ContentPadding * 2).toPx().roundToInt()
+    val itemMaxWidth = totalWidth / columns
+    var currentSpace = Int.MAX_VALUE
+    for (space in 1 until itemMaxWidth) {
+        if ((totalWidth - space * (columns + 1)) % columns == 0) {
+            if (abs(space - targetSpace) < abs(currentSpace - targetSpace)) {
+                currentSpace = space
+            } else {
+                break
+            }
+        }
     }
+    if (currentSpace == Int.MAX_VALUE) {
+        currentSpace = targetSpace
+        Log.w(TAG, "No suitable space found")
+    }
+    currentSpace.toDp() / 2
 }
 
 private fun checkLoadMore(postViewModel: PostViewModel, state: LazyStaggeredGridState) {
@@ -411,13 +373,6 @@ private fun checkLoadMore(postViewModel: PostViewModel, state: LazyStaggeredGrid
             postViewModel.loadMore()
         }
     }
-}
-
-@Preview("PostRouteExpanded", widthDp = 800, heightDp = 600)
-@Composable
-fun PostRoutePreview() {
-    val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
-    PostRoute(postViewModel, true) {}
 }
 
 object PostDefaults {
