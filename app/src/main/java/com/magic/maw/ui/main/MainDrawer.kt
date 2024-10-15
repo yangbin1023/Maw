@@ -1,6 +1,7 @@
 package com.magic.maw.ui.main
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -8,10 +9,12 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.magic.maw.R
 import com.magic.maw.ui.components.DrawerItem
+import com.magic.maw.util.UiUtils.getStatusBarHeight
 
 @Composable
 fun MainDrawer(
@@ -34,6 +37,7 @@ fun MainDrawer(
     ModalDrawerSheet(
         modifier = sheetModifier,
         drawerShape = RoundedCornerShape(topEnd = 5.dp, bottomEnd = 5.dp),
+        windowInsets = WindowInsets(top = LocalContext.current.getStatusBarHeight()),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
