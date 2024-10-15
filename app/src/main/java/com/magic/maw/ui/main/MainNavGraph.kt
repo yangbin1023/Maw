@@ -43,6 +43,7 @@ fun MainNavGraph(
     val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
     postViewModel.checkRefresh()
     mainViewModel.gesturesEnabled = !postViewModel.showView.collectAsState().value
+    val onFinish: () -> Unit = { navController.popBackStack() }
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -85,11 +86,14 @@ fun MainNavGraph(
         composable(route = MainRoutes.SETTING) {
             SettingScreen(
                 isExpandedScreen = isExpandedScreen,
-                onFinish = { navController.popBackStack() }
+                onFinish = onFinish
             )
         }
         composable(route = MainRoutes.SEARCH) {
-            SearchScreen(onFinish = { navController.popBackStack() })
+            SearchScreen(
+                onFinish = onFinish,
+                onSearch = { postViewModel.search(it);onFinish() }
+            )
         }
     }
 }

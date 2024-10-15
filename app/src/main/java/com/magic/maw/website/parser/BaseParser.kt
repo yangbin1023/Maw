@@ -15,6 +15,7 @@ abstract class BaseParser {
 
     abstract suspend fun requestPostData(option: RequestOption): List<PostData>
     abstract suspend fun requestTagInfo(name: String): TagInfo?
+    abstract fun RequestOption.parseSearchText(text: String): Boolean
 
     protected abstract fun getPostUrl(option: RequestOption): String
     protected abstract fun getTagUrl(name: String, page: Int, limit: Int): String
@@ -35,8 +36,3 @@ abstract class BaseParser {
         }
     }
 }
-
-data class PostResult(
-    val list: List<PostData> = emptyList(),
-    val throwable: Throwable? = null,
-)

@@ -49,14 +49,15 @@ object DLManager {
         source: String,
         id: Int,
         quality: Quality,
-        url: String
+        url: String,
+        scope: CoroutineScope? = null
     ): MutableStateFlow<LoadStatus<File>> {
         val path = getDLFullPath(source, id, quality)
         val file = File(path)
         if (file.exists())
             return MutableStateFlow(LoadStatus.Success(file))
         val task = addTask(source, id, quality, url, path)
-        coroutineScope.launch { task.start() }
+        (scope ?: coroutineScope).launch { task.start() }
         return task.statusFlow
     }
 
@@ -112,6 +113,7 @@ data class DLTask(
     val path: String = "",
     val statusFlow: MutableStateFlow<LoadStatus<File>> = MutableStateFlow(LoadStatus.Waiting),
 ) {
+    private var started: Boolean = false
     private var response: HttpResponse? = null
 
     fun cancel() = synchronized(this) {
@@ -129,6 +131,11 @@ data class DLTask(
     suspend fun start() {
         if (statusFlow.value is LoadStatus.Success)
             return
+        synchronized(this) {
+            if (started)
+                return
+            started = true
+        }
         try {
             val channel = client.get(url) {
                 onDownload { currentLen, contentLen ->
@@ -160,10 +167,11 @@ data class DLTask(
 
 fun loadDLFile(
     postData: PostData,
-    quality: Quality = postData.quality
+    quality: Quality = postData.quality,
+    scope: CoroutineScope? = null
 ): MutableStateFlow<LoadStatus<File>> {
     val info = postData.getInfo(quality) ?: postData.originalInfo
-    return DLManager.addTaskAndStart(postData.source, postData.id, quality, info.url)
+    return DLManager.addTaskAndStart(postData.source, postData.id, quality, info.url, scope)
 }
 
 fun loadDLFileWithTask(

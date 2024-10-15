@@ -65,8 +65,7 @@ fun TagItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                modifier = Modifier
-                    .padding(end = textEndPadding),
+                modifier = Modifier.padding(end = textEndPadding, bottom = 1.dp),
                 color = Color.White,
                 text = text.replace("_", " "),
                 fontSize = 16.sp,
@@ -75,15 +74,14 @@ fun TagItem(
                 softWrap = false
             )
             if (deleteEnable) {
-                val deleteModifier = onDeleteClick?.let {
-                    Modifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = it
-                    )
-                } ?: Modifier
                 Icon(
-                    modifier = deleteModifier.size(TagItemDefaults.iconSize),
+                    modifier = Modifier
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onDeleteClick ?: {}
+                        )
+                        .size(TagItemDefaults.iconSize),
                     painter = painterResource(id = R.drawable.ic_tag_delete),
                     tint = Color.White,
                     contentDescription = null
@@ -109,6 +107,6 @@ private fun TagItemPreview() {
 }
 
 object TagItemDefaults {
-    val itemHeight: Dp = 30.dp
-    val iconSize: Dp = 22.dp
+    val itemHeight: Dp = 26.dp
+    val iconSize: Dp = 20.dp
 }

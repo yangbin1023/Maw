@@ -95,9 +95,11 @@ import com.magic.maw.util.configFlow
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.loadDLFileWithTask
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -248,13 +250,15 @@ private suspend fun loadPainter(context: Context, data: Any) = suspendCoroutine 
 
 @Composable
 private fun ViewScreenItem(
-    data: PostData, info: PostData.Info, quality: Quality,
+    data: PostData,
+    info: PostData.Info,
+    quality: Quality,
     onTab: () -> Unit = {},
 ) {
     val task = loadDLFileWithTask(data, quality)
     val status by task.statusFlow.collectAsState()
     if (status !is LoadStatus.Success) {
-        LaunchedEffect(data, quality) { task.start() }
+        LaunchedEffect(task) { withContext(Dispatchers.IO) { task.start() } }
     }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()

@@ -11,6 +11,7 @@ import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import java.net.URLDecoder
 
 class YandeParser : BaseParser() {
     override val baseUrl: String get() = "https://yande.re"
@@ -41,9 +42,10 @@ class YandeParser : BaseParser() {
         val tagMap = HashMap<String, TagInfo>()
         var targetInfo: TagInfo? = null
         var retryCount = 0
+        val limit = 20
         do {
             try {
-                val url = getTagUrl(name, page, 20)
+                val url = getTagUrl(name, page, limit)
                 val yandeList: ArrayList<YandeTag> = client.get(url).body()
                 var found = false
                 for (yandeTag in yandeList) {
@@ -65,6 +67,24 @@ class YandeParser : BaseParser() {
         } while (true)
         tagManager.addAll(tagMap)
         return targetInfo
+    }
+
+    override fun RequestOption.parseSearchText(text: String): Boolean {
+        if (text.isEmpty())
+            return false
+        val tagTexts = URLDecoder.decode(text, "UTF-8").split(" ")
+        val tagList = ArrayList<String>()
+        for (tagText in tagTexts) {
+            if (tagText.isEmpty())
+                continue
+            if (tagText.startsWith("tag:") || tagText.startsWith("-tag:"))
+                continue
+            tagList.add(tagText)
+        }
+        if (tagList.isNotEmpty()) {
+            addTags(tagList)
+        }
+        return tagList.isNotEmpty()
     }
 
     override fun getPostUrl(option: RequestOption): String {

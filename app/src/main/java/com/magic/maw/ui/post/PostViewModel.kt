@@ -34,6 +34,7 @@ class PostViewModel(
     private val dataIdSet = HashSet<Int>()
     private val modelMap = HashMap<Int, Any?>()
     internal val stateMap = HashMap<String, Any>()
+    private var needSearch: Boolean = false
     var showView = MutableStateFlow(false)
 
     init {
@@ -106,6 +107,7 @@ class PostViewModel(
         } finally {
             refreshing = false
             loading = false
+            needSearch = false
         }
     }
 
@@ -148,6 +150,13 @@ class PostViewModel(
         loading = false
     }
 
+    fun search(text: String) {
+        needSearch = with(parser) { requestOption.parseSearchText(text) }
+        if (needSearch) {
+            refresh()
+        }
+    }
+
     fun getPreviewModel(context: Context, postData: PostData): MutableStateFlow<LoadStatus<Any>> {
         synchronized(modelMap) {
             modelMap[postData.id]?.let { return MutableStateFlow(LoadStatus.Success(it)) }
@@ -164,7 +173,7 @@ class PostViewModel(
                 resultFlow.value = it
             }
         }
-        val statusFlow = loadDLFile(postData, Quality.Preview)
+        val statusFlow = loadDLFile(postData, Quality.Preview, viewModelScope)
         viewModelScope.launch {
             checkFunc(statusFlow.value)
             statusFlow.collect {
@@ -183,6 +192,9 @@ class PostViewModel(
         if (requestOption.ratings != configFlow.value.websiteConfig.rating) {
             force = true
             requestOption.ratings = configFlow.value.websiteConfig.rating
+        }
+        if (needSearch) {
+            force = true
         }
         if (force) {
             requestOption.page = parser.firstPageIndex
