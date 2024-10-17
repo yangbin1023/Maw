@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.magic.maw.R
 import com.magic.maw.ui.components.rememberNestedScaffoldState
+import com.magic.maw.util.UiUtils.showSystemBars
 import kotlinx.coroutines.launch
 
 private const val TAG = "PostRoute"
@@ -74,6 +75,7 @@ fun PostRoute(
     val refreshState = rememberPullToRefreshState()
     val scaffoldState = rememberNestedScaffoldState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     AnimatedVisibility(
         visible = uiState is PostUiState.Post,
@@ -128,6 +130,7 @@ fun PostRoute(
                         scope.launch {
                             lazyState.scrollToItem(0, 0)
                             scaffoldState.animateTo(scaffoldState.maxPx)
+                            context.showSystemBars()
                         }
                     } else {
                         openSearch.invoke(tag.name)
