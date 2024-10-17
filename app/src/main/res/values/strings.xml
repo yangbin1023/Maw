@@ -32,4 +32,5 @@
     <string name="author">Author</string>
     <string name="source">Source</string>
     <string name="search_tags">Search tags</string>
+    <string name="click_again_to_exit">Click again to exit</string>
 </resources>

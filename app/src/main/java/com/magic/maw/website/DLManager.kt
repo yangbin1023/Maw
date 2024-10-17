@@ -2,11 +2,11 @@ package com.magic.maw.website
 
 import android.content.Context
 import android.os.Environment
-import android.util.Log
 import com.magic.maw.MyApp
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.util.client
+import com.magic.maw.util.logger as Logger
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
 import io.ktor.client.plugins.onDownload
@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 private const val TAG = "DLManager"
+private val logger = Logger(TAG)
 
 object DLManager {
     private val taskMap = LinkedHashMap<String, DLTask>()
@@ -99,7 +100,7 @@ object DLManager {
             if (taskMap[task.url] == task) {
                 taskMap.remove(task.url)
             } else {
-                Log.w(TAG, "The task is completed but does not exist in the task map.")
+                logger.warning("The task is completed but does not exist in the task map.")
             }
         }
     }
@@ -154,12 +155,12 @@ data class DLTask(
             file.parentFile?.apply { if (!exists()) mkdirs() }
             channel.copyAndClose(file.writeChannel())
             statusFlow.value = LoadStatus.Success(file)
-            Log.d(TAG, "download success, $url")
+            logger.info("download success, $url")
         } catch (e: Exception) {
             if (statusFlow.value !is LoadStatus.Success) {
                 statusFlow.value = LoadStatus.Error(e)
             }
-            Log.d(TAG, "download failed, $url, ${e.message}")
+            logger.warning("download failed, $url, ${e.message}")
         }
         DLManager.removeTask(this)
     }

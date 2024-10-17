@@ -181,8 +181,10 @@ class PostViewModel(
         }
     }
 
-    fun clearTags() {
+    fun clearTags(): Boolean {
+        val notEmpty = viewModelState.value.requestOption.tags.isNotEmpty()
         viewModelState.value.requestOption.clearTags()
+        return notEmpty
     }
 
     fun setViewIndex(index: Int) {

@@ -50,12 +50,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.magic.maw.R
 import com.magic.maw.ui.components.NestedScaffold
+import com.magic.maw.ui.components.NestedScaffoldState
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.theme.TableLayout
 import com.magic.maw.ui.theme.WaterLayout
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import com.magic.maw.util.UiUtils.hideSystemBars
 import com.magic.maw.util.UiUtils.showSystemBars
+import com.magic.maw.util.logger
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
@@ -67,6 +69,7 @@ fun PostScreen(
     uiState: PostUiState.Post,
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
+    scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
     openDrawer: () -> Unit,
     openSearch: () -> Unit,
     onRefresh: () -> Unit,
@@ -79,6 +82,7 @@ fun PostScreen(
         lazyState = lazyState,
         refreshState = refreshState,
         staggeredState = staggeredState,
+        scaffoldState = scaffoldState,
         openDrawer = openDrawer,
         openSearch = openSearch,
         onRefresh = onRefresh,
@@ -93,6 +97,7 @@ private fun NestedScaffoldBody(
     uiState: PostUiState.Post,
     lazyState: LazyStaggeredGridState,
     refreshState: PullToRefreshState,
+    scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
     staggeredState: MutableState<Boolean>,
     openDrawer: () -> Unit = {},
     openSearch: () -> Unit = {},
@@ -102,12 +107,11 @@ private fun NestedScaffoldBody(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val state = rememberNestedScaffoldState()
     val scrollToTop: () -> Unit = { scope.launch { lazyState.scrollToItem(0, 0) } }
-    LaunchedEffect(state) {
-        if (state.scrollValue == state.minPx) {
+    LaunchedEffect(scaffoldState) {
+        if (scaffoldState.scrollValue == scaffoldState.minPx) {
             context.hideSystemBars()
-        } else if (state.scrollValue == state.maxPx) {
+        } else if (scaffoldState.scrollValue == scaffoldState.maxPx) {
             context.showSystemBars()
         }
     }
@@ -123,7 +127,7 @@ private fun NestedScaffoldBody(
                 openSearch = openSearch
             )
         },
-        state = state,
+        state = scaffoldState,
         canScroll = {
             refreshState.distanceFraction <= 0 && uiState.dataList.isNotEmpty()
         },
@@ -322,7 +326,7 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
     }
     if (currentSpace == Int.MAX_VALUE) {
         currentSpace = targetSpace
-        Log.w("PostScreen", "No suitable space found")
+        logger("PostScreen").warning("No suitable space found")
     }
     currentSpace.toDp() / 2
 }

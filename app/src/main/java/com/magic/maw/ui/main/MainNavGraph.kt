@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -27,9 +28,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.magic.maw.R
 import com.magic.maw.ui.post.PostRoute
+import com.magic.maw.ui.post.PostUiState
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.search.SearchScreen
 import com.magic.maw.ui.setting.SettingScreen
+import com.magic.maw.util.configFlow
+import com.magic.maw.website.parser.BaseParser
 
 @Composable
 fun MainNavGraph(
@@ -40,8 +44,12 @@ fun MainNavGraph(
     startDestination: String = MainRoutes.POST,
     openDrawer: () -> Unit
 ) {
-    val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
+    val parser = BaseParser.get(configFlow.collectAsState().value.source)
+    val postViewModel: PostViewModel =
+        viewModel(factory = PostViewModel.providerFactory(parser = parser))
     val onFinish: () -> Unit = { navController.popBackStack() }
+    mainViewModel.gesturesEnabled =
+        postViewModel.uiState.collectAsState().value !is PostUiState.View
     NavHost(
         navController = navController,
         startDestination = startDestination,

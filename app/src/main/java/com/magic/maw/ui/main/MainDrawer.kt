@@ -26,16 +26,15 @@ fun MainDrawer(
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val targetWidth = screenWidth * 0.85f
     val sheetModifier = if (targetWidth < 360.dp) {
-        val minWidth = if (targetWidth > 240.dp) 240.dp else targetWidth
-        modifier.sizeIn(
-            minWidth = minWidth,
+        Modifier.sizeIn(
+            minWidth = if (targetWidth > 240.dp) 240.dp else targetWidth,
             maxWidth = targetWidth,
         )
     } else {
-        modifier
+        Modifier
     }
     ModalDrawerSheet(
-        modifier = sheetModifier,
+        modifier = modifier.then(sheetModifier),
         drawerShape = RoundedCornerShape(topEnd = 5.dp, bottomEnd = 5.dp),
         windowInsets = WindowInsets(top = LocalContext.current.getStatusBarHeight()),
     ) {
