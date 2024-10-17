@@ -137,12 +137,8 @@ object UiUtils {
 
     fun Context.isShowStatusBars(): Boolean {
         val window = findActivity()?.window ?: return false
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val windowInsets = window.decorView.rootWindowInsets
-            return windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top > 0
-        } else {
-            return !window.decorView.systemUiVisibility.hasFlag(View.SYSTEM_UI_FLAG_FULLSCREEN)
-        }
+        return ViewCompat.getRootWindowInsets(window.decorView)
+            ?.isVisible(WindowInsetsCompat.Type.statusBars()) == true
     }
 
     fun Context.getStatusBarHeight(): Int {

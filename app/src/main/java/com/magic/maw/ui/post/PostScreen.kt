@@ -1,6 +1,5 @@
 package com.magic.maw.ui.post
 
-import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -57,11 +56,13 @@ import com.magic.maw.ui.theme.WaterLayout
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import com.magic.maw.util.UiUtils.hideSystemBars
 import com.magic.maw.util.UiUtils.showSystemBars
-import com.magic.maw.util.logger
+import com.magic.maw.util.logger as Logger
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
+
+private val logger = Logger("PostScreen")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -326,7 +327,7 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
     }
     if (currentSpace == Int.MAX_VALUE) {
         currentSpace = targetSpace
-        logger("PostScreen").warning("No suitable space found")
+        logger.warning("No suitable space found")
     }
     currentSpace.toDp() / 2
 }

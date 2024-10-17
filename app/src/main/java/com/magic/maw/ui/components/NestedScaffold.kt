@@ -155,7 +155,7 @@ fun NestedScaffold(
         val density = LocalDensity.current
         val newPadding = remember(innerPadding) {
             object : PaddingValues {
-                override fun calculateBottomPadding(): Dp = innerPadding.calculateBottomPadding()
+                override fun calculateBottomPadding(): Dp = 0.dp
 
                 override fun calculateLeftPadding(layoutDirection: LayoutDirection): Dp =
                     innerPadding.calculateLeftPadding(layoutDirection)
