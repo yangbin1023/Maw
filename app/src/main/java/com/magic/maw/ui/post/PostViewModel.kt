@@ -161,6 +161,7 @@ class PostViewModel(
                 val list = parser.requestPostData(option.copy(page = option.page + 1))
                 viewModelState.update {
                     if (it.type != UiStateType.Refresh) {
+                        it.requestOption.page++
                         it.append(dataList = list, type = UiStateType.None)
                     } else {
                         it
