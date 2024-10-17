@@ -58,7 +58,7 @@ class NestedScaffoldState(
     companion object {
         val Saver = listSaver(
             save = { state ->
-                listOf(state.minPx, state.maxPx, state.scrollValue)
+                listOf(state.maxPx, state.minPx, state.scrollValue)
             },
             restore = {
                 NestedScaffoldState(it[0], it[1], it[2])

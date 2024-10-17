@@ -36,16 +36,19 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.magic.maw.R
 import com.magic.maw.data.PostData
+import com.magic.maw.data.Quality
 import com.magic.maw.ui.components.CountSingleton
 import com.magic.maw.website.LoadStatus
+import com.magic.maw.website.loadDLFile
+import java.io.File
 
 @Composable
 fun PostItem(
     modifier: Modifier = Modifier,
     postData: PostData,
-    postViewModel: PostViewModel,
     staggered: Boolean
 ) {
     var localData by remember { mutableStateOf(postData) }
@@ -67,11 +70,12 @@ fun PostItem(
                 .fillMaxWidth()
                 .aspectRatio(ratio)
         ) {
-            val modelFlow = postViewModel.getPreviewModel(LocalContext.current, postData)
-            val modelStatus by modelFlow.collectAsState()
-            when (modelStatus) {
-                is LoadStatus.Success<Any> -> {
-                    val model = (modelStatus as? LoadStatus.Success<Any>)?.result
+            val context = LocalContext.current
+            val status by loadDLFile(postData, Quality.Preview).collectAsState()
+            when (status) {
+                is LoadStatus.Success<File> -> {
+                    val file = (status as? LoadStatus.Success<File>)?.result
+                    val model = ImageRequest.Builder(context).data(file).build()
                     AsyncImage(
                         modifier = Modifier.fillMaxSize(),
                         model = model,

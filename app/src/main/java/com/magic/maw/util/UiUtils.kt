@@ -126,6 +126,15 @@ object UiUtils {
         }
     }
 
+    fun Context.showSystemBars(toShow: Boolean) {
+        val isShow = isShowStatusBars()
+        if (toShow && !isShow) {
+            showSystemBars()
+        } else if (!toShow && isShow) {
+            hideSystemBars()
+        }
+    }
+
     fun Context.isShowStatusBars(): Boolean {
         val window = findActivity()?.window ?: return false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

@@ -38,3 +38,14 @@ fun ShowSystemBars() {
         }
     }
 }
+
+@Composable
+fun RememberSystemBars() {
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val isShow = context.isShowStatusBars()
+        onDispose {
+            context.showSystemBars(isShow)
+        }
+    }
+}

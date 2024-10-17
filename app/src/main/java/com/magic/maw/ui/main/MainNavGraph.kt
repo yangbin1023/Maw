@@ -14,16 +14,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.magic.maw.R
 import com.magic.maw.ui.post.PostRoute
 import com.magic.maw.ui.post.PostViewModel
@@ -37,12 +38,9 @@ fun MainNavGraph(
     isExpandedScreen: Boolean = false,
     navController: NavHostController = rememberNavController(),
     startDestination: String = MainRoutes.POST,
-    openDrawer: () -> Unit,
-    openSearch: () -> Unit
+    openDrawer: () -> Unit
 ) {
     val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
-    postViewModel.checkRefresh()
-    mainViewModel.gesturesEnabled = !postViewModel.showView.collectAsState().value
     val onFinish: () -> Unit = { navController.popBackStack() }
     NavHost(
         navController = navController,
@@ -54,9 +52,8 @@ fun MainNavGraph(
         composable(route = MainRoutes.POST) {
             PostRoute(
                 postViewModel = postViewModel,
-                isExpandedScreen = isExpandedScreen,
                 openDrawer = openDrawer,
-                openSearch = openSearch
+                openSearch = { navController.navigate(MainRoutes.search(it)) }
             )
         }
         composable(route = MainRoutes.POOL) {
@@ -89,8 +86,13 @@ fun MainNavGraph(
                 onFinish = onFinish
             )
         }
-        composable(route = MainRoutes.SEARCH) {
+        composable(
+            route = MainRoutes.SEARCH,
+            arguments = listOf(navArgument("text") { type = NavType.StringType })
+        ) { navBackStackEntry ->
+            val initText = navBackStackEntry.arguments?.getString("text") ?: ""
             SearchScreen(
+                initText = initText,
                 onFinish = onFinish,
                 onSearch = { postViewModel.search(it);onFinish() }
             )

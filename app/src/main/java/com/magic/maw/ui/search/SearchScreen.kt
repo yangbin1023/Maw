@@ -56,10 +56,15 @@ import com.magic.maw.ui.theme.PreviewTheme
 import kotlinx.coroutines.delay
 
 @Composable
-fun SearchScreen(onFinish: () -> Unit = {}, onSearch: (String) -> Unit = {}) {
+fun SearchScreen(
+    initText: String = "",
+    onFinish: () -> Unit = {},
+    onSearch: (String) -> Unit = {}
+) {
     ShowSystemBars()
     val (inputText, setInputText) = remember {
-        mutableStateOf(TextFieldValue(text = ""))
+        val text = initText.toSearchTagText()
+        mutableStateOf(TextFieldValue(text = text, selection = TextRange(text.length)))
     }
     Scaffold(
         topBar = {
@@ -78,8 +83,7 @@ fun SearchScreen(onFinish: () -> Unit = {}, onSearch: (String) -> Unit = {}) {
         SearchBody(
             modifier = Modifier.padding(innerPadding),
             onTagClick = { tag ->
-                val oldText = inputText.text.trimEnd().run { if (isEmpty()) "" else "$this " }
-                val text = oldText + "${tag.name} "
+                val text = "${inputText.text.trim()} ${tag.name.trim()}".toSearchTagText()
                 setInputText(TextFieldValue(text = text, selection = TextRange(text.length)))
             }
         )
@@ -225,6 +229,8 @@ private fun SearchBody(
         }
     }
 }
+
+private fun String.toSearchTagText(): String = trim().run { if (isNotEmpty()) "$this " else "" }
 
 @Composable
 @Preview(name = "Search Preview", widthDp = 360, heightDp = 180, uiMode = UI_MODE_NIGHT_NO)

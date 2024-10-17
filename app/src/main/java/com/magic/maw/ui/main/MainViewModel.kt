@@ -22,7 +22,9 @@ object MainRoutes {
     const val POOL = "pool"
     const val POPULAR = "popular"
     const val SETTING = "setting"
-    const val SEARCH = "search"
+    const val SEARCH = "search?text={text}"
+
+    fun search(text: String = ""): String = SEARCH.replace("{text}", text)
 }
 
 fun NavController.onNavigate(targetRoute: String) {

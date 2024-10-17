@@ -1,227 +1,227 @@
 package com.magic.maw.ui.post
 
-import android.content.Context
 import android.util.Log
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import coil.request.ImageRequest
 import com.magic.maw.data.PostData
-import com.magic.maw.data.Quality
 import com.magic.maw.util.configFlow
-import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.RequestOption
-import com.magic.maw.website.loadDLFile
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 
 private const val TAG = "PostViewModel"
 
-class PostViewModel(
-    val dataList: SnapshotStateList<PostData> = SnapshotStateList(),
-    private val requestOption: RequestOption = RequestOption(),
-) : ViewModel() {
-    private var parser: BaseParser
-    private val dataIdSet = HashSet<Int>()
-    private val modelMap = HashMap<Int, Any?>()
-    internal val stateMap = HashMap<String, Any>()
-    private var needSearch: Boolean = false
-    var showView = MutableStateFlow(false)
+enum class UiStateType {
+    None,
+    LoadMore,
+    Refresh,
+    LoadFailed;
+
+    fun isLoading(): Boolean {
+        return this == LoadMore || this == Refresh
+    }
+}
+
+sealed interface PostUiState {
+    val noMore: Boolean
+    val type: UiStateType
+    val dataList: List<PostData>
+
+    data class Post(
+        val isSearch: Boolean,
+        override val noMore: Boolean,
+        override val type: UiStateType,
+        override val dataList: List<PostData>,
+    ) : PostUiState
+
+    data class View(
+        val initIndex: Int,
+        override val noMore: Boolean,
+        override val type: UiStateType,
+        override val dataList: List<PostData>,
+    ) : PostUiState
+}
+
+private data class PostViewModelState(
+    val dataList: List<PostData> = emptyList(),
+    val noMore: Boolean = true,
+    val type: UiStateType = UiStateType.None,
+    val viewIndex: Int = -1,
+    val requestOption: RequestOption
+) {
+    private val dataIdSet: HashSet<Int> = HashSet()
 
     init {
-        parser = BaseParser.get(configFlow.value.source.lowercase())
+        for (data in dataList) {
+            dataIdSet.add(data.id)
+        }
+    }
+
+    fun toUiState(): PostUiState {
+        return if (viewIndex < 0) {
+            PostUiState.Post(
+                isSearch = requestOption.tags.isNotEmpty(),
+                noMore = noMore,
+                type = type,
+                dataList = dataList
+            )
+        } else {
+            PostUiState.View(
+                initIndex = viewIndex,
+                noMore = noMore,
+                type = type,
+                dataList = dataList
+            )
+        }
+    }
+
+    fun append(
+        dataList: List<PostData>,
+        end: Boolean = true,
+        type: UiStateType = UiStateType.None
+    ): PostViewModelState {
+        val list: MutableList<PostData> = ArrayList()
+        for (data in dataList) {
+            if (!dataIdSet.contains(data.id)) {
+                list.add(data)
+            }
+        }
+        val newList = if (list.isEmpty()) {
+            this.dataList
+        } else {
+            this.dataList.toMutableList().apply {
+                if (end) addAll(list) else addAll(0, list)
+            }
+        }
+        val noMore = dataList.isEmpty() && end
+        return copy(dataList = newList, noMore = noMore, type = type)
+    }
+}
+
+class PostViewModel(
+    private val parser: BaseParser,
+    requestOption: RequestOption = RequestOption(),
+) : ViewModel() {
+    private val viewModelState = MutableStateFlow(
+        PostViewModelState(
+            noMore = false,
+            requestOption = requestOption,
+        )
+    )
+
+    val uiState = viewModelState
+        .map(PostViewModelState::toUiState)
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            viewModelState.value.toUiState()
+        )
+
+    init {
         requestOption.page = parser.firstPageIndex
         requestOption.ratings = configFlow.value.websiteConfig.rating
-        showView.onEach { if (!it) viewIndex = -1 }
+        refresh(true)
     }
 
-    var noMore: Boolean by mutableStateOf(false)
-    var refreshing: Boolean by mutableStateOf(false)
-    var staggered: Boolean by mutableStateOf(false)
-    var loading: Boolean by mutableStateOf(false)
-    var loadFailed: Boolean by mutableStateOf(false)
-    var viewIndex: Int = -1
-        set(value) {
-            if (value >= 0)
-                showView.update { true }
-            field = value
-        }
-
-    fun checkRefresh() {
-        if (dataList.isEmpty() && !noMore && !refreshing && !loadFailed) {
-            Log.d(TAG, "check to refresh")
-            refresh()
-        }
-    }
-
-    fun refresh() = viewModelScope.launch {
-        val force = checkForceRefresh()
-        if (force)
-            loadFailed = false
-        refreshing = true
-        try {
-            val list = parser.requestPostData(requestOption.copy(page = parser.firstPageIndex))
-
-            val tmpIdSet = HashSet<Int>()
-            val tmpList = ArrayList<PostData>()
-            if (force) {
-                for (item in list) {
-                    if (item.id > 0) {
-                        tmpList.add(item)
-                        tmpIdSet.add(item.id)
+    fun refresh(force: Boolean = checkForceRefresh()) {
+        if (viewModelState.value.type == UiStateType.Refresh)
+            return
+        viewModelState.update { it.copy(type = UiStateType.Refresh) }
+        viewModelScope.launch {
+            try {
+                val option = viewModelState.value.requestOption
+                val list = parser.requestPostData(option.copy(page = parser.firstPageIndex))
+                viewModelState.update {
+                    if (force) {
+                        it.copy(dataList = list, noMore = false, type = UiStateType.None)
+                    } else {
+                        it.append(dataList = list, end = false, type = UiStateType.None)
                     }
                 }
-                synchronized(this@PostViewModel) {
-                    dataIdSet.clear()
-                    dataList.clear()
-                    noMore = false
-                    requestOption.page = parser.firstPageIndex
-                }
-            } else {
-                for (item in list) {
-                    if (item.id > 0 && !dataIdSet.contains(item.id)) {
-                        tmpList.add(item)
-                        tmpIdSet.add(item.id)
-                    }
-                }
+            } catch (e: Throwable) {
+                Log.d(TAG, "refresh failed: ${e.message}")
+                viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
-
-            if (tmpList.isNotEmpty()) {
-                synchronized(this@PostViewModel) {
-                    dataIdSet.addAll(tmpIdSet)
-                    dataList.addAll(0, tmpList)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "request failed", e)
-            loadFailed = true
-        } finally {
-            refreshing = false
-            loading = false
-            needSearch = false
         }
     }
 
-    fun loadMore() = viewModelScope.launch {
-        if (refreshing || loading)
-            return@launch
-        loading = true
-        val list: List<PostData>
-        try {
-            list = parser.requestPostData(requestOption.copy(page = requestOption.page + 1))
-            if (refreshing) {
-                loading = false
-                return@launch
-            }
-        } catch (e: Exception) {
-            loading = false
-            Log.e(TAG, "load more failed: " + e.message, e)
-            return@launch
-        }
-
-        val tmpIdSet = HashSet<Int>()
-        val tmpList = ArrayList<PostData>()
-        for (item in list) {
-            if (item.id > 0) {
-                tmpList.add(item)
-                tmpIdSet.add(item.id)
+    fun loadMore() {
+        if (viewModelState.value.type.isLoading())
+            return
+        viewModelState.update { it.copy(type = UiStateType.LoadMore) }
+        viewModelScope.launch {
+            try {
+                val option = viewModelState.value.requestOption
+                val list = parser.requestPostData(option.copy(page = option.page + 1))
+                viewModelState.update {
+                    if (it.type != UiStateType.Refresh) {
+                        it.append(dataList = list, type = UiStateType.None)
+                    } else {
+                        it
+                    }
+                }
+            } catch (e: Throwable) {
+                Log.d(TAG, "loadMore failed: ${e.message}")
+                viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }
-
-        requestOption.page++
-
-        if (tmpList.isNotEmpty()) {
-            synchronized(this@PostViewModel) {
-                dataIdSet.addAll(tmpIdSet)
-                dataList.addAll(tmpList)
-            }
-        } else {
-            noMore = true
-        }
-        loading = false
     }
 
     fun search(text: String) {
-        needSearch = with(parser) { requestOption.parseSearchText(text) }
-        if (needSearch) {
-            refresh()
+        with(parser) {
+            if (viewModelState.value.requestOption.parseSearchText(text)) {
+                refresh(true)
+            }
         }
     }
 
-    fun getPreviewModel(context: Context, postData: PostData): MutableStateFlow<LoadStatus<Any>> {
-        synchronized(modelMap) {
-            modelMap[postData.id]?.let { return MutableStateFlow(LoadStatus.Success(it)) }
-        }
-        val resultFlow = MutableStateFlow<LoadStatus<Any>>(LoadStatus.Waiting)
-        val checkFunc: suspend (LoadStatus<File>) -> Unit = func@{
-            if (it is LoadStatus.Success<File> && resultFlow.value !is LoadStatus.Success) {
-                val model = ImageRequest.Builder(context).data(it.result).build()
-                synchronized(modelMap) {
-                    modelMap[postData.id] = model
-                }
-                resultFlow.value = LoadStatus.Success(model)
-            } else if (it is LoadStatus.Error && resultFlow.value !is LoadStatus.Error) {
-                resultFlow.value = it
+    fun clearTags() {
+        viewModelState.value.requestOption.clearTags()
+    }
+
+    fun setViewIndex(index: Int) {
+        viewModelState.update {
+            if (index >= 0 && index < it.dataList.size) {
+                it.copy(viewIndex = index)
+            } else {
+                it
             }
         }
-        val statusFlow = loadDLFile(postData, Quality.Preview, viewModelScope)
-        viewModelScope.launch {
-            checkFunc(statusFlow.value)
-            statusFlow.collect {
-                checkFunc(it)
-            }
-        }
-        return resultFlow
+    }
+
+    fun exitView() {
+        viewModelState.update { it.copy(viewIndex = -1) }
     }
 
     private fun checkForceRefresh(): Boolean {
-        var force = false
-        if (parser.source.lowercase() != configFlow.value.source.lowercase()) {
-            parser = BaseParser.get(configFlow.value.source)
-            force = true
-        }
-        if (requestOption.ratings != configFlow.value.websiteConfig.rating) {
-            force = true
-            requestOption.ratings = configFlow.value.websiteConfig.rating
-        }
-        if (needSearch) {
-            force = true
-        }
-        if (force) {
-            requestOption.page = parser.firstPageIndex
-            println("Force refresh. requestOption.ratings: ${requestOption.ratings}")
-        }
-        return force
+        return configFlow.value.websiteConfig.rating != viewModelState.value.requestOption.ratings
     }
 
     companion object {
         fun providerFactory(
-            dataList: SnapshotStateList<PostData> = SnapshotStateList(),
+            parser: BaseParser = BaseParser.get(configFlow.value.source),
             requestOption: RequestOption = RequestOption(),
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return PostViewModel(dataList, requestOption) as T
+                return PostViewModel(parser, requestOption) as T
             }
         }
     }
 }
 
-@Composable
-internal inline fun <reified T : Any> PostViewModel.getState(onNew: @Composable () -> T): T {
-    val type = T::class.java.name
-    val state = stateMap[type]
-    (state as? T)?.let { return it }
-    val newOne = onNew()
-    stateMap[type] = newOne
-    return newOne
-}
+//@Composable
+//internal inline fun <reified T : Any> PostViewModel.getState(onNew: @Composable () -> T): T {
+//    val type = T::class.java.name
+//    val state = stateMap[type]
+//    (state as? T)?.let { return it }
+//    val newOne = onNew()
+//    stateMap[type] = newOne
+//    return newOne
+//}

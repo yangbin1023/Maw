@@ -72,8 +72,7 @@ fun MainScreen(mainViewModel: MainViewModel, windowSizeClass: WindowSizeClass) {
                     mainViewModel = mainViewModel,
                     isExpandedScreen = isExpandedScreen,
                     navController = navController,
-                    openDrawer = { coroutineScope.launch { drawerState.open() } },
-                    openSearch = { navController.navigate(MainRoutes.SEARCH) }
+                    openDrawer = { coroutineScope.launch { drawerState.open() } }
                 )
             }
 

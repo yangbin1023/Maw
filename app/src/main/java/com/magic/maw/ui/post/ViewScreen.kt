@@ -83,20 +83,21 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
+import com.magic.maw.ui.components.RememberSystemBars
 import com.magic.maw.ui.components.ScrollableView
-import com.magic.maw.ui.components.ScrollableViewState
 import com.magic.maw.ui.components.SettingItem
 import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
 import com.magic.maw.util.UiUtils
+import com.magic.maw.util.UiUtils.isShowStatusBars
+import com.magic.maw.util.UiUtils.showSystemBars
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.loadDLFile
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.coroutines.resume
@@ -105,35 +106,40 @@ import kotlin.math.abs
 
 @Composable
 fun ViewScreen(
-    postViewModel: PostViewModel,
-    isExpandedScreen: Boolean,
-    systemBarsHide: () -> Boolean = { false },
-    onSystemBarsHide: (Boolean) -> Unit = {}
+    uiState: PostUiState.View,
+    onLoadMore: () -> Unit,
+    onExit: () -> Unit,
+    onTagClick: (TagInfo, Boolean) -> Unit
 ) {
-    val pagerState = rememberPagerState(postViewModel.viewIndex) { postViewModel.dataList.size }
-    val onExit: () -> Unit = {
-        postViewModel.showView.update { false }
-    }
+    val pagerState = rememberPagerState(uiState.initIndex) { uiState.dataList.size }
     val topBarMaxHeight = UiUtils.getTopBarHeight()
-    var topAppBarHide by remember { mutableStateOf(systemBarsHide.invoke()) }
-    val targetOffset = if (topAppBarHide) -topBarMaxHeight else 0.dp
+    val context = LocalContext.current
+    var showTopBar by remember { mutableStateOf(context.isShowStatusBars()) }
     val topAppBarOffset by animateDpAsState(
-        targetValue = targetOffset,
+        targetValue = if (showTopBar) 0.dp else -topBarMaxHeight,
         label = "showTopAppBar"
     )
+    RememberSystemBars()
     LaunchedEffect(Unit) {
         delay(1500)
-        topAppBarHide = true
+        showTopBar = false
     }
-    LaunchedEffect(topAppBarHide) {
-        onSystemBarsHide.invoke(topAppBarHide)
+    LaunchedEffect(showTopBar) {
+        context.showSystemBars(showTopBar)
     }
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val postData = try {
+            uiState.dataList[pagerState.currentPage]
+        } catch (_: Throwable) {
+            onExit.invoke()
+            return@BoxWithConstraints
+        }
         ViewContent(
-            postViewModel = postViewModel,
             pagerState = pagerState,
+            dataList = uiState.dataList,
+            onLoadMore = onLoadMore,
             onExit = onExit,
-            onTab = { topAppBarHide = !topAppBarHide }
+            onTab = { showTopBar = !showTopBar }
         )
         ViewTopBar(
             modifier = Modifier
@@ -144,16 +150,15 @@ fun ViewScreen(
                     IntOffset(0, y.toInt())
                 }
                 .shadow(5.dp),
-            postViewModel = postViewModel,
-            pagerState = pagerState,
+            postData = postData,
             onExit = onExit
         )
         ViewDetailBar(
-            postViewModel = postViewModel,
-            pagerState = pagerState,
-            maxDraggableHeight = maxHeight - topBarMaxHeight - targetOffset
+            postData = postData,
+            maxDraggableHeight = if (showTopBar) maxHeight - topBarMaxHeight else maxHeight,
+            onTagClick = onTagClick
         )
-        BackHandler(enabled = postViewModel.showView.collectAsState().value) { onExit.invoke() }
+        BackHandler { onExit.invoke() }
     }
 }
 
@@ -161,18 +166,13 @@ fun ViewScreen(
 @Composable
 private fun ViewTopBar(
     modifier: Modifier = Modifier,
-    postViewModel: PostViewModel,
-    pagerState: PagerState,
+    postData: PostData,
     onExit: () -> Unit
 ) {
     CenterAlignedTopAppBar(
         modifier = modifier,
         title = {
-            val index = pagerState.currentPage
-            if (index >= 0 && index < postViewModel.dataList.size) {
-                val data = postViewModel.dataList[index]
-                Text(text = data.id.toString())
-            }
+            Text(text = postData.id.toString())
         },
         navigationIcon = {
             IconButton(onClick = onExit) {
@@ -187,8 +187,9 @@ private fun ViewTopBar(
 
 @Composable
 private fun BoxScope.ViewContent(
-    postViewModel: PostViewModel,
     pagerState: PagerState,
+    dataList: List<PostData>,
+    onLoadMore: () -> Unit,
     onExit: () -> Unit,
     onTab: () -> Unit = {},
 ) {
@@ -200,17 +201,17 @@ private fun BoxScope.ViewContent(
             .background(MaterialTheme.colorScheme.background)
             .align(Alignment.Center),
     ) { index ->
-        if (index >= postViewModel.dataList.size || index < 0) {
+        if (index >= dataList.size || index < 0) {
             onExit.invoke()
             return@HorizontalPager
         }
         if (abs(pagerState.currentPage - index) > 1) {
             return@HorizontalPager
         }
-        if (postViewModel.dataList.size - index < 5) {
-            postViewModel.loadMore()
+        if (dataList.size - index < 5) {
+            onLoadMore()
         }
-        val data = postViewModel.dataList[index]
+        val data = dataList[index]
         val info = data.getInfo(data.quality) ?: let {
             data.quality = Quality.File
             data.originalInfo
@@ -334,11 +335,12 @@ private fun LoadingView(progress: (() -> Float)? = null) {
 @Composable
 private fun BoxScope.ViewDetailBar(
     modifier: Modifier = Modifier,
-    postViewModel: PostViewModel,
-    pagerState: PagerState,
+    postData: PostData,
     maxDraggableHeight: Dp,
+    onTagClick: (TagInfo, Boolean) -> Unit
 ) {
     val scrollableViewState = rememberScrollableViewState()
+    val scope = rememberCoroutineScope()
     scrollableViewState.updateData(
         density = LocalDensity.current,
         maxDraggableHeight = maxDraggableHeight
@@ -359,16 +361,19 @@ private fun BoxScope.ViewDetailBar(
         },
         toolbar = {
             ScrollableBar(
-                postViewModel = postViewModel,
-                pagerState = pagerState,
-                scrollableViewState = it
+                postData = postData,
+                expand = scrollableViewState.expand,
+                onExpandClick = {
+                    scrollableViewState.expand = !scrollableViewState.expand
+                    scope.launch { scrollableViewState.animateToExpand() }
+                }
             )
         },
         contentModifier = Modifier.background(ViewDetailBarFold),
         content = {
             ScrollableContent(
-                postViewModel = postViewModel,
-                pagerState = pagerState
+                postData = postData,
+                onTagClick = onTagClick
             )
         }
     )
@@ -377,9 +382,9 @@ private fun BoxScope.ViewDetailBar(
 @Composable
 private fun BoxScope.ScrollableBar(
     modifier: Modifier = Modifier,
-    postViewModel: PostViewModel,
-    pagerState: PagerState,
-    scrollableViewState: ScrollableViewState,
+    postData: PostData,
+    expand: Boolean,
+    onExpandClick: () -> Unit,
 ) {
     Box(
         modifier = modifier
@@ -388,9 +393,8 @@ private fun BoxScope.ScrollableBar(
             .fillMaxSize(),
         contentAlignment = Alignment.CenterStart
     ) {
-        val scope = rememberCoroutineScope()
         val expandIconDegree by animateFloatAsState(
-            targetValue = if (scrollableViewState.expand) 90f else 270f, label = ""
+            targetValue = if (expand) 90f else 270f, label = ""
         )
         Icon(
             modifier = Modifier
@@ -398,21 +402,19 @@ private fun BoxScope.ScrollableBar(
                 .height(40.dp)
                 .width(40.dp)
                 .align(Alignment.CenterEnd)
-                .clickable {
-                    scrollableViewState.expand = !scrollableViewState.expand
-                    scope.launch { scrollableViewState.animateToExpand() }
-                },
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onExpandClick
+                ),
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null
         )
 
-        if (postViewModel.dataList.size <= pagerState.currentPage)
-            return
-        val data = postViewModel.dataList[pagerState.currentPage]
-        val info = data.originalInfo
-        val quality = data.quality
+        val info = postData.originalInfo
+        val quality = postData.quality
         val context = LocalContext.current
-        val text = "${data.id} (${info.width}x${info.height}) ${quality.toResString(context)}"
+        val text = "${postData.id} (${info.width}x${info.height}) ${quality.toResString(context)}"
         Text(
             modifier = Modifier.align(Alignment.CenterStart),
             text = text
@@ -423,8 +425,8 @@ private fun BoxScope.ScrollableBar(
 @Composable
 private fun BoxScope.ScrollableContent(
     modifier: Modifier = Modifier,
-    postViewModel: PostViewModel,
-    pagerState: PagerState,
+    postData: PostData,
+    onTagClick: (TagInfo, Boolean) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val config by configFlow.collectAsState()
@@ -437,29 +439,28 @@ private fun BoxScope.ScrollableContent(
     ) {
         ContentHeader(stringResource(R.string.tags))
 
-        val data = postViewModel.dataList[pagerState.currentPage]
         var tagChanged = false
-        for (tagInfo in data.tags) {
+        for (tagInfo in postData.tags) {
             if (tagInfo.type == TagType.None) {
                 val info by tagManager.getInfoStatus(tagInfo.name, scope).collectAsState()
                 (info as? LoadStatus.Success)?.let {
-                    data.updateTag(it.result)
+                    postData.updateTag(it.result)
                     tagChanged = true
                 }
             }
         }
         if (tagChanged) {
-            data.tags.sort()
+            postData.tags.sort()
             tagChanged = false
         }
-        for (tagInfo in data.tags) {
-            TagInfoItem(info = tagInfo)
+        for (tagInfo in postData.tags) {
+            TagInfoItem(info = tagInfo, onTagClick = onTagClick)
         }
 
         ContentHeader(stringResource(R.string.others))
 
-        SettingItem(title = stringResource(R.string.author), tips = data.uploader)
-        SettingItem(title = stringResource(R.string.rating), tips = data.rating.name)
+        SettingItem(title = stringResource(R.string.author), tips = postData.uploader)
+        SettingItem(title = stringResource(R.string.rating), tips = postData.rating.name)
 //        SettingItem(title = stringResource(R.string.source), tips = data.srcUrl)
     }
 }
@@ -481,7 +482,7 @@ private fun ContentHeader(title: String) {
 private fun TagInfoItem(
     modifier: Modifier = Modifier,
     info: TagInfo,
-    onClick: (() -> Unit)? = null
+    onTagClick: (TagInfo, Boolean) -> Unit
 ) {
     Row(
         modifier = modifier
@@ -494,7 +495,7 @@ private fun TagInfoItem(
             TagItem(
                 text = info.name,
                 type = info.type,
-                onClick = onClick
+                onClick = { onTagClick(info, false) }
             )
             Spacer(modifier = Modifier.weight(1f))
         }
@@ -505,7 +506,10 @@ private fun TagInfoItem(
                     color = Color.White,
                     shape = CircleShape
                 )
-                .padding(vertical = 2.dp, horizontal = 5.dp),
+                .padding(vertical = 2.dp, horizontal = 5.dp)
+                .clickable {
+                    onTagClick(info, true)
+                },
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -536,7 +540,8 @@ private fun TagInfoItemPreview() {
                 name = "tokifokiz_bosotto_roshia-go_deklahsdf_hfkeu-nasfhuhsfjieadsf",
                 type = TagType.Artist,
                 count = 64810
-            )
+            ),
+            onTagClick = { _, _ -> }
         )
         TagInfoItem(
             info = TagInfo(
@@ -545,7 +550,8 @@ private fun TagInfoItemPreview() {
                 name = "tokifokiz_bosottosf",
                 type = TagType.Copyright,
                 count = 6516
-            )
+            ),
+            onTagClick = { _, _ -> }
         )
     }
 }
