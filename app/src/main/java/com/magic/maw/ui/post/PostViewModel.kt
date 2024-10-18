@@ -207,8 +207,6 @@ class PostViewModel(
     }
 
     private fun checkForceRefresh(): Boolean {
-        logger.info("config rating: " + configFlow.value.websiteConfig.rating)
-        logger.info("current rating: " + viewModelState.value.requestOption.ratings)
         return configFlow.value.websiteConfig.rating != viewModelState.value.requestOption.ratings
     }
 

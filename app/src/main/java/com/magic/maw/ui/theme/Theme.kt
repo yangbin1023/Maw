@@ -44,7 +44,7 @@ fun MawTheme(content: @Composable () -> Unit) {
             window.statusBarColor = Color.Transparent.toArgb()
             window.navigationBarColor = Color.Transparent.toArgb()
             WindowCompat.getInsetsController(window, window.decorView).apply {
-                isAppearanceLightStatusBars = darkTheme
+                isAppearanceLightStatusBars = !darkTheme
             }
         }
     }
