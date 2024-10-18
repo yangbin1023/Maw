@@ -2,6 +2,7 @@ package com.magic.maw
 
 import android.app.Activity
 import android.app.Application
+import com.hjq.toast.Toaster
 import com.magic.maw.website.parser.BaseParser
 import com.magic.maw.website.parser.YandeParser
 import com.tencent.mmkv.MMKV
@@ -21,6 +22,7 @@ class MyApp : Application() {
         _app = this
         _parser = BaseParser.get(YandeParser.SOURCE)
         MMKV.initialize(this)
+        Toaster.init(this)
     }
 
     fun closeAllActivity() {

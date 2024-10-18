@@ -121,7 +121,8 @@ fun rememberNestedScaffoldState(
 @Composable
 fun NestedScaffold(
     modifier: Modifier = Modifier,
-    topBar: @Composable (IntOffset) -> Unit,
+    topBar: @Composable (IntOffset) -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
     state: NestedScaffoldState = rememberNestedScaffoldState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     canScroll: () -> Boolean = { true },
@@ -145,6 +146,7 @@ fun NestedScaffold(
     }
 
     Scaffold(
+        snackbarHost = snackbarHost,
         modifier = modifier
             .nestedScroll(connection)
             .clipScrollableContainer(Orientation.Vertical),
@@ -172,6 +174,7 @@ fun NestedScaffold(
     }
 }
 
+@Suppress("unused")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NestedRefreshScaffold(
@@ -179,7 +182,8 @@ fun NestedRefreshScaffold(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
-    topBar: @Composable (IntOffset) -> Unit,
+    topBar: @Composable (IntOffset) -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
     state: NestedScaffoldState = rememberNestedScaffoldState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     canScroll: () -> Boolean = { true },
@@ -191,6 +195,7 @@ fun NestedRefreshScaffold(
     NestedScaffold(
         modifier = modifier,
         topBar = topBar,
+        snackbarHost = snackbarHost,
         state = state,
         coroutineScope = coroutineScope,
         canScroll = canScroll,

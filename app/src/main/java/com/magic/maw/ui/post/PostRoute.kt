@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,7 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewModelScope
+import com.hjq.toast.Toaster
 import com.magic.maw.R
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.util.UiUtils.showSystemBars
@@ -32,8 +31,6 @@ fun PostRoute(
     openSearch: (String) -> Unit,
 ) {
     val uiState by postViewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
 
     PostRoute(
         uiState = uiState,
@@ -46,10 +43,6 @@ fun PostRoute(
         onClearSearch = {
             postViewModel.clearTags()
             postViewModel.refresh(true)
-            postViewModel.viewModelScope.launch {
-                val message = context.getString(R.string.click_again_to_exit)
-                snackbarHostState.showSnackbar(message = message)
-            }
         },
         onSearch = { postViewModel.search(it) }
     )
@@ -105,6 +98,7 @@ fun PostRoute(
                     lazyState.scrollToItem(0, 0)
                     scaffoldState.animateTo(scaffoldState.maxPx)
                 }
+                Toaster.show(R.string.click_again_to_exit)
             })
         }
     }
