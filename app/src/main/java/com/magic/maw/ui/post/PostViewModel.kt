@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.magic.maw.data.PostData
 import com.magic.maw.util.configFlow
+import com.magic.maw.util.logger as Logger
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val TAG = "PostViewModel"
+private val logger = Logger(TAG)
 
 enum class UiStateType {
     None,
@@ -136,16 +138,18 @@ class PostViewModel(
         viewModelScope.launch {
             try {
                 val option = viewModelState.value.requestOption
+                option.ratings = configFlow.value.websiteConfig.rating
                 val list = parser.requestPostData(option.copy(page = parser.firstPageIndex))
                 viewModelState.update {
                     if (force) {
+                        it.requestOption.page = parser.firstPageIndex
                         it.copy(dataList = list, noMore = false, type = UiStateType.None)
                     } else {
                         it.append(dataList = list, end = false, type = UiStateType.None)
                     }
                 }
             } catch (e: Throwable) {
-                Log.d(TAG, "refresh failed: ${e.message}")
+                logger.config("refresh failed: ${e.message}")
                 viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }
@@ -203,6 +207,8 @@ class PostViewModel(
     }
 
     private fun checkForceRefresh(): Boolean {
+        logger.info("config rating: " + configFlow.value.websiteConfig.rating)
+        logger.info("current rating: " + viewModelState.value.requestOption.ratings)
         return configFlow.value.websiteConfig.rating != viewModelState.value.requestOption.ratings
     }
 
