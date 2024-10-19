@@ -28,11 +28,11 @@ import java.io.File
 
 private const val TAG = "DLManager"
 private val logger = Logger(TAG)
+private val scope by lazy { CoroutineScope(Dispatchers.IO) }
 
 object DLManager {
     private val taskMap = LinkedHashMap<String, DLTask>()
     private val diskPath by lazy { getDiskCachePath(MyApp.app) }
-    private val coroutineScope by lazy { CoroutineScope(Dispatchers.IO) }
 
     fun addTask(
         baseData: BaseData,
@@ -62,10 +62,11 @@ object DLManager {
             val initState = task.statusFlow.value
             task.statusFlow.stateIn(it, SharingStarted.Lazily, initState)
         } ?: task.statusFlow
-        coroutineScope.launch { task.start() }
+        task.start()
         return stateFlow
     }
 
+    @Suppress("unused")
     fun cancelTask(url: String) {
         synchronized(taskMap) {
             taskMap[url]?.let {
@@ -127,12 +128,12 @@ data class DLTask(
         return "source: ${baseData.source}, id: ${baseData.id}, quality: ${baseData.quality}, url: $url"
     }
 
-    suspend fun start() {
+    fun start() = scope.launch {
         if (statusFlow.value is LoadStatus.Success)
-            return
+            return@launch
         synchronized(this) {
             if (started)
-                return
+                return@launch
             started = true
         }
         try {
@@ -160,7 +161,7 @@ data class DLTask(
             }
             logger.severe("download failed, $url, ${e.message}")
         }
-        DLManager.removeTask(this)
+        DLManager.removeTask(this@DLTask)
     }
 }
 

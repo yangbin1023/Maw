@@ -90,6 +90,7 @@ import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
+import com.magic.maw.util.Logger
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.isShowStatusBars
 import com.magic.maw.util.UiUtils.showSystemBars
@@ -205,7 +206,7 @@ private fun BoxScope.ViewContent(
             onExit.invoke()
             return@HorizontalPager
         }
-        if (abs(pagerState.currentPage - index) > 1) {
+        if (abs(pagerState.settledPage - index) > 1) {
             return@HorizontalPager
         }
         if (dataList.size - index < 5) {
@@ -216,7 +217,13 @@ private fun BoxScope.ViewContent(
             data.quality = Quality.File
             data.originalInfo
         }
-        ViewScreenItem(data, info, data.quality, onTab)
+        ViewScreenItem(
+            data = data,
+            info = info,
+            quality = data.quality,
+            reset = pagerState.settledPage != index,
+            onTab = onTab
+        )
     }
 }
 
@@ -252,6 +259,7 @@ private fun ViewScreenItem(
     data: PostData,
     info: PostData.Info,
     quality: Quality,
+    reset: Boolean = false,
     onTab: () -> Unit = {},
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -281,6 +289,7 @@ private fun ViewScreenItem(
                 } else {
                     ModelProcessor()
                 }
+                LaunchedEffect(reset) { if (reset) zoomableViewState.reset() }
                 DisposableEffect(Unit) { onDispose { (model.first as? SamplingDecoder)?.release() } }
                 ImageViewer(
                     model = model.first,
