@@ -1,12 +1,11 @@
 package com.magic.maw.ui.post
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.magic.maw.data.PostData
 import com.magic.maw.util.configFlow
-import com.magic.maw.util.logger as Logger
+import com.magic.maw.util.Logger
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -149,7 +148,7 @@ class PostViewModel(
                     }
                 }
             } catch (e: Throwable) {
-                logger.config("refresh failed: ${e.message}")
+                logger.severe("refresh failed: ${e.message}")
                 viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }
@@ -172,17 +171,18 @@ class PostViewModel(
                     }
                 }
             } catch (e: Throwable) {
-                Log.d(TAG, "loadMore failed: ${e.message}")
+                logger.severe("loadMore failed: ${e.message}")
                 viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }
     }
 
-    fun search(text: String) {
-        with(parser) {
-            if (viewModelState.value.requestOption.parseSearchText(text)) {
-                refresh(true)
-            }
+    fun search(text: String) = with(parser) {
+        val list = viewModelState.value.requestOption.parseSearchText(text)
+        if (list.isNotEmpty()) {
+            viewModelState.value.requestOption.clearTags()
+            viewModelState.value.requestOption.addTags(list)
+            refresh(true)
         }
     }
 

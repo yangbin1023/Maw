@@ -3,10 +3,11 @@ package com.magic.maw.website
 import android.content.Context
 import android.os.Environment
 import com.magic.maw.MyApp
+import com.magic.maw.data.BaseData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.util.client
-import com.magic.maw.util.logger as Logger
+import com.magic.maw.util.Logger
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
 import io.ktor.client.plugins.onDownload
@@ -19,6 +20,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -31,15 +35,13 @@ object DLManager {
     private val coroutineScope by lazy { CoroutineScope(Dispatchers.IO) }
 
     fun addTask(
-        source: String,
-        id: Int,
-        quality: Quality,
+        baseData: BaseData,
         url: String,
-        path: String = getDLFullPath(source, id, quality)
+        path: String = getDLFullPath(baseData)
     ): DLTask {
         return synchronized(taskMap) {
             taskMap[url] ?: let {
-                DLTask(source, id, quality, url, path).apply {
+                DLTask(baseData, url, path).apply {
                     taskMap[url] = this
                 }
             }
@@ -47,19 +49,21 @@ object DLManager {
     }
 
     fun addTaskAndStart(
-        source: String,
-        id: Int,
-        quality: Quality,
+        baseData: BaseData,
         url: String,
         scope: CoroutineScope? = null
-    ): MutableStateFlow<LoadStatus<File>> {
-        val path = getDLFullPath(source, id, quality)
+    ): StateFlow<LoadStatus<File>> {
+        val path = getDLFullPath(baseData)
         val file = File(path)
         if (file.exists())
             return MutableStateFlow(LoadStatus.Success(file))
-        val task = addTask(source, id, quality, url, path)
-        (scope ?: coroutineScope).launch { task.start() }
-        return task.statusFlow
+        val task = addTask(baseData, url, path)
+        val stateFlow = scope?.let {
+            val initState = task.statusFlow.value
+            task.statusFlow.stateIn(it, SharingStarted.Lazily, initState)
+        } ?: task.statusFlow
+        coroutineScope.launch { task.start() }
+        return stateFlow
     }
 
     fun cancelTask(url: String) {
@@ -71,12 +75,8 @@ object DLManager {
         }
     }
 
-    fun getDLFullPath(source: String, id: Int, quality: Quality): String {
-        return getDLPath(source, quality) + File.separator + getDLName(
-            source,
-            id,
-            quality
-        )
+    fun getDLFullPath(baseData: BaseData): String {
+        return getDLPath(baseData.source, baseData.quality) + File.separator + getDLName(baseData)
     }
 
     private fun getDLPath(source: String, quality: Quality): String {
@@ -91,8 +91,8 @@ object DLManager {
         }
     }
 
-    private fun getDLName(source: String, id: Int, quality: Quality): String {
-        return "${source}_${id}_${quality.name}"
+    private fun getDLName(baseData: BaseData): String {
+        return baseData.toString()
     }
 
     internal fun removeTask(task: DLTask) {
@@ -107,9 +107,7 @@ object DLManager {
 }
 
 data class DLTask(
-    val source: String,
-    val id: Int,
-    val quality: Quality,
+    val baseData: BaseData,
     val url: String,
     val path: String = "",
     val statusFlow: MutableStateFlow<LoadStatus<File>> = MutableStateFlow(LoadStatus.Waiting),
@@ -126,7 +124,7 @@ data class DLTask(
     }
 
     override fun toString(): String {
-        return "source: $source, id: $id, quality: $quality, url: $url"
+        return "source: ${baseData.source}, id: ${baseData.id}, quality: ${baseData.quality}, url: $url"
     }
 
     suspend fun start() {
@@ -160,7 +158,7 @@ data class DLTask(
             if (statusFlow.value !is LoadStatus.Success) {
                 statusFlow.value = LoadStatus.Error(e)
             }
-            logger.warning("download failed, $url, ${e.message}")
+            logger.severe("download failed, $url, ${e.message}")
         }
         DLManager.removeTask(this)
     }
@@ -170,9 +168,10 @@ fun loadDLFile(
     postData: PostData,
     quality: Quality = postData.quality,
     scope: CoroutineScope? = null
-): MutableStateFlow<LoadStatus<File>> {
+): StateFlow<LoadStatus<File>> {
     val info = postData.getInfo(quality) ?: postData.originalInfo
-    return DLManager.addTaskAndStart(postData.source, postData.id, quality, info.url, scope)
+    val baseData = BaseData(postData.source, postData.id, quality)
+    return DLManager.addTaskAndStart(baseData, info.url, scope)
 }
 
 fun loadDLFileWithTask(
@@ -184,17 +183,15 @@ fun loadDLFileWithTask(
         currentQuality = Quality.File
         postData.originalInfo
     }
-
-    val path = getDLFullPath(postData.source, postData.id, currentQuality)
+    val baseData = BaseData(postData.source, postData.id, currentQuality)
+    val path = getDLFullPath(baseData)
     val file = File(path)
     if (file.exists())
         return DLTask(
-            postData.source,
-            postData.id,
-            quality,
+            baseData,
             info.url,
             path,
             MutableStateFlow(LoadStatus.Success(file))
         )
-    return addTask(postData.source, postData.id, quality, info.url, path)
+    return addTask(baseData, info.url, path)
 }

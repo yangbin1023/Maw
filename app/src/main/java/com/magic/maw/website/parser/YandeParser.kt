@@ -69,9 +69,9 @@ class YandeParser : BaseParser() {
         return targetInfo
     }
 
-    override fun RequestOption.parseSearchText(text: String): Boolean {
+    override fun RequestOption.parseSearchText(text: String): List<String> {
         if (text.isEmpty())
-            return false
+            return emptyList()
         val tagTexts = URLDecoder.decode(text, "UTF-8").split(" ")
         val tagList = ArrayList<String>()
         for (tagText in tagTexts) {
@@ -81,10 +81,7 @@ class YandeParser : BaseParser() {
                 continue
             tagList.add(tagText)
         }
-        if (tagList.isNotEmpty()) {
-            addTags(tagList)
-        }
-        return tagList.isNotEmpty()
+        return tagList
     }
 
     override fun getPostUrl(option: RequestOption): String {

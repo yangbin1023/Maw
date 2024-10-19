@@ -1,6 +1,5 @@
 package com.magic.maw.util
 
-import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -28,8 +27,7 @@ object TimeUtils {
         val simpleDateFormat = getFormat(formatStr)
         try {
             return simpleDateFormat.parse(timeStr)?.time
-        } catch (e: Throwable) {
-            Log.e(TAG, "get unix time failed, format: $formatStr, time: [$timeStr]", e)
+        } catch (_: Throwable) {
         }
         return null
     }

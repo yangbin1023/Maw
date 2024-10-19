@@ -1,6 +1,5 @@
 package com.magic.maw.website
 
-import android.util.Log
 import com.magic.maw.data.TagInfo
 import com.magic.maw.db.AppDB
 import com.magic.maw.db.updateOrInsert
@@ -106,7 +105,6 @@ class TagManager(val source: String) {
                 tagMap[name] = it
             }
             status.value = LoadStatus.Success(it)
-            Log.d(TAG, "get tag from web: $name")
             dbHandler.post { dao.insert(it) }
             return
         }

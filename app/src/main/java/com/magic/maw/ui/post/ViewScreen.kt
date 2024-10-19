@@ -254,9 +254,9 @@ private fun ViewScreenItem(
     quality: Quality,
     onTab: () -> Unit = {},
 ) {
-    val status by loadDLFile(data, quality).collectAsState()
-    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val status by loadDLFile(data, quality, coroutineScope).collectAsState()
+    val context = LocalContext.current
     val size = Size(info.width.toFloat(), info.height.toFloat())
     var model by remember { mutableStateOf<Pair<Any?, Size?>>(Pair(null, size)) }
     var retryCount by remember { mutableIntStateOf(0) }
@@ -264,7 +264,7 @@ private fun ViewScreenItem(
         is LoadStatus.Waiting -> LoadingView()
         is LoadStatus.Loading -> LoadingView { (status as? LoadStatus.Loading)?.progress ?: 0.99f }
         is LoadStatus.Error -> ErrorPlaceHolder(onRetry = { retryCount++ })
-        is LoadStatus.Success -> {
+        is LoadStatus.Success<File> -> {
             retryCount = 0
             if (model.first == null && model.second == null) {
                 // 解码失败

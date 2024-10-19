@@ -24,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,7 @@ fun PostItem(
     if (localData != postData) {
         localData = postData
     }
+    val scope = rememberCoroutineScope()
     Column(
         modifier = modifier
             .shadow(
@@ -71,7 +73,7 @@ fun PostItem(
                 .aspectRatio(ratio)
         ) {
             val context = LocalContext.current
-            val status by loadDLFile(postData, Quality.Preview).collectAsState()
+            val status by loadDLFile(postData, Quality.Preview, scope).collectAsState()
             when (status) {
                 is LoadStatus.Success<File> -> {
                     val file = (status as? LoadStatus.Success<File>)?.result

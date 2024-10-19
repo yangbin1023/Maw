@@ -5,6 +5,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -61,8 +63,10 @@ fun PostRoute(
     onClearSearch: () -> Unit,
     onSearch: (String) -> Unit,
 ) {
-    val fadeIn = fadeIn(animationSpec = tween(1200))
-    val fadeOut = fadeOut(animationSpec = tween(1200))
+    val fadeIn = fadeIn(animationSpec = tween(700))
+    val fadeOut = fadeOut(animationSpec = tween(700))
+    val slideIn = slideInHorizontally(animationSpec = tween(700), initialOffsetX = { it })
+    val slideOut = slideOutHorizontally(animationSpec = tween(700), targetOffsetX = { it })
 
     val lazyState = rememberLazyStaggeredGridState()
     val refreshState = rememberPullToRefreshState()
@@ -104,8 +108,8 @@ fun PostRoute(
     }
     AnimatedVisibility(
         visible = uiState is PostUiState.View,
-        enter = fadeIn,
-        exit = fadeOut
+        enter = slideIn + fadeIn,
+        exit = slideOut + fadeOut
     ) {
         val currentState = uiState as? PostUiState.View
         var viewState by remember { mutableStateOf<PostUiState.View?>(null) }

@@ -75,10 +75,10 @@ val dbHandler by lazy {
 private val loggerMap by lazy { HashMap<String, Logger>() }
 
 val logger by lazy {
-    logger("MawTAG").apply { level = Level.ALL }
+    Logger("MawTAG").apply { level = Level.ALL }
 }
 
-fun logger(tag: String): Logger {
+fun Logger(tag: String): Logger {
     if (tag.isEmpty())
         return logger
     val logger: Logger

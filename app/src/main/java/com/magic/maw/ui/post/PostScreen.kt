@@ -56,7 +56,7 @@ import com.magic.maw.ui.theme.WaterLayout
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import com.magic.maw.util.UiUtils.hideSystemBars
 import com.magic.maw.util.UiUtils.showSystemBars
-import com.magic.maw.util.logger as Logger
+import com.magic.maw.util.Logger
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
