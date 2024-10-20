@@ -15,6 +15,7 @@ abstract class BaseParser {
 
     abstract suspend fun requestPostData(option: RequestOption): List<PostData>
     abstract suspend fun requestTagInfo(name: String): TagInfo?
+    abstract suspend fun requestSuggestTagInfo(name: String, limit: Int = 10): List<TagInfo>
     abstract fun RequestOption.parseSearchText(text: String): List<String>
 
     protected abstract fun getPostUrl(option: RequestOption): String

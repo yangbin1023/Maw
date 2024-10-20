@@ -85,3 +85,15 @@ data class TagInfo(
             name compareTo other.name
     }
 }
+
+@Entity("tag_history")
+data class TagHistory(
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+    val source: String,
+    val name: String,
+    @ColumnInfo("create_time")
+    val createTime: Date = Date(),
+    @ColumnInfo("update_time")
+    val updateTime: Date = Date(),
+)

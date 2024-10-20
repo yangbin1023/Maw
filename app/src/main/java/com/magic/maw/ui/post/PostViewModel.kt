@@ -182,6 +182,7 @@ class PostViewModel(
         if (list.isNotEmpty()) {
             viewModelState.value.requestOption.clearTags()
             viewModelState.value.requestOption.addTags(list)
+            parser.tagManager.dealSearchTags(list)
             refresh(true)
         }
     }

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import com.magic.maw.data.TagHistory
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
 import java.util.Date
@@ -54,4 +55,31 @@ interface TagDao {
 
     @Query("DELETE FROM tag_info WHERE source = :source AND tag_id = :tagId")
     fun delete(source: String, tagId: Int)
+
+    @Insert
+    fun insertHistory(tagHistory: TagHistory)
+
+    @Query("SELECT * FROM tag_history")
+    fun getAllHistory(): List<TagHistory>
+
+    @Query("SELECT * FROM tag_history WHERE source = :source ORDER BY update_time DESC")
+    fun getAllHistory(source: String): List<TagHistory>
+
+    @Query("SELECT * FROM tag_history WHERE source = :source ORDER BY update_time DESC LIMIT :limit")
+    fun getAllHistory(source: String, limit: Int): List<TagHistory>
+
+    @Query("SELECT * FROM tag_history WHERE source = :source AND name = :name")
+    fun getHistory(source: String, name: String): TagHistory?
+
+    @Query("UPDATE tag_history SET update_time = :now WHERE id = :id")
+    fun updateHistory(id: Int, now: Date = Date())
+
+    @Query("DELETE FROM tag_history")
+    fun deleteAllHistory()
+
+    @Query("DELETE FROM tag_history WHERE source = :source")
+    fun deleteAllHistory(source: String)
+
+    @Query("DELETE FROM tag_history WHERE source = :source AND name = :name")
+    fun deleteHistory(source: String, name: String)
 }

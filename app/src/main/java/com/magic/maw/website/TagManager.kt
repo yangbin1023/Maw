@@ -1,8 +1,10 @@
 package com.magic.maw.website
 
+import com.magic.maw.data.TagHistory
 import com.magic.maw.data.TagInfo
 import com.magic.maw.db.AppDB
 import com.magic.maw.db.updateOrInsert
+import com.magic.maw.db.updateOrInsertHistory
 import com.magic.maw.util.dbHandler
 import com.magic.maw.website.parser.BaseParser
 import com.magic.maw.website.parser.YandeParser
@@ -23,6 +25,7 @@ class TagManager(val source: String) {
     private val taskMap = HashMap<String, TagTask>()
     private val coroutineScope by lazy { CoroutineScope(Dispatchers.IO) }
     private val parser: BaseParser get() = BaseParser.get(source)
+    private val historyList = ArrayList<TagInfo>()
 
     init {
         dbHandler.post {
@@ -34,6 +37,7 @@ class TagManager(val source: String) {
                 }
             }
         }
+        loadTagHistory()
     }
 
     fun addAll(tagList: List<TagInfo>) {
@@ -86,6 +90,51 @@ class TagManager(val source: String) {
                 return task.status
             }
         }
+    }
+
+    fun getHistoryList(): List<TagInfo> = historyList
+
+    fun deleteHistory(name: String) = dbHandler.post {
+        synchronized(historyList) {
+            val iterator = historyList.iterator()
+            while (iterator.hasNext()) {
+                if (iterator.next().name == name) {
+                    iterator.remove()
+                }
+            }
+        }
+        dao.deleteHistory(source, name)
+    }
+
+    fun deleteAllHistory() = dbHandler.post {
+        synchronized(historyList) {
+            historyList.clear()
+        }
+        dao.deleteAllHistory(source)
+    }
+
+    fun dealSearchTags(tagList: List<String>) = dbHandler.post {
+        for (item in tagList) {
+            dao.updateOrInsertHistory(TagHistory(source = source, name = item))
+        }
+        loadTagHistory()
+    }
+
+    private fun loadTagHistory() = dbHandler.post {
+        val historyList = ArrayList<TagInfo>()
+        for (item in dao.getAllHistory(source)) {
+            historyList.add(getInfo(name = item.name) ?: TagInfo(source = source, name = item.name))
+        }
+        synchronized(this.historyList) {
+            this.historyList.clear()
+            this.historyList.addAll(historyList)
+        }
+    }
+
+    private fun getInfo(name: String): TagInfo? {
+        synchronized(tagMap) { tagMap[name] }?.let { return it }
+        dao.get(source = source, name = name)?.let { return it }
+        return null
     }
 
     private suspend fun TagTask.start() {

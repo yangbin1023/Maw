@@ -69,6 +69,25 @@ class YandeParser : BaseParser() {
         return targetInfo
     }
 
+    override suspend fun requestSuggestTagInfo(name: String, limit: Int): List<TagInfo> {
+        if (name.isEmpty())
+            return emptyList()
+        val tagMap = HashMap<String, TagInfo>()
+        val tagList = ArrayList<TagInfo>()
+        try {
+            val url = getTagUrl(name, firstPageIndex, limit)
+            val yandeList: ArrayList<YandeTag> = client.get(url).body()
+            for (yandeTag in yandeList) {
+                val tag = yandeTag.toData() ?: continue
+                tagMap[tag.name] = tag
+                tagList.add(tag)
+            }
+        } catch (_: Exception) {
+        }
+        tagManager.addAll(tagMap)
+        return tagList
+    }
+
     override fun RequestOption.parseSearchText(text: String): List<String> {
         if (text.isEmpty())
             return emptyList()
