@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridS
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,8 +32,10 @@ fun PostRoute(
     postViewModel: PostViewModel,
     openDrawer: () -> Unit,
     openSearch: (String) -> Unit,
+    onOpenView: (Boolean) -> Unit,
 ) {
     val uiState by postViewModel.uiState.collectAsStateWithLifecycle()
+    onOpenView.invoke(uiState is PostUiState.View)
 
     PostRoute(
         uiState = uiState,
@@ -74,6 +77,12 @@ fun PostRoute(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    val resetTopBar: suspend () -> Unit = {
+        lazyState.scrollToItem(0, 0)
+        scaffoldState.animateTo(scaffoldState.maxPx)
+        context.showSystemBars()
+    }
+
     AnimatedVisibility(
         visible = uiState is PostUiState.Post,
         enter = fadeIn,
@@ -85,6 +94,11 @@ fun PostRoute(
             postState = currentState
         }
         postState?.let {
+            LaunchedEffect(uiState.type) {
+                if (uiState.type == UiStateType.Refresh) {
+                    resetTopBar.invoke()
+                }
+            }
             PostScreen(
                 uiState = it,
                 lazyState = lazyState,
@@ -98,10 +112,7 @@ fun PostRoute(
             )
             BackHandler(enabled = it.isSearch, onBack = {
                 onClearSearch.invoke()
-                scope.launch {
-                    lazyState.scrollToItem(0, 0)
-                    scaffoldState.animateTo(scaffoldState.maxPx)
-                }
+                scope.launch { resetTopBar.invoke() }
                 Toaster.show(R.string.click_again_to_exit)
             })
         }
@@ -122,14 +133,10 @@ fun PostRoute(
                 onLoadMore = onLoadMore,
                 onExit = onExitView,
                 onTagClick = { tag, justSearch ->
-                    onExitView.invoke()
                     if (justSearch) {
+                        onExitView.invoke()
                         onSearch.invoke(tag.name)
-                        scope.launch {
-                            lazyState.scrollToItem(0, 0)
-                            scaffoldState.animateTo(scaffoldState.maxPx)
-                            context.showSystemBars()
-                        }
+                        scope.launch { resetTopBar.invoke() }
                     } else {
                         openSearch.invoke(tag.name)
                     }

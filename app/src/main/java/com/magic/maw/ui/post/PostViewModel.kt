@@ -198,7 +198,7 @@ class PostViewModel(
             if (index >= 0 && index < it.dataList.size) {
                 it.copy(viewIndex = index)
             } else {
-                it
+                it.copy(viewIndex = -1)
             }
         }
     }

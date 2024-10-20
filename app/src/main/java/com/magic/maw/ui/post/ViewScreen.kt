@@ -90,7 +90,6 @@ import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
-import com.magic.maw.util.Logger
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.isShowStatusBars
 import com.magic.maw.util.UiUtils.showSystemBars

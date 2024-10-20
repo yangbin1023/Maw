@@ -28,7 +28,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.magic.maw.R
 import com.magic.maw.ui.post.PostRoute
-import com.magic.maw.ui.post.PostUiState
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.search.SearchScreen
 import com.magic.maw.ui.setting.SettingScreen
@@ -47,9 +46,6 @@ fun MainNavGraph(
     val parser = BaseParser.get(configFlow.collectAsState().value.source)
     val postViewModel: PostViewModel =
         viewModel(factory = PostViewModel.providerFactory(parser = parser))
-    val onFinish: () -> Unit = { navController.popBackStack() }
-    mainViewModel.gesturesEnabled =
-        postViewModel.uiState.collectAsState().value !is PostUiState.View
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -61,7 +57,8 @@ fun MainNavGraph(
             PostRoute(
                 postViewModel = postViewModel,
                 openDrawer = openDrawer,
-                openSearch = { navController.navigate(MainRoutes.search(it)) }
+                openSearch = { navController.navigate(MainRoutes.search(it)) },
+                onOpenView = { mainViewModel.gesturesEnabled = it }
             )
         }
         composable(route = MainRoutes.POOL) {
@@ -91,7 +88,7 @@ fun MainNavGraph(
         composable(route = MainRoutes.SETTING) {
             SettingScreen(
                 isExpandedScreen = isExpandedScreen,
-                onFinish = onFinish
+                onFinish = { navController.popBackStack() }
             )
         }
         composable(
@@ -101,8 +98,11 @@ fun MainNavGraph(
             val initText = navBackStackEntry.arguments?.getString("text") ?: ""
             SearchScreen(
                 initText = initText,
-                onFinish = onFinish,
-                onSearch = { postViewModel.search(it);onFinish() }
+                onFinish = { navController.popBackStack() },
+                onSearch = {
+                    postViewModel.search(it)
+                    navController.popBackStack()
+                }
             )
         }
     }
