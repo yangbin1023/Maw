@@ -181,7 +181,7 @@ class PostViewModel(
 
     fun search(text: String) = with(parser) {
         val list = viewModelState.value.requestOption.parseSearchText(text)
-        if (list.isNotEmpty()) {
+        if (list.isNotEmpty() && list != viewModelState.value.requestOption.tags.toList()) {
             viewModelState.value.requestOption.clearTags()
             viewModelState.value.requestOption.addTags(list)
             parser.tagManager.dealSearchTags(list)
