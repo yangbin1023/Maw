@@ -131,9 +131,11 @@ class PostViewModel(
     }
 
     fun refresh(force: Boolean = checkForceRefresh()) {
-        if (viewModelState.value.type == UiStateType.Refresh)
-            return
-        viewModelState.update { it.copy(type = UiStateType.Refresh) }
+        synchronized(this) {
+            if (viewModelState.value.type == UiStateType.Refresh)
+                return
+            viewModelState.update { it.copy(type = UiStateType.Refresh) }
+        }
         viewModelScope.launch {
             try {
                 val option = viewModelState.value.requestOption
@@ -204,6 +206,8 @@ class PostViewModel(
     }
 
     fun exitView() {
+        if (viewModelState.value.viewIndex < 0)
+            return
         viewModelState.update { it.copy(viewIndex = -1) }
     }
 
@@ -223,13 +227,3 @@ class PostViewModel(
         }
     }
 }
-
-//@Composable
-//internal inline fun <reified T : Any> PostViewModel.getState(onNew: @Composable () -> T): T {
-//    val type = T::class.java.name
-//    val state = stateMap[type]
-//    (state as? T)?.let { return it }
-//    val newOne = onNew()
-//    stateMap[type] = newOne
-//    return newOne
-//}

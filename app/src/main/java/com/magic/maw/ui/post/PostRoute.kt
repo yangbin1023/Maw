@@ -30,13 +30,20 @@ private const val TAG = "PostRoute"
 @Composable
 fun PostRoute(
     postViewModel: PostViewModel,
+    searchText: String = "",
     openDrawer: () -> Unit,
     openSearch: (String) -> Unit,
     onOpenView: (Boolean) -> Unit,
 ) {
     val uiState by postViewModel.uiState.collectAsStateWithLifecycle()
-    onOpenView.invoke(uiState is PostUiState.View)
+    onOpenView.invoke(uiState !is PostUiState.View)
 
+    LaunchedEffect(searchText) {
+        if (searchText.isNotEmpty()) {
+            postViewModel.exitView()
+            postViewModel.search(searchText)
+        }
+    }
     PostRoute(
         uiState = uiState,
         openDrawer = openDrawer,

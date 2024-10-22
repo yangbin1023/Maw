@@ -44,25 +44,25 @@ fun MainDrawer(
             labelRes = R.string.post,
             iconRes = R.drawable.ic_image,
             selected = currentRoute == MainRoutes.POST,
-            onClick = { navController.navigate(MainRoutes.POST);closeDrawer() }
+            onClick = { navController.onNavigate(MainRoutes.POST);closeDrawer() }
         )
         DrawerItem(
             labelRes = R.string.pool,
             iconRes = R.drawable.ic_album,
             selected = currentRoute == MainRoutes.POOL,
-            onClick = { navController.navigate(MainRoutes.POOL);closeDrawer() }
+            onClick = { navController.onNavigate(MainRoutes.POOL);closeDrawer() }
         )
         DrawerItem(
             labelRes = R.string.popular,
             iconRes = R.drawable.ic_popular,
             selected = currentRoute == MainRoutes.POPULAR,
-            onClick = { navController.navigate(MainRoutes.POPULAR);closeDrawer() }
+            onClick = { navController.onNavigate(MainRoutes.POPULAR);closeDrawer() }
         )
         DrawerItem(
             labelRes = R.string.setting,
             iconRes = R.drawable.ic_setting,
             selected = currentRoute == MainRoutes.SETTING,
-            onClick = { navController.navigate(MainRoutes.SETTING);closeDrawer() }
+            onClick = { navController.onNavigate(MainRoutes.SETTING);closeDrawer() }
         )
     }
 }

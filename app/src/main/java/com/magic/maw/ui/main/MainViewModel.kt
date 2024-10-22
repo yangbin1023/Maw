@@ -6,7 +6,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.magic.maw.MyApp
 import com.magic.maw.website.parser.BaseParser
 
@@ -18,21 +17,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 }
 
 object MainRoutes {
-    const val POST = "post"
+    const val POST = "post?tagText={tagText}"
     const val POOL = "pool"
     const val POPULAR = "popular"
     const val SETTING = "setting"
     const val SEARCH = "search?text={text}"
 
+    fun post(tagText: String = ""): String = POST.replace("{tagText}", tagText)
     fun search(text: String = ""): String = SEARCH.replace("{text}", text)
 }
 
-fun NavController.onNavigate(targetRoute: String) {
+fun NavController.onNavigate(route: String, vararg args: Any) {
+    val targetRoute = getFormatRoute(route, *args)
     navigate(targetRoute) {
-        popUpTo(graph.findStartDestination().id) {
+        popUpTo(route) {
+            inclusive = true
             saveState = true
         }
-        launchSingleTop = true
-        restoreState = true
     }
+}
+
+private fun getFormatRoute(format: String, vararg args: Any): String {
+    val strList = ArrayList<String>()
+    var itemStr = format
+    do {
+        val startIndex = itemStr.indexOf("{")
+        val endIndex = itemStr.indexOf("}")
+        if (startIndex < 0 || endIndex < 0 || startIndex > endIndex)
+            break
+        strList.add(itemStr.substring(startIndex, endIndex + 1))
+        itemStr = itemStr.substring(endIndex + 1)
+    } while (true)
+    var str = format
+    for (i in 0 until strList.size) {
+        val newValue = if (args.size > i) args[i].toString() else ""
+        str = str.replaceFirst(strList[i], newValue)
+    }
+    return str
 }

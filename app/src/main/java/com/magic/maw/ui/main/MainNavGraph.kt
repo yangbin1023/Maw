@@ -53,9 +53,14 @@ fun MainNavGraph(
         enterTransition = defaultEnter,
         exitTransition = defaultExit
     ) {
-        composable(route = MainRoutes.POST) {
+        composable(
+            route = MainRoutes.POST,
+            arguments = listOf(navArgument("tagText") { type = NavType.StringType })
+        ) { navBackStackEntry ->
+            val tagText = navBackStackEntry.arguments?.getString("tagText") ?: ""
             PostRoute(
                 postViewModel = postViewModel,
+                searchText = tagText,
                 openDrawer = openDrawer,
                 openSearch = { navController.navigate(MainRoutes.search(it)) },
                 onOpenView = { mainViewModel.gesturesEnabled = it }
@@ -99,10 +104,7 @@ fun MainNavGraph(
             SearchScreen(
                 initText = initText,
                 onFinish = { navController.popBackStack() },
-                onSearch = {
-                    postViewModel.search(it)
-                    navController.popBackStack()
-                }
+                onSearch = { navController.onNavigate(MainRoutes.POST, it) }
             )
         }
     }
