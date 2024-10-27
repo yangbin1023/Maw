@@ -115,6 +115,8 @@ class ScrollableViewState(
 
     var expand by mutableStateOf(false)
 
+    val hideContent: Boolean get() = offsetValue == minPx
+
     private suspend fun snapTo(value: Float) {
         offsetAnimate.snapTo(value)
         if (value == minPx) {

@@ -1,6 +1,8 @@
 package com.magic.maw.ui.post
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -40,6 +43,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -63,7 +67,6 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -83,6 +86,7 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
+import com.magic.maw.data.toSizeString
 import com.magic.maw.ui.components.RememberSystemBars
 import com.magic.maw.ui.components.ScrollableView
 import com.magic.maw.ui.components.SettingItem
@@ -211,15 +215,8 @@ private fun BoxScope.ViewContent(
         if (dataList.size - index < 5) {
             onLoadMore()
         }
-        val data = dataList[index]
-        val info = data.getInfo(data.quality) ?: let {
-            data.quality = Quality.File
-            data.originalInfo
-        }
         ViewScreenItem(
-            data = data,
-            info = info,
-            quality = data.quality,
+            data = dataList[index],
             reset = pagerState.settledPage != index,
             onTab = onTab
         )
@@ -256,17 +253,18 @@ private suspend fun loadPainter(context: Context, data: Any) = suspendCoroutine 
 @Composable
 private fun ViewScreenItem(
     data: PostData,
-    info: PostData.Info,
-    quality: Quality,
     reset: Boolean = false,
     onTab: () -> Unit = {},
 ) {
+    val quality = data.quality
+    val info = data.getInfo(quality) ?: data.originalInfo
     val coroutineScope = rememberCoroutineScope()
     val status by loadDLFile(data, quality, coroutineScope).collectAsState()
     val context = LocalContext.current
     val size = Size(info.width.toFloat(), info.height.toFloat())
     var model by remember { mutableStateOf<Pair<Any?, Size?>>(Pair(null, size)) }
     var retryCount by remember { mutableIntStateOf(0) }
+    LaunchedEffect(quality) { model = Pair(null, size) }
     when (status) {
         is LoadStatus.Waiting -> LoadingView()
         is LoadStatus.Loading -> LoadingView { (status as? LoadStatus.Loading)?.progress ?: 0.99f }
@@ -359,7 +357,7 @@ private fun BoxScope.ViewDetailBar(
             .align(Alignment.BottomCenter),
         state = scrollableViewState,
         toolbarModifier = Modifier.let {
-            if (scrollableViewState.expand) {
+            if (!scrollableViewState.hideContent) {
                 it.background(ViewDetailBarExpand)
             } else {
                 it.background(
@@ -377,7 +375,7 @@ private fun BoxScope.ViewDetailBar(
                 }
             )
         },
-        contentModifier = Modifier.background(ViewDetailBarFold),
+        contentModifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(0.7f)),
         content = {
             ScrollableContent(
                 postData = postData,
@@ -439,6 +437,11 @@ private fun BoxScope.ScrollableContent(
     val scope = rememberCoroutineScope()
     val config by configFlow.collectAsState()
     val tagManager = TagManager.get(config.source)
+    val context = LocalContext.current
+    val qualityItemList = ArrayList<Pair<Quality, PostData.Info>>()
+    postData.sampleInfo?.let { qualityItemList.add(Pair(Quality.Sample, it)) }
+    postData.largeInfo?.let { qualityItemList.add(Pair(Quality.Large, it)) }
+    qualityItemList.add(Pair(Quality.File, postData.originalInfo))
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -467,9 +470,37 @@ private fun BoxScope.ScrollableContent(
 
         ContentHeader(stringResource(R.string.others))
 
-        SettingItem(title = stringResource(R.string.author), tips = postData.uploader)
-        SettingItem(title = stringResource(R.string.rating), tips = postData.rating.name)
-//        SettingItem(title = stringResource(R.string.source), tips = data.srcUrl)
+        for (item in qualityItemList) {
+            QualityItem(
+                quality = item.first,
+                selected = postData.quality == item.first,
+                info = item.second,
+                onClick = { postData.quality = it }
+            )
+        }
+        SettingItem(
+            title = stringResource(R.string.author),
+            tips = postData.uploader,
+            showIcon = false
+        )
+        SettingItem(
+            title = stringResource(R.string.rating),
+            tips = postData.rating.name,
+            showIcon = false
+        )
+        postData.srcUrl?.let { srcUrl ->
+            val tips = if (srcUrl.length > 21) "${srcUrl.substring(0, 18)}..." else srcUrl
+            SettingItem(
+                title = stringResource(R.string.source),
+                tips = tips,
+                contentDescription = srcUrl,
+                showIcon = false
+            ) {
+                if (srcUrl.isNotEmpty()) {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(srcUrl)))
+                }
+            }
+        }
     }
 }
 
@@ -482,8 +513,37 @@ private fun ContentHeader(title: String) {
     )
     HorizontalDivider(
         modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
-        thickness = 2.dp
+        thickness = 2.dp,
+        color = MaterialTheme.colorScheme.onBackground.copy(0.85f)
     )
+}
+
+@Composable
+private fun QualityItem(
+    quality: Quality,
+    info: PostData.Info,
+    selected: Boolean,
+    onClick: (Quality) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 15.dp)
+            .wrapContentHeight()
+            .clickable { onClick.invoke(quality) },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = quality.toResString(LocalContext.current))
+        Spacer(modifier = Modifier.weight(1.0f))
+        val resolutionStr = "${info.width}x${info.height}"
+        val sizeStr = if (info.size > 0) " " + info.size.toSizeString() else ""
+        Text(
+            text = "$resolutionStr$sizeStr",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(0.7f)
+        )
+        RadioButton(selected = selected, onClick = { onClick.invoke(quality) })
+    }
 }
 
 @Composable
@@ -507,59 +567,32 @@ private fun TagInfoItem(
             )
             Spacer(modifier = Modifier.weight(1f))
         }
+        val searchColor = MaterialTheme.colorScheme.onBackground
         Row(
             modifier = Modifier
                 .border(
                     width = 1.dp,
-                    color = Color.White,
+                    color = searchColor,
                     shape = CircleShape
                 )
-                .padding(vertical = 2.dp, horizontal = 5.dp)
+                .padding(horizontal = 4.5.dp)
                 .clickable {
                     onTagClick(info, true)
                 },
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                modifier = Modifier.size(21.dp),
+                modifier = Modifier.size(16.dp),
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
-                tint = Color.White
+                tint = searchColor
             )
             Text(
-                modifier = Modifier.padding(horizontal = 1.dp),
+                modifier = Modifier.padding(end = 1.dp),
                 text = info.count.toString(),
-                color = Color.White,
-                fontSize = 18.sp
+                color = searchColor,
+                fontSize = 14.sp
             )
         }
-    }
-}
-
-@Composable
-@Preview
-private fun TagInfoItemPreview() {
-    Column {
-        ContentHeader(stringResource(R.string.tags))
-        TagInfoItem(
-            info = TagInfo(
-                id = 10,
-                source = "yande",
-                name = "tokifokiz_bosotto_roshia-go_deklahsdf_hfkeu-nasfhuhsfjieadsf",
-                type = TagType.Artist,
-                count = 64810
-            ),
-            onTagClick = { _, _ -> }
-        )
-        TagInfoItem(
-            info = TagInfo(
-                id = 10,
-                source = "yande",
-                name = "tokifokiz_bosottosf",
-                type = TagType.Copyright,
-                count = 6516
-            ),
-            onTagClick = { _, _ -> }
-        )
     }
 }

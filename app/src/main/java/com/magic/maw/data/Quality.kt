@@ -39,8 +39,11 @@ enum class Quality(val value: Int) {
             return Sample
         }
 
+        /**
+         * 获取支持的质量类型，从高到低
+         */
         fun getQualities(): Array<Quality> {
-            return arrayOf(Preview, Sample, Large, File)
+            return arrayOf(File, Large, Sample, Preview)
         }
     }
 }

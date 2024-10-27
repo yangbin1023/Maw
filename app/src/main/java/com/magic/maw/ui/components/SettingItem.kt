@@ -27,6 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -36,16 +40,28 @@ fun SettingItem(
     title: String,
     subTitle: String? = null,
     tips: String? = null,
+    contentDescription: String? = null,
     enable: Boolean = true,
+    showIcon: Boolean = true,
     imageVector: ImageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
     onClick: () -> Unit = {}
 ) {
+    val paddingModifier = if (modifier == Modifier) Modifier.itemPadding() else modifier
+    val semantics = if (contentDescription != null) {
+        Modifier.semantics {
+            this.contentDescription = contentDescription
+            this.role = Role.Button
+        }
+    } else {
+        Modifier
+    }
     Row(
         modifier = Modifier
             .clickable(enabled = enable, onClick = throttle(func = onClick))
             .fillMaxWidth()
             .defaultMinSize(minHeight = SettingItemDefaults.defaultMinHeight)
-            .let { if (modifier == Modifier) it.itemPadding() else it.then(modifier) },
+            .then(paddingModifier)
+            .then(semantics),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -66,7 +82,9 @@ fun SettingItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Icon(imageVector = imageVector, contentDescription = null)
+        if (showIcon) {
+            Icon(imageVector = imageVector, contentDescription = null)
+        }
     }
 }
 
@@ -76,12 +94,23 @@ fun DialogSettingItem(
     title: String,
     subTitle: String? = null,
     tips: String? = null,
+    contentDescription: String? = null,
     enable: Boolean = true,
+    showIcon: Boolean = true,
     imageVector: ImageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
     dialogContent: @Composable (onDismiss: () -> Unit) -> Unit = {}
 ) {
     var showDialog: Boolean by remember { mutableStateOf(false) }
-    SettingItem(modifier, title, subTitle, tips, enable, imageVector) {
+    SettingItem(
+        modifier = modifier,
+        title = title,
+        subTitle = subTitle,
+        tips = tips,
+        contentDescription = contentDescription,
+        enable = enable,
+        showIcon = showIcon,
+        imageVector = imageVector
+    ) {
         showDialog = true
     }
     val onDismiss = {

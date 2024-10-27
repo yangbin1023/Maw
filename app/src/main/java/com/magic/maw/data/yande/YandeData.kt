@@ -48,15 +48,13 @@ class YandeData : IData<PostData> {
     var height: Int? = null
     var is_held: Boolean? = null
     var frames_pending_string: String? = null
-//    var frames_pending //类型未知，数组
-//            : Array<Any> = arrayOf()
     var frames_string: String? = null
-//    var frames //类型未知，数组
-//            : Array<Any> = arrayOf()
-    var is_note_locked: Boolean? = null
     var last_noted_at: Int? = null
     var last_commented_at: Int? = null
     var flag_detail: FlagDetail? = null
+//    var frames_pending: Array<Any> = arrayOf() //类型未知，数组
+//    var frames: Array<Any> = arrayOf() //类型未知，数组
+//    var is_note_locked: Boolean? = null
 
     @Serializable
     class FlagDetail {
@@ -131,8 +129,12 @@ class YandeData : IData<PostData> {
         fileInfo.height = height!!
         fileInfo.url = file_url!!
         fileInfo.md5 = md5!!
+        if (fileInfo.url.endsWith(".png", true)) {
+            fileInfo.type = FileType.Png
+        }
         data.originalInfo = fileInfo
 
+        data.quality = data.getDefaultQuality()
         return data
     }
 }

@@ -56,11 +56,11 @@ private data class PostViewModelState(
     val viewIndex: Int = -1,
     val requestOption: RequestOption
 ) {
-    private val dataIdSet: HashSet<Int> = HashSet()
+    private val dataMap: HashMap<Int, PostData> = HashMap()
 
     init {
         for (data in dataList) {
-            dataIdSet.add(data.id)
+            dataMap[data.id] = data
         }
     }
 
@@ -89,7 +89,8 @@ private data class PostViewModelState(
     ): PostViewModelState {
         val list: MutableList<PostData> = ArrayList()
         for (data in dataList) {
-            if (!dataIdSet.contains(data.id)) {
+            dataMap[data.id]?.updateFrom(data) ?: let {
+                dataMap[data.id] = data
                 list.add(data)
             }
         }
