@@ -3,11 +3,14 @@ package com.magic.maw.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.UnfoldMore
@@ -27,12 +30,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.magic.maw.R
 
 @Composable
 fun SettingItem(
@@ -40,6 +47,7 @@ fun SettingItem(
     title: String,
     subTitle: String? = null,
     tips: String? = null,
+    tipsColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     contentDescription: String? = null,
     enable: Boolean = true,
     showIcon: Boolean = true,
@@ -65,22 +73,42 @@ fun SettingItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.weight(1f, fill = true)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge)
-            if (subTitle != null) {
-                Text(
-                    text = subTitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        BoxWithConstraints(
+            modifier = Modifier
+                .weight(1.0f)
+        ) {
+            val maxWidth = maxWidth
+            val itemMinWidth = maxWidth * if (tips == null) 0f else 0.3f
+            val itemMaxWidth = maxWidth - itemMinWidth
+            Row(Modifier, verticalAlignment = Alignment.CenterVertically) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = itemMaxWidth)
+                        .padding(end = 10.dp)
+                ) {
+                    Text(text = title, style = MaterialTheme.typography.bodyLarge)
+                    if (subTitle != null) {
+                        Text(
+                            text = subTitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(Modifier.weight(1.0f))
+                if (tips != null) {
+                    Text(
+                        modifier = Modifier.widthIn(max = maxWidth),
+                        text = tips,
+                        textAlign = TextAlign.End,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = tipsColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        softWrap = false
+                    )
+                }
             }
-        }
-        if (tips != null) {
-            Text(
-                text = tips,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
         if (showIcon) {
             Icon(imageVector = imageVector, contentDescription = null)
@@ -127,7 +155,7 @@ fun MenuSettingItem(
     title: String,
     subTitle: String? = null,
     enable: Boolean = true,
-    items: Array<String>,
+    items: List<String>,
     checkItem: Int = 0,
     onItemChanged: (Int) -> Unit,
 ) {
@@ -272,11 +300,15 @@ object SettingItemDefaults {
 @Composable
 fun SettingItemPreview() {
     Column(modifier = Modifier.background(Color.White)) {
-        SettingItem(title = "Test1", subTitle = "desc1", tips = "tips1")
+        SettingItem(
+            title = stringResource(R.string.source),
+            subTitle = "该文件的来源",
+            tips = "https://www.pixiv.net/artworks/123692003"
+        )
         var selectIndex by remember { mutableIntStateOf(0) }
         MenuSettingItem(
             title = "暗色主题",
-            items = arrayOf("跟随系统", "打开", "关闭"),
+            items = listOf("跟随系统", "打开", "关闭"),
             checkItem = selectIndex
         ) {
             selectIndex = it

@@ -35,4 +35,6 @@
     <string name="search_tags">搜索标签</string>
     <string name="click_again_to_exit">再按一次退出</string>
     <string name="search_history">搜索历史</string>
+    <string name="upload_time">上传时间</string>
+    <string name="score">评分</string>
 </resources>

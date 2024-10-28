@@ -41,4 +41,9 @@ object TimeUtils {
         val simpleDateFormat = getFormat(formatStr)
         return simpleDateFormat.format(Date())
     }
+
+    fun Long.toFormatStr(formatStr: String = FORMAT_1): String {
+        val simpleDateFormat = getFormat(formatStr)
+        return simpleDateFormat.format(Date(this))
+    }
 }

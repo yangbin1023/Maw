@@ -196,7 +196,7 @@ private fun SettingBody(
         }
 
         // 深色模式
-        val darkSettingItems = arrayOf(
+        val darkSettingItems = listOf(
             stringResource(R.string.follow_system),
             stringResource(R.string.always_enable),
             stringResource(R.string.always_disable)

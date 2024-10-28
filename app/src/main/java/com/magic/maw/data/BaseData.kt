@@ -92,6 +92,9 @@ data class PostData(
         this.sampleInfo = data.sampleInfo
         this.largeInfo = data.largeInfo
         this.originalInfo = data.originalInfo
+        if (getInfo(quality) == null) {
+            quality = getDefaultQuality()
+        }
     }
 
     data class Info(

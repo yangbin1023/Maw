@@ -34,4 +34,6 @@
     <string name="search_tags">Search tags</string>
     <string name="click_again_to_exit">Click again to exit</string>
     <string name="search_history">Search history</string>
+    <string name="upload_time">Upload time</string>
+    <string name="score">Score</string>
 </resources>

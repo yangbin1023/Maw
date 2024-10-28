@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -43,7 +42,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -87,6 +85,7 @@ import com.magic.maw.data.Quality
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
 import com.magic.maw.data.toSizeString
+import com.magic.maw.ui.components.MenuSettingItem
 import com.magic.maw.ui.components.RememberSystemBars
 import com.magic.maw.ui.components.ScrollableView
 import com.magic.maw.ui.components.SettingItem
@@ -94,6 +93,7 @@ import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
+import com.magic.maw.util.TimeUtils.toFormatStr
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.isShowStatusBars
 import com.magic.maw.util.UiUtils.showSystemBars
@@ -417,10 +417,8 @@ private fun BoxScope.ScrollableBar(
             contentDescription = null
         )
 
-        val info = postData.originalInfo
-        val quality = postData.quality
-        val context = LocalContext.current
-        val text = "${postData.id} (${info.width}x${info.height}) ${quality.toResString(context)}"
+        val info = postData.getInfo(postData.quality) ?: postData.originalInfo
+        val text = "${postData.id} (${info.width}x${info.height})"
         Text(
             modifier = Modifier.align(Alignment.CenterStart),
             text = text
@@ -438,10 +436,26 @@ private fun BoxScope.ScrollableContent(
     val config by configFlow.collectAsState()
     val tagManager = TagManager.get(config.source)
     val context = LocalContext.current
-    val qualityItemList = ArrayList<Pair<Quality, PostData.Info>>()
-    postData.sampleInfo?.let { qualityItemList.add(Pair(Quality.Sample, it)) }
-    postData.largeInfo?.let { qualityItemList.add(Pair(Quality.Large, it)) }
-    qualityItemList.add(Pair(Quality.File, postData.originalInfo))
+    val qualityList = ArrayList<Quality>()
+    val qualityItems = ArrayList<String>()
+    postData.sampleInfo?.let {
+        qualityList.add(Quality.Sample)
+        val resolutionStr = "${it.width}x${it.height}"
+        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
+        qualityItems.add("$resolutionStr$sizeStr")
+    }
+    postData.largeInfo?.let {
+        qualityList.add(Quality.Large)
+        val resolutionStr = "${it.width}x${it.height}"
+        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
+        qualityItems.add("$resolutionStr$sizeStr")
+    }
+    postData.originalInfo.let {
+        qualityList.add(Quality.File)
+        val resolutionStr = "${it.width}x${it.height}"
+        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
+        qualityItems.add("$resolutionStr$sizeStr")
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -470,14 +484,19 @@ private fun BoxScope.ScrollableContent(
 
         ContentHeader(stringResource(R.string.others))
 
-        for (item in qualityItemList) {
-            QualityItem(
-                quality = item.first,
-                selected = postData.quality == item.first,
-                info = item.second,
-                onClick = { postData.quality = it }
-            )
+        var qualityIndex by remember { mutableIntStateOf(qualityList.indexOf(postData.quality)) }
+        if (qualityIndex < 0) {
+            qualityIndex = 0
         }
+        MenuSettingItem(
+            title = stringResource(R.string.quality),
+            items = qualityItems,
+            checkItem = qualityIndex,
+            onItemChanged = {
+                postData.quality = qualityList[it]
+                qualityIndex = it
+            }
+        )
         SettingItem(
             title = stringResource(R.string.author),
             tips = postData.uploader,
@@ -488,18 +507,30 @@ private fun BoxScope.ScrollableContent(
             tips = postData.rating.name,
             showIcon = false
         )
-        postData.srcUrl?.let { srcUrl ->
-            val tips = if (srcUrl.length > 21) "${srcUrl.substring(0, 18)}..." else srcUrl
+        postData.uploadTime?.let {
+            SettingItem(
+                title = stringResource(R.string.upload_time),
+                tips = it.toFormatStr(),
+                showIcon = false
+            )
+        }
+
+        val srcUrl = postData.srcUrl ?: ""
+        if (srcUrl.isNotEmpty()) {
             SettingItem(
                 title = stringResource(R.string.source),
-                tips = tips,
+                tips = srcUrl,
                 contentDescription = srcUrl,
+                showIcon = false,
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(srcUrl))) }
+            )
+        }
+        postData.score?.let {
+            SettingItem(
+                title = stringResource(R.string.score),
+                tips = it.toString(),
                 showIcon = false
-            ) {
-                if (srcUrl.isNotEmpty()) {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(srcUrl)))
-                }
-            }
+            )
         }
     }
 }
@@ -516,34 +547,6 @@ private fun ContentHeader(title: String) {
         thickness = 2.dp,
         color = MaterialTheme.colorScheme.onBackground.copy(0.85f)
     )
-}
-
-@Composable
-private fun QualityItem(
-    quality: Quality,
-    info: PostData.Info,
-    selected: Boolean,
-    onClick: (Quality) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 15.dp)
-            .wrapContentHeight()
-            .clickable { onClick.invoke(quality) },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = quality.toResString(LocalContext.current))
-        Spacer(modifier = Modifier.weight(1.0f))
-        val resolutionStr = "${info.width}x${info.height}"
-        val sizeStr = if (info.size > 0) " " + info.size.toSizeString() else ""
-        Text(
-            text = "$resolutionStr$sizeStr",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onBackground.copy(0.7f)
-        )
-        RadioButton(selected = selected, onClick = { onClick.invoke(quality) })
-    }
 }
 
 @Composable

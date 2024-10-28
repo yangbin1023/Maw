@@ -88,7 +88,7 @@ class YandeData : IData<PostData> {
         data.score = score
         data.srcUrl = source
         data.rating = getRating()
-        data.uploadTime = updated_at
+        data.uploadTime = updated_at?.let { it * 1000 }
         tags?.split(" ")?.toSet()?.let { tagNames ->
             for (tagName in tagNames) {
                 data.tags.add(TagInfo(source = YandeParser.SOURCE, name = tagName))
