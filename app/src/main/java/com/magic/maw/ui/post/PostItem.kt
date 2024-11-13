@@ -63,7 +63,7 @@ fun PostItem(
                 elevation = PostDefaults.ContentPadding,
                 shape = RoundedCornerShape(PostDefaults.ContentPadding)
             )
-            .background(MaterialTheme.colorScheme.surface),
+            .background(MaterialTheme.colorScheme.surfaceContainer),
     ) {
         val info = localData.originalInfo
         val ratio = getPostRatio(staggered, info.width, info.height)

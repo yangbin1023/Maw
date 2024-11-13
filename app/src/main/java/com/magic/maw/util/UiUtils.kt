@@ -9,7 +9,6 @@ import android.graphics.Color
 import android.graphics.Point
 import android.os.Build
 import android.util.Size
-import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import androidx.compose.material3.ExperimentalMaterial3Api

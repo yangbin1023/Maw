@@ -1,6 +1,5 @@
 package com.magic.maw.ui.post
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -44,7 +43,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -60,8 +58,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -69,16 +65,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.drawable.toBitmap
-import coil.imageLoader
-import coil.request.ImageRequest
-import com.jvziyaoyao.scale.image.sampling.SamplingDecoder
-import com.jvziyaoyao.scale.image.sampling.createSamplingDecoder
-import com.jvziyaoyao.scale.image.sampling.samplingProcessorPair
-import com.jvziyaoyao.scale.image.viewer.ImageViewer
-import com.jvziyaoyao.scale.image.viewer.ModelProcessor
-import com.jvziyaoyao.scale.zoomable.zoomable.ZoomableGestureScope
-import com.jvziyaoyao.scale.zoomable.zoomable.rememberZoomableState
 import com.magic.maw.R
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
@@ -87,9 +73,11 @@ import com.magic.maw.data.TagType
 import com.magic.maw.data.toSizeString
 import com.magic.maw.ui.components.MenuSettingItem
 import com.magic.maw.ui.components.RememberSystemBars
+import com.magic.maw.ui.components.ScaleAsyncImage
 import com.magic.maw.ui.components.ScrollableView
 import com.magic.maw.ui.components.SettingItem
 import com.magic.maw.ui.components.TagItem
+import com.magic.maw.ui.components.rememberScaleState
 import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
@@ -104,8 +92,6 @@ import com.magic.maw.website.loadDLFile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 import kotlin.math.abs
 
 @Composable
@@ -138,6 +124,7 @@ fun ViewScreen(
             onExit.invoke()
             return@BoxWithConstraints
         }
+        val draggableHeight = if (showTopBar) this.maxHeight - topBarMaxHeight else this.maxHeight
         ViewContent(
             pagerState = pagerState,
             dataList = uiState.dataList,
@@ -159,7 +146,7 @@ fun ViewScreen(
         )
         ViewDetailBar(
             postData = postData,
-            maxDraggableHeight = if (showTopBar) maxHeight - topBarMaxHeight else maxHeight,
+            maxDraggableHeight = draggableHeight,
             onTagClick = onTagClick
         )
         BackHandler { onExit.invoke() }
@@ -223,33 +210,6 @@ private fun BoxScope.ViewContent(
     }
 }
 
-private suspend fun loadModel(context: Context, file: File): Pair<Any?, Size?> {
-    try {
-        createSamplingDecoder(file)?.let {
-            return Pair(it, it.intrinsicSize)
-        }
-    } catch (e: Exception) {
-        println(e)
-    }
-    loadPainter(context, file)?.let {
-        val painter = BitmapPainter(it.toBitmap().asImageBitmap())
-        return Pair(painter, painter.intrinsicSize)
-    }
-    return Pair(null, null)
-}
-
-private suspend fun loadPainter(context: Context, data: Any) = suspendCoroutine { c ->
-    val imageRequest = ImageRequest.Builder(context)
-        .data(data)
-        .size(coil.size.Size.ORIGINAL)
-        .target(
-            onSuccess = { c.resume(it) },
-            onError = { c.resume(null) }
-        )
-        .build()
-    context.imageLoader.enqueue(imageRequest)
-}
-
 @Composable
 private fun ViewScreenItem(
     data: PostData,
@@ -260,7 +220,6 @@ private fun ViewScreenItem(
     val info = data.getInfo(quality) ?: data.originalInfo
     val coroutineScope = rememberCoroutineScope()
     val status by loadDLFile(data, quality, coroutineScope).collectAsState()
-    val context = LocalContext.current
     val size = Size(info.width.toFloat(), info.height.toFloat())
     var model by remember { mutableStateOf<Pair<Any?, Size?>>(Pair(null, size)) }
     var retryCount by remember { mutableIntStateOf(0) }
@@ -271,34 +230,14 @@ private fun ViewScreenItem(
         is LoadStatus.Error -> ErrorPlaceHolder(onRetry = { retryCount++ })
         is LoadStatus.Success<File> -> {
             retryCount = 0
-            if (model.first == null && model.second == null) {
-                // 解码失败
-                ErrorPlaceHolder()
-            } else if (model.first == null) {
-                LaunchedEffect(status) {
-                    model = loadModel(context, (status as LoadStatus.Success<File>).result)
-                }
-                LoadingView()
-            } else if (model.second != null) {
-                val zoomableViewState = rememberZoomableState(contentSize = model.second)
-                val processor = if (model.first is SamplingDecoder) {
-                    ModelProcessor(samplingProcessorPair)
-                } else {
-                    ModelProcessor()
-                }
-                LaunchedEffect(reset) { if (reset) zoomableViewState.reset() }
-                DisposableEffect(Unit) { onDispose { (model.first as? SamplingDecoder)?.release() } }
-                ImageViewer(
-                    model = model.first,
-                    state = zoomableViewState,
-                    processor = processor,
-                    detectGesture = ZoomableGestureScope(onDoubleTap = {
-                        coroutineScope.launch { zoomableViewState.toggleScale(it) }
-                    }, onTap = {
-                        onTab.invoke()
-                    })
-                )
-            }
+            val scaleState = rememberScaleState(contentSize = size)
+            LaunchedEffect(reset) { if (reset) scaleState.resetImmediately() }
+            ScaleAsyncImage(
+                model = (status as? LoadStatus.Success<File>)?.result,
+                scaleState = scaleState,
+                onTap = { onTab.invoke() },
+                onDoubleTap = { coroutineScope.launch { scaleState.toggleScale(it) } }
+            )
         }
     }
 }
