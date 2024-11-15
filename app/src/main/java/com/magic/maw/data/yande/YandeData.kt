@@ -1,7 +1,6 @@
 package com.magic.maw.data.yande
 
 import com.magic.maw.data.FileType
-import com.magic.maw.data.IData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
 import com.magic.maw.data.TagInfo
@@ -9,7 +8,7 @@ import com.magic.maw.website.parser.YandeParser
 import kotlinx.serialization.Serializable
 
 @Serializable
-class YandeData : IData<PostData> {
+class YandeData {
     var id: Int = 0
     var tags: String? = null
     var created_at: Long? = null
@@ -78,7 +77,7 @@ class YandeData : IData<PostData> {
         return id == 0 || file_size == null || width == null || height == null || md5 == null || file_url == null
     }
 
-    override fun toData(): PostData? {
+    fun toPostData(): PostData? {
         if (invalid() || preview_url == null) {
             return null
         }

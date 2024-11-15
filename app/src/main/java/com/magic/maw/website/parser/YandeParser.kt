@@ -23,7 +23,7 @@ class YandeParser : BaseParser() {
         val yandeList: ArrayList<YandeData> = client.get(getPostUrl(option)).body()
         val list: ArrayList<PostData> = ArrayList()
         for (item in yandeList) {
-            val data = item.toData() ?: continue
+            val data = item.toPostData() ?: continue
             for ((index, tag) in data.tags.withIndex()) {
                 (tagManager.getInfoStatus(tag.name).value as? LoadStatus.Success)?.let {
                     data.tags[index] = it.result
@@ -49,7 +49,7 @@ class YandeParser : BaseParser() {
                 val yandeList: ArrayList<YandeTag> = client.get(url).body()
                 var found = false
                 for (yandeTag in yandeList) {
-                    val tag = yandeTag.toData() ?: continue
+                    val tag = yandeTag.toTagInfo() ?: continue
                     if (tag.name == name) {
                         found = true
                         targetInfo = tag
@@ -78,7 +78,7 @@ class YandeParser : BaseParser() {
             val url = getTagUrl(name, firstPageIndex, limit)
             val yandeList: ArrayList<YandeTag> = client.get(url).body()
             for (yandeTag in yandeList) {
-                val tag = yandeTag.toData() ?: continue
+                val tag = yandeTag.toTagInfo() ?: continue
                 tagMap[tag.name] = tag
                 tagList.add(tag)
             }

@@ -235,6 +235,7 @@ fun getDefaultOnScrollStop(
 
 object NestedScaffoldDefaults {
     val TopBarMinDp = 0.dp
+    @Suppress("unused")
     val defaultOnScrollStop: OnScrollStop = func@{ scope, state, _ ->
         val percent = state.scrollPercent
         if (percent == 0f || percent == 1.0f)

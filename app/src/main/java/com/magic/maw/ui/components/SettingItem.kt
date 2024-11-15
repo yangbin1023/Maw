@@ -77,7 +77,7 @@ fun SettingItem(
             modifier = Modifier
                 .weight(1.0f)
         ) {
-            val maxWidth = maxWidth
+            val maxWidth = this.maxWidth
             val itemMinWidth = maxWidth * if (tips == null) 0f else 0.3f
             val itemMaxWidth = maxWidth - itemMinWidth
             Row(Modifier, verticalAlignment = Alignment.CenterVertically) {
