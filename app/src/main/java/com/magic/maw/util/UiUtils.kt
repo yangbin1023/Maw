@@ -3,6 +3,8 @@ package com.magic.maw.util
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.Build
+import android.view.View
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -59,8 +61,12 @@ object UiUtils {
 
     fun Context.isShowStatusBars(): Boolean {
         val window = findActivity()?.window ?: return false
-        return ViewCompat.getRootWindowInsets(window.decorView)
-            ?.isVisible(WindowInsetsCompat.Type.statusBars()) == true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowInsets = window.decorView.rootWindowInsets
+            return windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top > 0
+        } else {
+            return !window.decorView.systemUiVisibility.hasFlag(View.SYSTEM_UI_FLAG_FULLSCREEN)
+        }
     }
 
     fun Context.getStatusBarHeight(): Int {
