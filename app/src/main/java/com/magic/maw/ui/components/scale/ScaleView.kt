@@ -1,4 +1,4 @@
-package com.magic.maw.ui.components
+package com.magic.maw.ui.components.scale
 
 import androidx.annotation.FloatRange
 import androidx.compose.animation.core.Animatable
@@ -40,7 +40,6 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
-import coil.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -57,11 +56,11 @@ import kotlin.math.sign
 import kotlin.math.withSign
 
 @Composable
-fun ScaleAsyncImage(
-    model: Any? = null,
+fun ScaleView(
     boundClip: Boolean = true, scaleState: ScaleState = rememberScaleState(),
     onTap: (Offset) -> Unit = {},
-    onDoubleTap: (Offset) -> Unit = {}
+    onDoubleTap: (Offset) -> Unit = {},
+    content:@Composable ()->Unit,
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -99,7 +98,7 @@ fun ScaleAsyncImage(
             .width(density.run { scaleState.displayWidth.toDp() })
             .height(density.run { scaleState.displayHeight.toDp() })
         ) {
-            AsyncImage(model = model, contentDescription = null)
+            content.invoke()
         }
     }
 }
@@ -206,6 +205,14 @@ class ScaleState(
     val displayHeight: Float
         get() {
             return contentSize.height.times(scale1x)
+        }
+
+    val realSize: Size
+        get() {
+            return Size(
+                width = displayWidth.times(scale.value),
+                height = displayHeight.times(scale.value)
+            )
         }
 
     // 手势的中心点

@@ -22,10 +22,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hjq.toast.Toaster
 import com.magic.maw.R
 import com.magic.maw.ui.components.rememberNestedScaffoldState
+import com.magic.maw.ui.view.ViewScreen
 import com.magic.maw.util.UiUtils.showSystemBars
 import kotlinx.coroutines.launch
-
-private const val TAG = "PostRoute"
 
 @Composable
 fun PostRoute(
