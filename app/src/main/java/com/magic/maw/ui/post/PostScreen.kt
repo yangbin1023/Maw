@@ -273,7 +273,7 @@ private fun PostBody(
 ) {
     BoxWithConstraints(modifier = modifier) {
 
-        val columns = max((maxWidth / 210.dp).toInt(), 2)
+        val columns = max((this.maxWidth / 210.dp).toInt(), 2)
         val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
 
         LazyVerticalStaggeredGrid(

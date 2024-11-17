@@ -33,6 +33,7 @@ import com.magic.maw.ui.post.PostUiState
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.isShowStatusBars
 import com.magic.maw.util.UiUtils.showSystemBars
+import com.magic.maw.util.logger
 import kotlinx.coroutines.delay
 
 @Composable
@@ -42,10 +43,12 @@ fun ViewScreen(
     onExit: () -> Unit,
     onTagClick: (TagInfo, Boolean) -> Unit
 ) {
+    logger.info("ViewScreen re-compose")
     val pagerState = rememberPagerState(uiState.initIndex) { uiState.dataList.size }
     val topBarMaxHeight = UiUtils.getTopBarHeight()
     val context = LocalContext.current
     var showTopBar by remember { mutableStateOf(context.isShowStatusBars()) }
+    val onTap: () -> Unit = { showTopBar = !showTopBar }
     val topAppBarOffset by animateDpAsState(
         targetValue = if (showTopBar) 0.dp else -topBarMaxHeight,
         label = "showTopAppBar"
@@ -73,7 +76,7 @@ fun ViewScreen(
             dataList = uiState.dataList,
             onLoadMore = onLoadMore,
             onExit = onExit,
-            onTab = { showTopBar = !showTopBar }
+            onTab = onTap
         )
 
         ViewTopBar(

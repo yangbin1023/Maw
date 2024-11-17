@@ -107,6 +107,12 @@ class ScrollableViewState(
     private var toolbarHeightValue: Float = 0f,
     initialOffsetValue: Float = 0f,
 ) {
+    init {
+        if (maxPx < minPx) {
+            throw RuntimeException("maxPx[$maxPx] < minPx[$minPx]")
+        }
+    }
+
     private val offsetAnimate = Animatable(initialOffsetValue)
 
     val toolbarHeightDp: Float get() = toolbarHeightValue
@@ -156,6 +162,9 @@ class ScrollableViewState(
         draggableStages: Int = 0
     ) = apply {
         val maxHeight = maxDraggableHeight - toolbarHeight
+        if (maxHeight < minDraggableHeight) {
+            throw RuntimeException("max height[$maxHeight] < min height[$minDraggableHeight]")
+        }
         toolbarHeightValue = toolbarHeight.value
         maxPx = with(density) { maxHeight.toPx() }
         minPx = with(density) { minDraggableHeight.toPx() }
@@ -199,7 +208,7 @@ private fun ScrollableViewPreview() {
             .background(Color.White)
     ) {
         val state = rememberScrollableViewState(
-            maxDraggableHeight = maxHeight
+            maxDraggableHeight = this.maxHeight
         )
         ScrollableView(
             modifier = Modifier.align(Alignment.BottomCenter),

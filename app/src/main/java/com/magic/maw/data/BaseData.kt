@@ -57,7 +57,7 @@ data class PostData(
     }
 
     override fun toString(): String {
-        return "source: $source, id: $id"
+        return "source: $source, id: $id, quality: ${quality.name}"
     }
 
     fun getInfo(quality: Quality): Info? {

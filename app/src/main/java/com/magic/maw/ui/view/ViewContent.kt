@@ -1,6 +1,5 @@
 package com.magic.maw.ui.view
 
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,9 +20,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,24 +35,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.magic.maw.R
 import com.magic.maw.data.PostData
-import com.magic.maw.data.Quality
 import com.magic.maw.ui.components.ScaleImageView
 import com.magic.maw.ui.components.loadModel
 import com.magic.maw.ui.components.scale.rememberScaleState
-import com.magic.maw.util.logger
 import com.magic.maw.website.LoadStatus
+import com.magic.maw.website.LoadType
 import com.magic.maw.website.loadDLFile
-import com.magic.maw.website.loadDLFileWithTask
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 @Composable
@@ -98,36 +87,66 @@ private fun ViewScreenItem(
 ) {
     val quality = data.quality
     val info = data.getInfo(quality) ?: data.originalInfo
+    val defaultSize = Size(info.width.toFloat(), info.height.toFloat())
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val stateFlow = loadDLFile(data, quality, coroutineScope).collectAsState()
-    val size = Size(info.width.toFloat(), info.height.toFloat())
-    var model by remember { mutableStateOf<Pair<Any?, Size?>>(Pair(null, size)) }
+    val scope = rememberCoroutineScope()
+    val type = remember { mutableStateOf(LoadType.Waiting) }
+    val progress = remember { mutableFloatStateOf(0f) }
+    val model = remember { mutableStateOf<Any?>(null) }
+    val size = remember { mutableStateOf<Size>(defaultSize) }
     var retryCount by remember { mutableIntStateOf(0) }
-    LaunchedEffect(quality) { model = Pair(null, size) }
-    val state = stateFlow.value
-    when (state) {
-        is LoadStatus.Waiting -> LoadingView()
-        is LoadStatus.Loading -> LoadingView { state.progress }
-        is LoadStatus.Error -> ErrorPlaceHolder(onRetry = { retryCount++ })
-        is LoadStatus.Success<File> -> {
-            retryCount = 0
-            var pair by remember { mutableStateOf<Pair<Any?, Size?>>(Pair(null, size)) }
-            LaunchedEffect(state.result) {
-                pair = loadModel(context = context, state.result)
+    LaunchedEffect(data, quality, retryCount) {
+        withContext(Dispatchers.IO) {
+            loadDLFile(data, quality)
+        }.collect {
+            // 下载失败后重试，若重试三次仍然失败则显示错误
+            if (it == LoadStatus.Waiting) {
+                type.value = LoadType.Waiting
+            } else if (it is LoadStatus.Error) {
+                if (retryCount < 3) {
+                    // 下载失败后重试，若重试三次仍然失败则显示错误
+                    type.value = LoadType.Waiting
+                    retryCount++
+                } else {
+                    type.value = LoadType.Error
+                }
+            } else if (it is LoadStatus.Loading) {
+                type.value = LoadType.Loading
+                progress.floatValue = it.progress
+            } else if (it is LoadStatus.Success) {
+                withContext(Dispatchers.IO) {
+                    loadModel(context, it.result, defaultSize)
+                }.collect { pair ->
+                    if (pair is LoadStatus.Success) {
+                        type.value = LoadType.Success
+                        model.value = pair.result.first
+                        size.value = pair.result.second
+                    } else if (pair is LoadStatus.Loading) {
+                        type.value = LoadType.Loading
+                        progress.floatValue = pair.progress
+                    } else if (pair == LoadStatus.Waiting) {
+                        type.value = LoadType.Waiting
+                    } else {
+                        type.value = LoadType.Error
+                    }
+                }
             }
-            if (pair.second == null) {
-                ErrorPlaceHolder()
-            } else {
-                val scaleState = rememberScaleState(contentSize = pair.second)
-                LaunchedEffect(reset) { if (reset) scaleState.resetImmediately() }
-                ScaleImageView(
-                    model = pair.first,
-                    scaleState = scaleState,
-                    onTap = { onTab.invoke() },
-                    onDoubleTap = { coroutineScope.launch { scaleState.toggleScale(it) } }
-                )
-            }
+        }
+    }
+
+    when (type.value) {
+        LoadType.Waiting -> LoadingView()
+        LoadType.Loading -> LoadingView { progress.floatValue }
+        LoadType.Error -> ErrorPlaceHolder { retryCount++ }
+        LoadType.Success -> {
+            val state = rememberScaleState(contentSize = size.value)
+            LaunchedEffect(reset) { if (reset) state.resetImmediately() }
+            ScaleImageView(
+                model = model.value,
+                scaleState = state,
+                onTap = { onTab.invoke() },
+                onDoubleTap = { scope.launch { (state.toggleScale(it)) } }
+            )
         }
     }
 }
@@ -165,67 +184,4 @@ private fun LoadingView(progress: (() -> Float)? = null) {
             CircularProgressIndicator(progress = it)
         } ?: CircularProgressIndicator()
     }
-}
-
-@Composable
-private fun loadImageState(
-    data: PostData,
-    quality: Quality,
-    defaultSize: Size,
-    scope: CoroutineScope
-): MutableState<LoadStatus<Pair<Any, Size>>> {
-    val state = remember { mutableStateOf<LoadStatus<Pair<Any, Size>>>(LoadStatus.Waiting) }
-    val dlState = loadDLFile(data, quality, scope).collectAsState().value
-    val context = LocalContext.current
-    state.value = when (dlState) {
-        is LoadStatus.Error -> LoadStatus.Error(dlState.exception)
-        is LoadStatus.Loading -> LoadStatus.Loading(dlState.progress)
-        is LoadStatus.Waiting -> LoadStatus.Waiting
-        is LoadStatus.Success -> {
-            val pair = loadModel(context, dlState.result, defaultSize).collectAsState().value
-            if (pair is LoadStatus.Success) pair else LoadStatus.Loading(1.0f)
-        }
-    }
-    return state
-}
-
-private fun loadImageState(
-    data: PostData,
-    quality: Quality,
-    defaultSize: Size,
-    context: Context,
-    scope: CoroutineScope
-): StateFlow<LoadStatus<Pair<Any, Size>>> {
-    val state = MutableStateFlow<LoadStatus<Pair<Any, Size>>>(LoadStatus.Waiting).apply {
-        stateIn(scope, SharingStarted.Eagerly, this.value)
-    }
-    val task = loadDLFileWithTask(data, quality)
-    val dlStateFlow = task.statusFlow
-    val updateFunc2: (LoadStatus<Pair<Any, Size>>) -> Unit = { newValue ->
-        logger.info("update func 2: $newValue")
-        if (newValue is LoadStatus.Success) {
-            state.update { it }
-        } else {
-            state.update { LoadStatus.Loading(1.0f) }
-        }
-    }
-    val updateFunc: (LoadStatus<File>) -> Unit = { newValue ->
-        logger.info("update func 1: $newValue")
-        when (newValue) {
-            is LoadStatus.Error -> state.update { LoadStatus.Error(newValue.exception) }
-            is LoadStatus.Loading -> state.update { LoadStatus.Loading(newValue.progress) }
-            is LoadStatus.Waiting -> state.update { LoadStatus.Waiting }
-            is LoadStatus.Success -> {
-                scope.launch(Dispatchers.IO) {
-                    val flow = loadModel(context, newValue.result, defaultSize)
-                    flow.onEach { updateFunc2.invoke(it) }
-                    updateFunc2.invoke(flow.value)
-                }
-            }
-        }
-    }
-    dlStateFlow.onEach { updateFunc.invoke(it) }
-    updateFunc.invoke(dlStateFlow.value)
-    task.start()
-    return state
 }

@@ -89,19 +89,20 @@ fun PostRoute(
         context.showSystemBars()
     }
 
+    var postState by remember { mutableStateOf<PostUiState.Post?>(null) }
+    var viewState by remember { mutableStateOf<PostUiState.View?>(null) }
+    when (uiState) {
+        is PostUiState.Post -> postState = uiState
+        is PostUiState.View -> viewState = uiState
+    }
     AnimatedVisibility(
         visible = uiState is PostUiState.Post,
         enter = fadeIn,
         exit = fadeOut
     ) {
-        val currentState = uiState as? PostUiState.Post
-        var postState by remember { mutableStateOf<PostUiState.Post?>(null) }
-        if (postState != currentState && currentState != null) {
-            postState = currentState
-        }
         postState?.let {
-            LaunchedEffect(uiState.type) {
-                if (uiState.type == UiStateType.Refresh) {
+            LaunchedEffect(it.type) {
+                if (it.type == UiStateType.Refresh) {
                     resetTopBar.invoke()
                 }
             }
@@ -128,11 +129,6 @@ fun PostRoute(
         enter = slideIn + fadeIn,
         exit = slideOut + fadeOut
     ) {
-        val currentState = uiState as? PostUiState.View
-        var viewState by remember { mutableStateOf<PostUiState.View?>(null) }
-        if (viewState != currentState && currentState != null) {
-            viewState = currentState
-        }
         viewState?.let {
             ViewScreen(
                 uiState = it,

@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -73,10 +74,13 @@ fun ViewDetailBar(
 ) {
     val scrollableViewState = rememberScrollableViewState()
     val scope = rememberCoroutineScope()
-    scrollableViewState.updateData(
-        density = LocalDensity.current,
-        maxDraggableHeight = maxDraggableHeight
-    )
+    val density = LocalDensity.current
+    LaunchedEffect(maxDraggableHeight) {
+        scrollableViewState.updateData(
+            density = density,
+            maxDraggableHeight = maxDraggableHeight
+        )
+    }
     ScrollableView(
         modifier = modifier.fillMaxWidth(),
         state = scrollableViewState,
