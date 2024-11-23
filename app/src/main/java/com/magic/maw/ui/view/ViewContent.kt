@@ -37,6 +37,7 @@ import com.magic.maw.R
 import com.magic.maw.data.PostData
 import com.magic.maw.ui.components.ScaleImageView
 import com.magic.maw.ui.components.loadModel
+import com.magic.maw.ui.components.scale.ScaleDecoder
 import com.magic.maw.ui.components.scale.rememberScaleState
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.LoadType
@@ -96,6 +97,7 @@ private fun ViewScreenItem(
     val size = remember { mutableStateOf<Size>(defaultSize) }
     var retryCount by remember { mutableIntStateOf(0) }
     LaunchedEffect(data, quality, retryCount) {
+        type.value = LoadType.Waiting
         withContext(Dispatchers.IO) {
             loadDLFile(data, quality)
         }.collect {
@@ -118,6 +120,10 @@ private fun ViewScreenItem(
                     loadModel(context, it.result, defaultSize)
                 }.collect { pair ->
                     if (pair is LoadStatus.Success) {
+                        model.value.let {
+                            if (it is ScaleDecoder && it != pair.result.first)
+                                it.release()
+                        }
                         type.value = LoadType.Success
                         model.value = pair.result.first
                         size.value = pair.result.second

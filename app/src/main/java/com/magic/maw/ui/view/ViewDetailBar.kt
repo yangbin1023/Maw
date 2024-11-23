@@ -215,6 +215,12 @@ private fun DetailContent(
         if (qualityIndex < 0) {
             qualityIndex = 0
         }
+        LaunchedEffect(postData) {
+            qualityIndex = qualityList.indexOf(postData.quality)
+            if (qualityIndex < 0) {
+                qualityIndex = 0
+            }
+        }
         MenuSettingItem(
             title = stringResource(R.string.quality),
             items = qualityItems,

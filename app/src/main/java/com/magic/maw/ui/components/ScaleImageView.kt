@@ -29,8 +29,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import java.io.File
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 @Composable
 fun ScaleImageView(
@@ -120,25 +118,3 @@ fun loadModel(
     context.imageLoader.enqueue(imageRequest)
     return flow
 }
-
-suspend fun loadModel(context: Context, file: File): Pair<Any?, Size?> = suspendCoroutine { cont ->
-    try {
-        createScaleDecoder(file)?.let { cont.resume(Pair(it, it.intrinsicSize)) }
-    } catch (e: Exception) {
-        println(e)
-    }
-    val imageRequest = ImageRequest.Builder(context)
-        .data(file)
-        .size(coil.size.Size.ORIGINAL)
-        .target(
-            onSuccess = {
-                val painter = BitmapPainter(it.toBitmap().asImageBitmap())
-                cont.resume(Pair(painter, painter.intrinsicSize))
-            },
-            onError = { cont.resume(Pair(null, null)) }
-        )
-        .build()
-    context.imageLoader.enqueue(imageRequest)
-}
-
-data class ModelInfo(val model: Any? = null, val size: Size? = null)
