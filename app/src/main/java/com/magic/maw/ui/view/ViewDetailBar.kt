@@ -306,15 +306,13 @@ private fun TagInfoItem(
         val searchColor = MaterialTheme.colorScheme.onBackground
         Row(
             modifier = Modifier
+                .clickable { onTagClick(info, true) }
                 .border(
                     width = 1.dp,
                     color = searchColor,
                     shape = CircleShape
                 )
-                .padding(horizontal = 4.5.dp)
-                .clickable {
-                    onTagClick(info, true)
-                },
+                .padding(horizontal = 4.5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(

@@ -4,6 +4,7 @@ import com.magic.maw.data.Rating
 
 data class RequestOption(
     var page: Int = 1,
+    var poolId: Int = -1,
     var ratings: Int = Rating.None.value,
     internal val tags: HashSet<String> = HashSet(),
 ) {

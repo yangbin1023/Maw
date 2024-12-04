@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +28,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.magic.maw.R
+import com.magic.maw.ui.pool.PoolRoute
+import com.magic.maw.ui.pool.PoolViewModel
 import com.magic.maw.ui.post.PostRoute
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.search.SearchScreen
@@ -61,22 +64,15 @@ fun MainNavGraph(
             PostRoute(
                 postViewModel = postViewModel,
                 searchText = tagText,
-                openDrawer = openDrawer,
+                onNegative = openDrawer,
                 openSearch = { navController.navigate(MainRoutes.search(it)) },
                 onOpenView = { mainViewModel.gesturesEnabled = it }
             )
         }
         composable(route = MainRoutes.POOL) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
-                Text(
-                    text = stringResource(id = R.string.pool),
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
+            val poolViewModel: PoolViewModel = viewModel()
+            LaunchedEffect(poolViewModel) { poolViewModel.refresh() }
+            PoolRoute(poolViewModel = poolViewModel, openDrawer = openDrawer)
         }
         composable(route = MainRoutes.POPULAR) {
             Box(

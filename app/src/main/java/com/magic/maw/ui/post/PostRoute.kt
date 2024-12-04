@@ -8,6 +8,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -18,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hjq.toast.Toaster
 import com.magic.maw.R
@@ -30,9 +34,12 @@ import kotlinx.coroutines.launch
 fun PostRoute(
     postViewModel: PostViewModel,
     searchText: String = "",
-    openDrawer: () -> Unit,
-    openSearch: (String) -> Unit,
-    onOpenView: (Boolean) -> Unit,
+    titleText: String = stringResource(R.string.post),
+    isSubView: Boolean = false,
+    staggeredEnable: Boolean = true,
+    onNegative: () -> Unit = {},
+    openSearch: ((String) -> Unit)? = null,
+    onOpenView: (Boolean) -> Unit = {},
 ) {
     val uiState by postViewModel.uiState.collectAsStateWithLifecycle()
     onOpenView.invoke(uiState !is PostUiState.View)
@@ -45,7 +52,10 @@ fun PostRoute(
     }
     PostRoute(
         uiState = uiState,
-        openDrawer = openDrawer,
+        titleText = titleText,
+        isSubView = isSubView,
+        staggeredEnable = staggeredEnable,
+        onNegative = onNegative,
         openSearch = openSearch,
         onRefresh = { postViewModel.refresh() },
         onLoadMore = { postViewModel.loadMore() },
@@ -63,8 +73,11 @@ fun PostRoute(
 @Composable
 fun PostRoute(
     uiState: PostUiState,
-    openDrawer: () -> Unit,
-    openSearch: (String) -> Unit,
+    titleText: String = stringResource(R.string.post),
+    isSubView: Boolean = false,
+    staggeredEnable: Boolean = true,
+    onNegative: () -> Unit,
+    openSearch: ((String) -> Unit)? = null,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onItemClick: (Int) -> Unit,
@@ -95,6 +108,11 @@ fun PostRoute(
         is PostUiState.Post -> postState = uiState
         is PostUiState.View -> viewState = uiState
     }
+    val negativeIcon = if (isSubView) {
+        Icons.AutoMirrored.Filled.ArrowBack
+    } else {
+        Icons.Default.Menu
+    }
     AnimatedVisibility(
         visible = uiState is PostUiState.Post,
         enter = fadeIn,
@@ -111,8 +129,11 @@ fun PostRoute(
                 lazyState = lazyState,
                 refreshState = refreshState,
                 scaffoldState = scaffoldState,
-                openDrawer = openDrawer,
-                openSearch = { openSearch.invoke("") },
+                titleText = titleText,
+                negativeIcon = negativeIcon,
+                staggeredEnable = staggeredEnable,
+                onNegative = onNegative,
+                openSearch = openSearch?.let { { it.invoke("") } },
                 onRefresh = onRefresh,
                 onLoadMore = onLoadMore,
                 onItemClick = onItemClick
@@ -134,8 +155,10 @@ fun PostRoute(
                 uiState = it,
                 onLoadMore = onLoadMore,
                 onExit = onExitView,
-                onTagClick = { tag, justSearch ->
-                    if (justSearch) {
+                onTagClick = onTagClick@{ tag, justSearch ->
+                    if (isSubView)
+                        return@onTagClick
+                    if (justSearch || openSearch == null) {
                         onExitView.invoke()
                         onSearch.invoke(tag.name)
                         scope.launch { resetTopBar.invoke() }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -87,7 +88,8 @@ fun loadModel(
     file: File,
     defaultSize: Size
 ): StateFlow<LoadStatus<Pair<Any, Size>>> {
-    val flow = MutableStateFlow<LoadStatus<Pair<Any, Size>>>(LoadStatus.Loading(1.0f))
+    val defaultStatus = LoadStatus.Loading(mutableFloatStateOf(1f))
+    val flow = MutableStateFlow<LoadStatus<Pair<Any, Size>>>(defaultStatus)
     try {
         createScaleDecoder(file)?.let { decoder ->
             flow.update {

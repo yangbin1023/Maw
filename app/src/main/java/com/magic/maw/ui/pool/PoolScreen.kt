@@ -1,4 +1,4 @@
-package com.magic.maw.ui.post
+package com.magic.maw.ui.pool
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -23,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,88 +33,38 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.magic.maw.R
 import com.magic.maw.ui.components.NestedScaffold
 import com.magic.maw.ui.components.NestedScaffoldState
 import com.magic.maw.ui.components.rememberNestedScaffoldState
-import com.magic.maw.ui.theme.TableLayout
-import com.magic.maw.ui.theme.WaterLayout
+import com.magic.maw.ui.post.PostDefaults
+import com.magic.maw.ui.post.UiStateType
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import com.magic.maw.util.UiUtils.hideSystemBars
 import com.magic.maw.util.UiUtils.showSystemBars
-import com.magic.maw.util.Logger
-import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.roundToInt
-
-private val logger = Logger("PostScreen")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PostScreen(
-    uiState: PostUiState.Post,
+fun PoolScreen(
+    uiState: PoolUiState,
+    modifier: Modifier = Modifier,
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
+    scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
-    scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
-    titleText: String = stringResource(R.string.post),
-    negativeIcon: ImageVector = Icons.Default.Menu,
-    staggeredEnable: Boolean = true,
-    onNegative: () -> Unit = {},
-    openSearch: (() -> Unit)? = null,
-    onRefresh: () -> Unit,
-    onLoadMore: () -> Unit,
-    onItemClick: (Int) -> Unit,
-) {
-    val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
-    NestedScaffoldBody(
-        uiState = uiState,
-        lazyState = lazyState,
-        refreshState = refreshState,
-        titleText = titleText,
-        negativeIcon = negativeIcon,
-        staggeredState = staggeredState,
-        scaffoldState = scaffoldState,
-        onNegative = onNegative,
-        openSearch = openSearch,
-        onRefresh = onRefresh,
-        onLoadMore = onLoadMore,
-        onItemClick = onItemClick
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun NestedScaffoldBody(
-    uiState: PostUiState.Post,
-    lazyState: LazyStaggeredGridState,
-    refreshState: PullToRefreshState,
-    scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
-    titleText: String = stringResource(R.string.post),
-    negativeIcon: ImageVector = Icons.Default.Menu,
-    staggeredState: MutableState<Boolean>? = null,
-    onNegative: () -> Unit = {},
-    openSearch: (() -> Unit)? = null,
+    openDrawer: () -> Unit,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onItemClick: (Int) -> Unit,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val scrollToTop: () -> Unit = { scope.launch { lazyState.scrollToItem(0, 0) } }
     LaunchedEffect(scaffoldState) {
         if (scaffoldState.scrollValue == scaffoldState.minPx) {
             context.hideSystemBars()
@@ -125,17 +73,13 @@ private fun NestedScaffoldBody(
         }
     }
     NestedScaffold(
+        modifier = modifier,
         topBar = { offset ->
-            PostTopBar(
+            PoolTopBar(
                 modifier = Modifier
                     .offset { offset }
                     .shadow(5.dp),
-                titleText = titleText,
-                negativeIcon = negativeIcon,
-                staggeredState = staggeredState,
-                scrollToTop = scrollToTop,
-                onNegative = onNegative,
-                openSearch = openSearch
+                openDrawer = openDrawer
             )
         },
         state = scaffoldState,
@@ -145,14 +89,11 @@ private fun NestedScaffoldBody(
         onScrollToTop = { context.hideSystemBars() },
         onScrollToBottom = { context.showSystemBars() },
     ) { innerPadding ->
-        PostRefreshBody(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+        PoolRefreshBody(
             uiState = uiState,
-            refreshState = refreshState,
+            modifier = Modifier.padding(innerPadding),
             lazyState = lazyState,
-            staggeredState = staggeredState,
+            refreshState = refreshState,
             onRefresh = onRefresh,
             onLoadMore = onLoadMore,
             onItemClick = onItemClick
@@ -162,47 +103,20 @@ private fun NestedScaffoldBody(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PostTopBar(
+private fun PoolTopBar(
     modifier: Modifier = Modifier,
-    titleText: String = stringResource(id = R.string.post),
-    negativeIcon: ImageVector = Icons.Default.Menu,
-    staggeredState: MutableState<Boolean>? = null,
-    scrollToTop: () -> Unit = {},
-    onNegative: () -> Unit = {},
-    openSearch: (() -> Unit)? = null,
-    scrollBehavior: TopAppBarScrollBehavior? = null,
+    openDrawer: () -> Unit = {},
+    scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
     TopAppBar(
-        title = { Text(text = titleText) },
+        title = { Text(text = stringResource(id = R.string.pool)) },
         modifier = modifier.shadow(3.dp),
         navigationIcon = {
-            IconButton(onClick = onNegative) {
+            IconButton(onClick = openDrawer) {
                 Icon(
-                    imageVector = negativeIcon,
+                    imageVector = Icons.Default.Menu,
                     contentDescription = "",
                 )
-            }
-        },
-        actions = {
-            staggeredState?.let {
-                IconButton(
-                    onClick = {
-                        it.value = !it.value
-                        scrollToTop()
-                    },
-                    modifier = Modifier.width(PostDefaults.ActionsIconWidth)
-                ) {
-                    val imageVector = if (!it.value) TableLayout else WaterLayout
-                    Icon(imageVector = imageVector, contentDescription = "")
-                }
-            }
-            openSearch?.let {
-                IconButton(
-                    onClick = it,
-                    modifier = Modifier.width(PostDefaults.ActionsIconWidth)
-                ) {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = "")
-                }
             }
         },
         windowInsets = WindowInsets(top = LocalContext.current.getStatusBarHeight()),
@@ -212,15 +126,14 @@ private fun PostTopBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PostRefreshBody(
+private fun PoolRefreshBody(
+    uiState: PoolUiState,
     modifier: Modifier = Modifier,
-    uiState: PostUiState.Post,
-    refreshState: PullToRefreshState,
-    lazyState: LazyStaggeredGridState,
-    staggeredState: MutableState<Boolean>? = null,
-    onRefresh: () -> Unit,
-    onLoadMore: () -> Unit,
-    onItemClick: (Int) -> Unit,
+    lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
+    refreshState: PullToRefreshState = rememberPullToRefreshState(),
+    onRefresh: () -> Unit = {},
+    onLoadMore: () -> Unit = {},
+    onItemClick: (Int) -> Unit = {},
 ) {
     PullToRefreshBox(
         modifier = modifier,
@@ -229,28 +142,27 @@ private fun PostRefreshBody(
         state = refreshState
     ) {
         if (uiState.dataList.isEmpty()) {
-            PostEmptyView(
+            PoolEmptyView(
                 modifier = Modifier.fillMaxSize(),
-                uiState = uiState,
+                type = uiState.type,
                 onRefresh = onRefresh
             )
         } else {
-            PostBody(
-                modifier = Modifier.fillMaxSize(),
+            PoolBody(
                 uiState = uiState,
-                state = lazyState,
-                staggeredState = staggeredState,
+                modifier = Modifier.fillMaxSize(),
+                lazyState = lazyState,
                 onLoadMore = onLoadMore,
-                onItemClick = onItemClick
+                onItemClick = onItemClick,
             )
         }
     }
 }
 
 @Composable
-private fun PostEmptyView(
+private fun PoolEmptyView(
     modifier: Modifier = Modifier,
-    uiState: PostUiState.Post,
+    type: UiStateType,
     onRefresh: () -> Unit
 ) {
     Column(
@@ -258,9 +170,9 @@ private fun PostEmptyView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        val text = if (uiState.type.isLoading()) {
+        val text = if (type.isLoading()) {
             stringResource(R.string.loading)
-        } else if (uiState.type == UiStateType.LoadFailed) {
+        } else if (type == UiStateType.LoadFailed) {
             stringResource(R.string.loading_failed)
         } else {
             stringResource(R.string.no_data)
@@ -279,39 +191,30 @@ private fun PostEmptyView(
 }
 
 @Composable
-private fun PostBody(
+private fun PoolBody(
     modifier: Modifier = Modifier,
-    uiState: PostUiState.Post,
-    state: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
-    staggeredState: MutableState<Boolean>? = null,
-    onItemClick: (Int) -> Unit,
+    uiState: PoolUiState,
+    lazyState: LazyStaggeredGridState,
     onLoadMore: () -> Unit,
+    onItemClick: (Int) -> Unit
 ) {
     BoxWithConstraints(modifier = modifier) {
-
-        val columns = max((this.maxWidth / 210.dp).toInt(), 2)
-        val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
-
+        val columns = max((this.maxWidth / 320.dp).toInt(), 1)
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(columns),
-            state = state,
-            contentPadding = PaddingValues(contentPadding)
+            state = lazyState,
+            contentPadding = PaddingValues(3.dp)
         ) {
-            itemsIndexed(uiState.dataList) { index, item ->
-                PostItem(
+            itemsIndexed(uiState.dataList) { index, data ->
+                PoolItem(
                     modifier = Modifier
-                        .padding(contentPadding)
-                        .clickable {
-                            if (uiState.type != UiStateType.Refresh) {
-                                onItemClick.invoke(index)
-                            }
-                        },
-                    postData = item,
-                    staggered = staggeredState?.value == true
+                        .fillMaxSize()
+                        .padding(3.dp),
+                    poolData = data,
+                    onClick = { onItemClick.invoke(index) }
                 )
             }
-            checkLoadMore(uiState = uiState, state = state, onLoadMore = onLoadMore)
-
+            checkLoadMore(uiState = uiState, state = lazyState, onLoadMore = onLoadMore)
             if (uiState.noMore) {
                 item(span = StaggeredGridItemSpan.FullLine) {
                     Text(
@@ -326,30 +229,8 @@ private fun PostBody(
     }
 }
 
-@Composable
-private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensity.current) {
-    val totalWidth = maxWidth.toPx().toInt()
-    val targetSpace = (PostDefaults.ContentPadding * 2).toPx().roundToInt()
-    val itemMaxWidth = totalWidth / columns
-    var currentSpace = Int.MAX_VALUE
-    for (space in 1 until itemMaxWidth) {
-        if ((totalWidth - space * (columns + 1)) % columns == 0) {
-            if (abs(space - targetSpace) < abs(currentSpace - targetSpace)) {
-                currentSpace = space
-            } else {
-                break
-            }
-        }
-    }
-    if (currentSpace == Int.MAX_VALUE) {
-        currentSpace = targetSpace
-        logger.warning("No suitable space found")
-    }
-    currentSpace.toDp() / 2
-}
-
 private fun checkLoadMore(
-    uiState: PostUiState.Post,
+    uiState: PoolUiState,
     state: LazyStaggeredGridState,
     onLoadMore: () -> Unit
 ) {
@@ -364,10 +245,4 @@ private fun checkLoadMore(
             onLoadMore.invoke()
         }
     }
-}
-
-object PostDefaults {
-    val ContentPadding: Dp = 3.5.dp
-    val ActionsIconWidth: Dp = 40.dp
-    val NoMoreItemHeight: Dp = 36.dp
 }

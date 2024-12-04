@@ -109,11 +109,13 @@ private data class PostViewModelState(
 class PostViewModel(
     private val parser: BaseParser,
     requestOption: RequestOption = RequestOption(),
+    dataList: List<PostData> = emptyList(),
 ) : ViewModel() {
     private val viewModelState = MutableStateFlow(
         PostViewModelState(
             noMore = false,
             requestOption = requestOption,
+            dataList = dataList
         )
     )
 
@@ -128,7 +130,19 @@ class PostViewModel(
     init {
         requestOption.page = parser.firstPageIndex
         requestOption.ratings = configFlow.value.websiteConfig.rating
-        refresh(true)
+        if (dataList.isEmpty()) {
+            refresh(true)
+        }
+    }
+
+    fun update(dataList: List<PostData>) {
+        viewModelState.update {
+            it.copy(
+                dataList = dataList,
+                noMore = false,
+                type = UiStateType.None
+            )
+        }
     }
 
     fun refresh(force: Boolean = checkForceRefresh()) {
@@ -141,7 +155,11 @@ class PostViewModel(
             try {
                 val option = viewModelState.value.requestOption
                 option.ratings = configFlow.value.websiteConfig.rating
-                val list = parser.requestPostData(option.copy(page = parser.firstPageIndex))
+                val list = if (option.poolId > 0) {
+                    parser.requestPoolPostData(option.copy(page = parser.firstPageIndex))
+                } else {
+                    parser.requestPostData(option.copy(page = parser.firstPageIndex))
+                }
                 viewModelState.update {
                     if (force) {
                         it.requestOption.page = parser.firstPageIndex
@@ -164,7 +182,11 @@ class PostViewModel(
         viewModelScope.launch {
             try {
                 val option = viewModelState.value.requestOption
-                val list = parser.requestPostData(option.copy(page = option.page + 1))
+                val list = if (option.poolId > 0) {
+                    parser.requestPoolPostData(option.copy(page = option.page + 1))
+                } else {
+                    parser.requestPostData(option.copy(page = option.page + 1))
+                }
                 viewModelState.update {
                     if (it.type != UiStateType.Refresh) {
                         it.requestOption.page++
@@ -220,10 +242,11 @@ class PostViewModel(
         fun providerFactory(
             parser: BaseParser = BaseParser.get(configFlow.value.source),
             requestOption: RequestOption = RequestOption(),
+            dataList: List<PostData> = emptyList(),
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return PostViewModel(parser, requestOption) as T
+                return PostViewModel(parser, requestOption, dataList) as T
             }
         }
     }

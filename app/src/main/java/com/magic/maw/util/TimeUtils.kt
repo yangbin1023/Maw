@@ -8,8 +8,10 @@ object TimeUtils {
     private const val TAG = "TimeUtils"
     private val dateFormatMap = HashMap<String, SimpleDateFormat>()
     const val FORMAT_1 = "yyyy-MM-dd HH:mm:ss"
-    const val FORMAT_2 = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"
+    const val FORMAT_2 = "yyyy/MM/dd HH:mm:ss"
     const val FORMAT_3 = "yyyyMMdd_HHmmss"
+    const val FORMAT_4 = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+    const val FORMAT_5 = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
 
     private fun getFormat(formatStr: String): SimpleDateFormat {
         dateFormatMap[formatStr]?.let {

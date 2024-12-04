@@ -20,8 +20,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -92,7 +92,7 @@ private fun ViewScreenItem(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val type = remember { mutableStateOf(LoadType.Waiting) }
-    val progress = remember { mutableFloatStateOf(0f) }
+    val progress = remember { mutableStateOf<MutableFloatState?>(null) }
     val model = remember { mutableStateOf<Any?>(null) }
     val size = remember { mutableStateOf<Size>(defaultSize) }
     var retryCount by remember { mutableIntStateOf(0) }
@@ -114,7 +114,7 @@ private fun ViewScreenItem(
                 }
             } else if (it is LoadStatus.Loading) {
                 type.value = LoadType.Loading
-                progress.floatValue = it.progress
+                progress.value = it.progress
             } else if (it is LoadStatus.Success) {
                 withContext(Dispatchers.IO) {
                     loadModel(context, it.result, defaultSize)
@@ -129,7 +129,7 @@ private fun ViewScreenItem(
                         size.value = pair.result.second
                     } else if (pair is LoadStatus.Loading) {
                         type.value = LoadType.Loading
-                        progress.floatValue = pair.progress
+                        progress.value = pair.progress
                     } else if (pair == LoadStatus.Waiting) {
                         type.value = LoadType.Waiting
                     } else {
@@ -142,7 +142,7 @@ private fun ViewScreenItem(
 
     when (type.value) {
         LoadType.Waiting -> LoadingView()
-        LoadType.Loading -> LoadingView { progress.floatValue }
+        LoadType.Loading -> LoadingView { progress.value?.floatValue ?: 0f }
         LoadType.Error -> ErrorPlaceHolder { retryCount++ }
         LoadType.Success -> {
             val state = rememberScaleState(contentSize = size.value)

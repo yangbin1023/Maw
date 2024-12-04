@@ -36,4 +36,5 @@
     <string name="search_history">Search history</string>
     <string name="upload_time">Upload time</string>
     <string name="score">Score</string>
+    <string name="unknown">Unknown</string>
 </resources>

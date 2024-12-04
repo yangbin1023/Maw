@@ -1,9 +1,12 @@
 package com.magic.maw.website.parser
 
+import com.magic.maw.data.PoolData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.TagInfo
+import com.magic.maw.data.UserInfo
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
+import com.magic.maw.website.UserManager
 import java.lang.ref.SoftReference
 
 abstract class BaseParser {
@@ -11,15 +14,22 @@ abstract class BaseParser {
     abstract val source: String
     abstract val supportRating: Int
     abstract val tagManager: TagManager
+    abstract val userManager: UserManager
     open val firstPageIndex: Int = 1
 
     abstract suspend fun requestPostData(option: RequestOption): List<PostData>
+    abstract suspend fun requestPoolData(option: RequestOption): List<PoolData>
+    abstract suspend fun requestPoolPostData(option: RequestOption): List<PostData>
     abstract suspend fun requestTagInfo(name: String): TagInfo?
     abstract suspend fun requestSuggestTagInfo(name: String, limit: Int = 10): List<TagInfo>
+    abstract suspend fun requestUserInfo(userId: Int): UserInfo?
     abstract fun RequestOption.parseSearchText(text: String): List<String>
 
     protected abstract fun getPostUrl(option: RequestOption): String
+    protected abstract fun getPoolUrl(option: RequestOption): String
+    protected abstract fun getPoolPostUrl(option: RequestOption): String
     protected abstract fun getTagUrl(name: String, page: Int, limit: Int): String
+    protected abstract fun getUserUrl(userId: Int): String
 
     companion object {
         private val parserMap = HashMap<String, SoftReference<BaseParser>>()

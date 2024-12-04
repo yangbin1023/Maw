@@ -2,6 +2,11 @@ package com.magic.maw.website
 
 import android.content.Context
 import android.os.Environment
+import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshots.SnapshotMutableState
 import com.magic.maw.MyApp
 import com.magic.maw.data.BaseData
 import com.magic.maw.data.PostData
@@ -23,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -143,8 +149,10 @@ data class DLTask(
                     val status = statusFlow.value
                     if (status is LoadStatus.Error) {
                         cancel()
+                    } else if (status is LoadStatus.Loading) {
+                        status.progress.floatValue = progress
                     } else if (status !is LoadStatus.Success) {
-                        statusFlow.value = LoadStatus.Loading(progress)
+                        statusFlow.value = LoadStatus.Loading(mutableFloatStateOf(0f))
                     }
                 }
             }.apply {
