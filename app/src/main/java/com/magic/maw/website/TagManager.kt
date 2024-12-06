@@ -7,11 +7,13 @@ import com.magic.maw.db.updateOrInsert
 import com.magic.maw.db.updateOrInsertHistory
 import com.magic.maw.util.dbHandler
 import com.magic.maw.website.parser.BaseParser
+import com.magic.maw.website.parser.DanbooruParser
 import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.lang.ref.SoftReference
 import java.util.Date
@@ -77,6 +79,10 @@ class TagManager(val source: String) {
         }
         synchronized(taskMap) {
             taskMap[name]?.let {
+                if (it.status.value is LoadStatus.Error) {
+                    it.status.update { LoadStatus.Waiting }
+                    scope.launch(Dispatchers.IO) { it.start() }
+                }
                 return it.status
             } ?: let {
                 val task = TagTask(source, name)
@@ -149,22 +155,20 @@ class TagManager(val source: String) {
             return
         }
         // 网络请求
-        parser.requestTagInfo(name)?.let {
-            synchronized(tagMap) {
-                tagMap[name] = it
+        var retryCount = 0
+        do {
+            parser.requestTagInfo(name)?.let {
+                synchronized(tagMap) {
+                    tagMap[name] = it
+                }
+                status.value = LoadStatus.Success(it)
+                dbHandler.post { dao.insert(it) }
+                return
             }
-            status.value = LoadStatus.Success(it)
-            dbHandler.post { dao.insert(it) }
-            return
-        }
-
-        retryCount++
-        if (retryCount < MAX_RETRY_COUNT) {
-            delay(1000)
-            start()
-        } else {
-            status.value = LoadStatus.Error(RuntimeException("get tag($name) failed"))
-        }
+            retryCount++
+            delay(retryCount * (500 + (0L..1000L).random()))
+        } while (retryCount < MAX_RETRY_COUNT)
+        status.value = LoadStatus.Error(RuntimeException("get tag($name) failed"))
     }
 
     companion object {
@@ -174,6 +178,7 @@ class TagManager(val source: String) {
             map[source]?.get()?.let { return it }
             val manager = when (source) {
                 YandeParser.SOURCE -> TagManager(YandeParser.SOURCE)
+                DanbooruParser.SOURCE -> TagManager(DanbooruParser.SOURCE)
                 else -> throw RuntimeException("Unknown source: $source")
             }
             map[source] = SoftReference(manager)

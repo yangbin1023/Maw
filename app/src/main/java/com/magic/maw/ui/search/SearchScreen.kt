@@ -79,13 +79,14 @@ fun SearchScreen(
     onFinish: () -> Unit = {},
     onSearch: (String) -> Unit = {}
 ) {
-    ShowSystemBars()
     val source = configFlow.collectAsState().value.source
     val tagManager = TagManager.get(source)
+    val isSearch = remember { mutableStateOf(false) }
     val (inputText, setInputText) = remember {
         val text = initText.toSearchTagText()
         mutableStateOf(TextFieldValue(text = text, selection = TextRange(text.length)))
     }
+    ShowSystemBars(needHideStatusBar = { !isSearch.value })
     Scaffold(
         topBar = {
             SearchTopBar(
@@ -94,6 +95,7 @@ fun SearchScreen(
                 onFinish = onFinish,
                 onSearch = {
                     if (inputText.text.isNotEmpty()) {
+                        isSearch.value = true
                         onSearch(inputText.text)
                     }
                 }

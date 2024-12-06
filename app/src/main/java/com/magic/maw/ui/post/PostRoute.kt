@@ -25,6 +25,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hjq.toast.Toaster
 import com.magic.maw.R
+import com.magic.maw.ui.components.ConfigChangeChecker
+import com.magic.maw.ui.components.RememberSystemBars
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.view.ViewScreen
 import com.magic.maw.util.UiUtils.showSystemBars
@@ -39,25 +41,21 @@ fun PostRoute(
     staggeredEnable: Boolean = true,
     onNegative: () -> Unit = {},
     openSearch: ((String) -> Unit)? = null,
-    onOpenView: (Boolean) -> Unit = {},
+    onOpenSubView: (Boolean) -> Unit = {},
 ) {
     val uiState by postViewModel.uiState.collectAsStateWithLifecycle()
-    onOpenView.invoke(uiState !is PostUiState.View)
+    onOpenSubView.invoke(uiState is PostUiState.View)
 
-    LaunchedEffect(searchText) {
-        if (searchText.isNotEmpty()) {
-            postViewModel.exitView()
-            postViewModel.search(searchText)
-        }
-    }
     PostRoute(
         uiState = uiState,
         titleText = titleText,
         isSubView = isSubView,
         staggeredEnable = staggeredEnable,
+        searchText = searchText,
         onNegative = onNegative,
         openSearch = openSearch,
         onRefresh = { postViewModel.refresh() },
+        onForceRefresh = { postViewModel.refresh(true) },
         onLoadMore = { postViewModel.loadMore() },
         onItemClick = { postViewModel.setViewIndex(it) },
         onExitView = { postViewModel.exitView() },
@@ -76,9 +74,11 @@ fun PostRoute(
     titleText: String = stringResource(R.string.post),
     isSubView: Boolean = false,
     staggeredEnable: Boolean = true,
+    searchText: String = "",
     onNegative: () -> Unit,
     openSearch: ((String) -> Unit)? = null,
     onRefresh: () -> Unit,
+    onForceRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onItemClick: (Int) -> Unit,
     onExitView: () -> Unit,
@@ -97,11 +97,12 @@ fun PostRoute(
     val context = LocalContext.current
 
     val resetTopBar: suspend () -> Unit = {
+        context.showSystemBars()
         lazyState.scrollToItem(0, 0)
         scaffoldState.animateTo(scaffoldState.maxPx)
-        context.showSystemBars()
     }
 
+    val isSearch = remember { mutableStateOf(false) }
     var postState by remember { mutableStateOf<PostUiState.Post?>(null) }
     var viewState by remember { mutableStateOf<PostUiState.View?>(null) }
     when (uiState) {
@@ -113,60 +114,77 @@ fun PostRoute(
     } else {
         Icons.Default.Menu
     }
+    LaunchedEffect(searchText) {
+        if (searchText.isNotEmpty()) {
+            isSearch.value = true
+            context.showSystemBars()
+            onExitView.invoke()
+            onSearch.invoke(searchText)
+        }
+    }
+    ConfigChangeChecker {
+        scope.launch {
+            context.showSystemBars()
+            lazyState.scrollToItem(0, 0)
+            scaffoldState.snapTo(scaffoldState.maxPx)
+        }
+        onForceRefresh.invoke()
+        onExitView.invoke()
+    }
     AnimatedVisibility(
         visible = uiState is PostUiState.Post,
         enter = fadeIn,
         exit = fadeOut
     ) {
-        postState?.let {
-            LaunchedEffect(it.type) {
-                if (it.type == UiStateType.Refresh) {
-                    resetTopBar.invoke()
-                }
+        val state = postState ?: return@AnimatedVisibility
+        LaunchedEffect(state.type) {
+            if (state.type == UiStateType.Refresh) {
+                resetTopBar.invoke()
             }
-            PostScreen(
-                uiState = it,
-                lazyState = lazyState,
-                refreshState = refreshState,
-                scaffoldState = scaffoldState,
-                titleText = titleText,
-                negativeIcon = negativeIcon,
-                staggeredEnable = staggeredEnable,
-                onNegative = onNegative,
-                openSearch = openSearch?.let { { it.invoke("") } },
-                onRefresh = onRefresh,
-                onLoadMore = onLoadMore,
-                onItemClick = onItemClick
-            )
-            BackHandler(enabled = it.isSearch, onBack = {
-                onClearSearch.invoke()
-                scope.launch { resetTopBar.invoke() }
-                Toaster.show(R.string.click_again_to_exit)
-            })
         }
+        PostScreen(
+            uiState = state,
+            lazyState = lazyState,
+            refreshState = refreshState,
+            scaffoldState = scaffoldState,
+            titleText = titleText,
+            negativeIcon = negativeIcon,
+            staggeredEnable = staggeredEnable,
+            onNegative = onNegative,
+            openSearch = openSearch?.let { { it.invoke("") } },
+            onRefresh = onRefresh,
+            onLoadMore = onLoadMore,
+            onItemClick = onItemClick
+        )
+        BackHandler(enabled = state.isSearch, onBack = {
+            onClearSearch.invoke()
+            scope.launch { resetTopBar.invoke() }
+            Toaster.show(R.string.click_again_to_exit)
+        })
     }
     AnimatedVisibility(
         visible = uiState is PostUiState.View,
         enter = slideIn + fadeIn,
         exit = slideOut + fadeOut
     ) {
-        viewState?.let {
-            ViewScreen(
-                uiState = it,
-                onLoadMore = onLoadMore,
-                onExit = onExitView,
-                onTagClick = onTagClick@{ tag, justSearch ->
-                    if (isSubView)
-                        return@onTagClick
-                    if (justSearch || openSearch == null) {
-                        onExitView.invoke()
-                        onSearch.invoke(tag.name)
-                        scope.launch { resetTopBar.invoke() }
-                    } else {
-                        openSearch.invoke(tag.name)
-                    }
+        val state = viewState ?: return@AnimatedVisibility
+        RememberSystemBars(enable = { !isSearch.value })
+        ViewScreen(
+            uiState = state,
+            onLoadMore = onLoadMore,
+            onExit = onExitView,
+            onTagClick = onTagClick@{ tag, justSearch ->
+                if (isSubView)
+                    return@onTagClick
+                if (justSearch || openSearch == null) {
+                    onExitView.invoke()
+                    onSearch.invoke(tag.name)
+                    scope.launch { resetTopBar.invoke() }
+                } else {
+                    openSearch.invoke(tag.name)
                 }
-            )
-        }
+            }
+        )
+        BackHandler(onBack = onExitView)
     }
 }

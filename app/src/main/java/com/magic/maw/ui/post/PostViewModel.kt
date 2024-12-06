@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.magic.maw.data.PostData
-import com.magic.maw.util.configFlow
 import com.magic.maw.util.Logger
+import com.magic.maw.util.configFlow
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -107,7 +107,6 @@ private data class PostViewModelState(
 }
 
 class PostViewModel(
-    private val parser: BaseParser,
     requestOption: RequestOption = RequestOption(),
     dataList: List<PostData> = emptyList(),
 ) : ViewModel() {
@@ -128,7 +127,7 @@ class PostViewModel(
         )
 
     init {
-        requestOption.page = parser.firstPageIndex
+        requestOption.page = getParser().firstPageIndex
         requestOption.ratings = configFlow.value.websiteConfig.rating
         if (dataList.isEmpty()) {
             refresh(true)
@@ -154,6 +153,7 @@ class PostViewModel(
         viewModelScope.launch {
             try {
                 val option = viewModelState.value.requestOption
+                val parser = getParser()
                 option.ratings = configFlow.value.websiteConfig.rating
                 val list = if (option.poolId > 0) {
                     parser.requestPoolPostData(option.copy(page = parser.firstPageIndex))
@@ -181,6 +181,7 @@ class PostViewModel(
         viewModelState.update { it.copy(type = UiStateType.LoadMore) }
         viewModelScope.launch {
             try {
+                val parser = getParser()
                 val option = viewModelState.value.requestOption
                 val list = if (option.poolId > 0) {
                     parser.requestPoolPostData(option.copy(page = option.page + 1))
@@ -188,7 +189,7 @@ class PostViewModel(
                     parser.requestPostData(option.copy(page = option.page + 1))
                 }
                 viewModelState.update {
-                    if (it.type != UiStateType.Refresh) {
+                    if (it.type != UiStateType.Refresh && list.isNotEmpty()) {
                         it.requestOption.page++
                         it.append(dataList = list, type = UiStateType.None)
                     } else {
@@ -202,12 +203,12 @@ class PostViewModel(
         }
     }
 
-    fun search(text: String) = with(parser) {
+    fun search(text: String) = with(getParser()) {
         val list = viewModelState.value.requestOption.parseSearchText(text)
         if (list.isNotEmpty() && list != viewModelState.value.requestOption.tags.toList()) {
             viewModelState.value.requestOption.clearTags()
             viewModelState.value.requestOption.addTags(list)
-            parser.tagManager.dealSearchTags(list)
+            tagManager.dealSearchTags(list)
             refresh(true)
         }
     }
@@ -234,19 +235,22 @@ class PostViewModel(
         viewModelState.update { it.copy(viewIndex = -1) }
     }
 
+    private fun getParser(): BaseParser {
+        return BaseParser.get(configFlow.value.source)
+    }
+
     private fun checkForceRefresh(): Boolean {
         return configFlow.value.websiteConfig.rating != viewModelState.value.requestOption.ratings
     }
 
     companion object {
         fun providerFactory(
-            parser: BaseParser = BaseParser.get(configFlow.value.source),
             requestOption: RequestOption = RequestOption(),
             dataList: List<PostData> = emptyList(),
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return PostViewModel(parser, requestOption, dataList) as T
+                return PostViewModel(requestOption, dataList) as T
             }
         }
     }

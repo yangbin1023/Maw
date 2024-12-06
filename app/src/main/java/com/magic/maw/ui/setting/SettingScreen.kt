@@ -17,9 +17,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -45,6 +47,8 @@ import com.magic.maw.ui.theme.supportDynamicColor
 import com.magic.maw.util.configFlow
 import com.magic.maw.util.updateWebConfig
 import com.magic.maw.website.parser.BaseParser
+import com.magic.maw.website.parser.DanbooruParser
+import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.flow.update
 
 private const val TAG = "SettingScreen"
@@ -57,7 +61,8 @@ fun SettingScreen(
 ) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
-    ShowSystemBars()
+    val changeSetting = remember { mutableStateOf(false) }
+    ShowSystemBars(needHideStatusBar = { !changeSetting.value })
     Scaffold(topBar = {
         SettingTopBar(
             enableShadow = false,
@@ -69,6 +74,7 @@ fun SettingScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
+            changeSetting = changeSetting,
             isExpandedScreen = isExpandedScreen,
         )
     }
@@ -101,6 +107,7 @@ private fun SettingTopBar(
 private fun SettingBody(
     modifier: Modifier = Modifier,
     isExpandedScreen: Boolean,
+    changeSetting: MutableState<Boolean>
 ) {
     val config by configFlow.collectAsState()
     Column(
@@ -110,7 +117,12 @@ private fun SettingBody(
     ) {
         // 网站设置
         val options = LocalContext.current.resources.getStringArray(R.array.website).toList()
-        var selectIndex by remember { mutableIntStateOf(0) }
+        val initValue = when (config.source) {
+            YandeParser.SOURCE -> 0
+            DanbooruParser.SOURCE -> 2
+            else -> 0
+        }
+        var selectIndex by remember { mutableIntStateOf(initValue) }
         DialogSettingItem(
             title = stringResource(id = R.string.website),
             tips = options[selectIndex]
@@ -122,6 +134,15 @@ private fun SettingBody(
                 onDismissRequest = onDismiss,
                 onOptionSelected = {
                     selectIndex = it
+                    val source = when (options[selectIndex]) {
+                        "Yande" -> YandeParser.SOURCE
+                        "Danbooru" -> DanbooruParser.SOURCE
+                        else -> ""
+                    }
+                    if (source.isNotEmpty() && source != config.source) {
+                        changeSetting.value = true
+                        configFlow.update { it.copy(source = source) }
+                    }
                     onDismiss.invoke()
                 }
             )
@@ -156,7 +177,10 @@ private fun SettingBody(
                     for (index in indexes) {
                         newRating += supportRatings[index].value
                     }
-                    configFlow.updateWebConfig(websiteConfig.copy(rating = newRating))
+                    if (websiteConfig.rating != newRating) {
+                        changeSetting.value = true
+                        configFlow.updateWebConfig(websiteConfig.copy(rating = newRating))
+                    }
                     onDismiss.invoke()
                 })
             )

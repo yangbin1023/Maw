@@ -8,6 +8,8 @@ import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.UserManager
 import java.lang.ref.SoftReference
+import java.net.URLDecoder
+import java.net.URLEncoder
 
 abstract class BaseParser {
     protected abstract val baseUrl: String
@@ -39,11 +41,20 @@ abstract class BaseParser {
                 parserMap[source]?.get()?.let { return it }
                 val parser = when (source) {
                     YandeParser.SOURCE -> YandeParser()
+                    DanbooruParser.SOURCE -> DanbooruParser()
                     else -> throw RuntimeException("Unknown source: $source")
                 }
                 parserMap[source] = SoftReference(parser)
                 return parser
             }
+        }
+
+        fun String.encode(enc: String = "UTF-8"): String {
+            return URLEncoder.encode(this, enc)
+        }
+
+        fun String.decode(enc: String = "UTF-8"): String {
+            return URLDecoder.decode(this, enc)
         }
     }
 }

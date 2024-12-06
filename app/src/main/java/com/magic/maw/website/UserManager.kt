@@ -5,6 +5,7 @@ import com.magic.maw.db.AppDB
 import com.magic.maw.db.updateOrInsert
 import com.magic.maw.util.dbHandler
 import com.magic.maw.website.parser.BaseParser
+import com.magic.maw.website.parser.DanbooruParser
 import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -94,21 +95,20 @@ class UserManager(val source: String) {
             add(it)
             return
         }
-        try {
-            parser.requestUserInfo(userId)?.let {
-                status.value = LoadStatus.Success(it)
-                add(it)
-                return
+        var retryCount = 0
+        do {
+            try {
+                parser.requestUserInfo(userId)?.let {
+                    status.value = LoadStatus.Success(it)
+                    add(it)
+                    return
+                }
+            } catch (_: Throwable) {
             }
-        } catch (_: Throwable) {
-        }
-        retryCount++
-        if (retryCount < 3) {
-            delay(1000)
-            start()
-        } else {
-            status.value = LoadStatus.Error(RuntimeException("get user info failed. id: $userId"))
-        }
+            retryCount++
+            delay(retryCount * (500 + (0L..1000L).random()))
+        } while (retryCount < 3)
+        status.value = LoadStatus.Error(RuntimeException("get user info failed. id: $userId"))
     }
 
     companion object {
@@ -118,6 +118,7 @@ class UserManager(val source: String) {
             map[source]?.get()?.let { return it }
             val manager = when (source) {
                 YandeParser.SOURCE -> UserManager(YandeParser.SOURCE)
+                DanbooruParser.SOURCE -> UserManager(DanbooruParser.SOURCE)
                 else -> throw RuntimeException("Unknown source: $source")
             }
             map[source] = SoftReference(manager)
@@ -129,6 +130,5 @@ class UserManager(val source: String) {
 data class UserTask(
     val source: String,
     val userId: Int,
-    val status: MutableStateFlow<LoadStatus<UserInfo>> = MutableStateFlow(LoadStatus.Waiting),
-    var retryCount: Int = 0
+    val status: MutableStateFlow<LoadStatus<UserInfo>> = MutableStateFlow(LoadStatus.Waiting)
 )

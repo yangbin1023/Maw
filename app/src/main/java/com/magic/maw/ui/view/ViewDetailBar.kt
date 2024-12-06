@@ -51,6 +51,7 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
+import com.magic.maw.data.UserInfo
 import com.magic.maw.data.toSizeString
 import com.magic.maw.ui.components.MenuSettingItem
 import com.magic.maw.ui.components.ScrollableView
@@ -63,6 +64,7 @@ import com.magic.maw.util.TimeUtils.toFormatStr
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.TagManager
+import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.launch
 
 @Composable
@@ -193,11 +195,13 @@ private fun DetailContent(
 
         var tagChanged = false
         for (tagInfo in postData.tags) {
-            if (tagInfo.type == TagType.None) {
-                val info by tagManager.getInfoStatus(tagInfo.name, scope).collectAsState()
-                (info as? LoadStatus.Success)?.let {
-                    postData.updateTag(it.result)
-                    tagChanged = true
+            if (tagInfo.type == TagType.None || tagInfo.count == 0) {
+                val info = tagManager.getInfoStatus(tagInfo.name, scope).collectAsState().value
+                if (info is LoadStatus.Success<TagInfo>) {
+                    if (tagInfo.type != info.result.type) {
+                        tagChanged = true
+                    }
+                    postData.updateTag(info.result)
                 }
             }
         }
@@ -230,6 +234,15 @@ private fun DetailContent(
                 qualityIndex = it
             }
         )
+        if (postData.uploader.isNullOrEmpty()) {
+            postData.createId?.let { createId ->
+                val userManager = BaseParser.get(config.source).userManager
+                val status = userManager.getStatus(createId).collectAsState().value
+                if (status is LoadStatus.Success<UserInfo>) {
+                    postData.uploader = status.result.name
+                }
+            }
+        }
         SettingItem(
             title = stringResource(R.string.author),
             tips = postData.uploader,
@@ -321,12 +334,14 @@ private fun TagInfoItem(
                 contentDescription = null,
                 tint = searchColor
             )
-            Text(
-                modifier = Modifier.padding(end = 1.dp),
-                text = info.count.toString(),
-                color = searchColor,
-                fontSize = 14.sp
-            )
+            if (info.count > 0) {
+                Text(
+                    modifier = Modifier.padding(end = 1.dp),
+                    text = info.count.toString(),
+                    color = searchColor,
+                    fontSize = 14.sp
+                )
+            }
         }
     }
 }

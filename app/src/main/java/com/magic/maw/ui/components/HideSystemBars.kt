@@ -24,7 +24,7 @@ fun HideSystemBars() {
 }
 
 @Composable
-fun ShowSystemBars() {
+fun ShowSystemBars(needHideStatusBar: () -> Boolean = { true }) {
     val context = LocalContext.current
     DisposableEffect(Unit) {
         val isShowStatusBar = context.isShowStatusBars()
@@ -32,7 +32,7 @@ fun ShowSystemBars() {
             context.showSystemBars()
         }
         onDispose {
-            if (!isShowStatusBar) {
+            if (!isShowStatusBar && needHideStatusBar.invoke()) {
                 context.hideSystemBars()
             }
         }
@@ -40,12 +40,14 @@ fun ShowSystemBars() {
 }
 
 @Composable
-fun RememberSystemBars() {
+fun RememberSystemBars(enable: () -> Boolean = { true }) {
     val context = LocalContext.current
     DisposableEffect(Unit) {
         val isShow = context.isShowStatusBars()
         onDispose {
-            context.showSystemBars(isShow)
+            if (enable.invoke()) {
+                context.showSystemBars(isShow)
+            }
         }
     }
 }

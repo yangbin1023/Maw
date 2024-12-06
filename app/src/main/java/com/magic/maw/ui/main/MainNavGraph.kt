@@ -14,8 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -34,21 +33,17 @@ import com.magic.maw.ui.post.PostRoute
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.search.SearchScreen
 import com.magic.maw.ui.setting.SettingScreen
-import com.magic.maw.util.configFlow
-import com.magic.maw.website.parser.BaseParser
 
 @Composable
 fun MainNavGraph(
     modifier: Modifier = Modifier,
-    mainViewModel: MainViewModel,
+    inSubView: MutableState<Boolean>,
     isExpandedScreen: Boolean = false,
     navController: NavHostController = rememberNavController(),
     startDestination: String = MainRoutes.POST,
     openDrawer: () -> Unit
 ) {
-    val parser = BaseParser.get(configFlow.collectAsState().value.source)
-    val postViewModel: PostViewModel =
-        viewModel(factory = PostViewModel.providerFactory(parser = parser))
+    val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -66,13 +61,16 @@ fun MainNavGraph(
                 searchText = tagText,
                 onNegative = openDrawer,
                 openSearch = { navController.navigate(MainRoutes.search(it)) },
-                onOpenView = { mainViewModel.gesturesEnabled = it }
+                onOpenSubView = { inSubView.value = it }
             )
         }
         composable(route = MainRoutes.POOL) {
             val poolViewModel: PoolViewModel = viewModel()
-            LaunchedEffect(poolViewModel) { poolViewModel.refresh() }
-            PoolRoute(poolViewModel = poolViewModel, openDrawer = openDrawer)
+            PoolRoute(
+                poolViewModel = poolViewModel,
+                openDrawer = openDrawer,
+                onOpenSubView = { inSubView.value = it }
+            )
         }
         composable(route = MainRoutes.POPULAR) {
             Box(

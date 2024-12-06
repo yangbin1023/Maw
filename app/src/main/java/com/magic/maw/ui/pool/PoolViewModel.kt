@@ -56,10 +56,15 @@ data class PoolUiState(
 }
 
 class PoolViewModel : ViewModel() {
-    private val viewModelState = MutableStateFlow(
-        PoolUiState(noMore = false, requestOption = RequestOption())
-    )
-    private var parser = BaseParser.get(configFlow.value.source)
+    private val viewModelState: MutableStateFlow<PoolUiState>
+
+    init {
+        val parser = getParser()
+        val websiteConfig = configFlow.value.websiteConfig
+        val option = RequestOption(page = parser.firstPageIndex, ratings = websiteConfig.rating)
+        viewModelState = MutableStateFlow(PoolUiState(noMore = false, requestOption = option))
+        refresh(true)
+    }
 
     val uiState = viewModelState
         .stateIn(viewModelScope, SharingStarted.Eagerly, viewModelState.value)
@@ -72,7 +77,9 @@ class PoolViewModel : ViewModel() {
         }
         viewModelScope.launch {
             try {
+                val parser = getParser()
                 val option = viewModelState.value.requestOption
+                option.ratings = configFlow.value.websiteConfig.rating
                 val list = parser.requestPoolData(option.copy(page = parser.firstPageIndex))
                 viewModelState.update {
                     if (force) {
@@ -97,10 +104,11 @@ class PoolViewModel : ViewModel() {
         }
         viewModelScope.launch {
             try {
+                val parser = getParser()
                 val option = viewModelState.value.requestOption
                 val list = parser.requestPoolData(option.copy(page = option.page + 1))
                 viewModelState.update {
-                    if (it.type != UiStateType.Refresh) {
+                    if (it.type != UiStateType.Refresh && list.isNotEmpty()) {
                         it.requestOption.page++
                         it.append(dataList = list, type = UiStateType.None)
                     } else {
@@ -108,7 +116,7 @@ class PoolViewModel : ViewModel() {
                     }
                 }
             } catch (e: Throwable) {
-                logger.severe("refresh failed: ${e.message}")
+                logger.severe("loadMore failed: ${e.message}")
                 viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }
@@ -119,11 +127,12 @@ class PoolViewModel : ViewModel() {
     }
 
     private fun checkForceRefresh(): Boolean {
-        val newSource = configFlow.value.source
-        if (newSource != parser.source) {
-            parser = BaseParser.get(newSource)
-            return true
-        }
-        return false
+        val websiteConfig = configFlow.value.websiteConfig
+        val state = viewModelState.value
+        return websiteConfig.rating != state.requestOption.ratings
+    }
+
+    private fun getParser(): BaseParser {
+        return BaseParser.get(configFlow.value.source)
     }
 }

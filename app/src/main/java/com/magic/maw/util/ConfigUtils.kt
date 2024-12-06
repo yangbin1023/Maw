@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import com.magic.maw.data.Quality
 import com.magic.maw.data.Rating
 import com.magic.maw.ui.theme.supportDynamicColor
+import com.magic.maw.website.parser.DanbooruParser
 import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -40,6 +41,7 @@ fun MutableStateFlow<Config>.updateWebConfig(websiteConfig: WebsiteConfig) {
         val prevValue = value
         val nextValue = when (value.source) {
             YandeParser.SOURCE -> prevValue.copy(yandeConfig = websiteConfig)
+            DanbooruParser.SOURCE -> prevValue.copy(danbooruConfig = websiteConfig)
             else -> throw RuntimeException("不支持的网站")
         }
         if (compareAndSet(prevValue, nextValue)) {
@@ -52,12 +54,14 @@ fun MutableStateFlow<Config>.updateWebConfig(websiteConfig: WebsiteConfig) {
 data class Config(
     val source: String = YandeParser.SOURCE,
     val yandeConfig: WebsiteConfig = WebsiteConfig(),
+    val danbooruConfig: WebsiteConfig = WebsiteConfig(rating = Rating.General.value),
     val darkMode: Int = 0,
     val dynamicColor: Boolean = supportDynamicColor
 ) {
     val websiteConfig: WebsiteConfig
         get() = when (source) {
             YandeParser.SOURCE -> yandeConfig
+            DanbooruParser.SOURCE -> danbooruConfig
             else -> throw RuntimeException("不支持的网站")
         }
 

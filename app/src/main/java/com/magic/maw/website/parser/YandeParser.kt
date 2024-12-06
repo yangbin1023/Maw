@@ -8,9 +8,9 @@ import com.magic.maw.data.UserInfo
 import com.magic.maw.data.yande.YandeData
 import com.magic.maw.data.yande.YandePool
 import com.magic.maw.data.yande.YandeTag
+import com.magic.maw.data.yande.YandeUser
 import com.magic.maw.util.Logger
 import com.magic.maw.util.client
-import com.magic.maw.util.json
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
@@ -21,10 +21,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import java.net.URLDecoder
 
 private val logger = Logger("YandeParser")
 
@@ -116,7 +112,7 @@ class YandeParser : BaseParser() {
         do {
             try {
                 val url = getTagUrl(name, page, limit)
-                val yandeList: ArrayList<YandeTag> = client.get(url).body()
+                val yandeList: List<YandeTag> = client.get(url).body()
                 var found = false
                 for (yandeTag in yandeList) {
                     val tag = yandeTag.toTagInfo() ?: continue
@@ -129,7 +125,7 @@ class YandeParser : BaseParser() {
                 retryCount = 0
                 if (yandeList.isEmpty() || found)
                     break
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 retryCount++
                 if (retryCount >= 3) break else continue
             }
@@ -159,27 +155,20 @@ class YandeParser : BaseParser() {
     }
 
     override suspend fun requestUserInfo(userId: Int): UserInfo? {
-        val jsonStr = client.get(getUserUrl(userId)).body<String>()
-        println("request user info: $jsonStr")
-        val rootJson = json.parseToJsonElement(jsonStr).jsonArray.let {
-            if (it.isEmpty())
-                return null
-            it[0].jsonObject
+        try {
+            val userList: List<YandeUser> = client.get(getUserUrl(userId)).body()
+            if (userList.isNotEmpty()) {
+                return userList[0].toUserInfo()
+            }
+        } catch (_: Exception) {
         }
-        val content = rootJson["name"]?.jsonPrimitive?.content ?: return null
-        val endIndex = content.length - 1
-        val name = if (content.length > 1 && content[0] == '\"' && content[endIndex] == '\"') {
-            content.substring(1, endIndex)
-        } else {
-            content
-        }
-        return UserInfo(source = source, userId = userId, name = name)
+        return null
     }
 
     override fun RequestOption.parseSearchText(text: String): List<String> {
         if (text.isEmpty())
             return emptyList()
-        val tagTexts = URLDecoder.decode(text, "UTF-8").split(" ")
+        val tagTexts = text.decode().split(" ")
         val tagList = ArrayList<String>()
         for (tagText in tagTexts) {
             if (tagText.isEmpty())
@@ -195,9 +184,7 @@ class YandeParser : BaseParser() {
         val tags = ArrayList<String>().apply { addAll(option.tags) }
         getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it) }
         val tagStr = tags.joinToString("+")
-        return "$baseUrl/post.json?page=${option.page}&limit=40&tags=$tagStr".apply {
-            println("post url: $this")
-        }
+        return "$baseUrl/post.json?page=${option.page}&limit=40&tags=$tagStr"
     }
 
     override fun getPoolUrl(option: RequestOption): String {

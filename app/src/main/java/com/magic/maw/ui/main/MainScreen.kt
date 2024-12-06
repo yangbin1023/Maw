@@ -6,8 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -21,20 +22,21 @@ import kotlinx.coroutines.launch
 private const val TAG = "MainScreen"
 
 @Composable
-fun MainScreen(mainViewModel: MainViewModel, windowSizeClass: WindowSizeClass) {
+fun MainScreen() {
     MawTheme {
         val navController = rememberNavController()
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         // drawerState.currentOffset 侧边栏滑动的偏移量，全部显示时为0
 
         val coroutineScope = rememberCoroutineScope()
+        val inSubView = remember { mutableStateOf(false) }
         val currentRoute = navController.currentRoute ?: MainRoutes.POST
 
         val screenWidth = LocalConfiguration.current.screenWidthDp * LocalDensity.current.density
         val dragThreshold = screenWidth * 0.3f
         val isExpandedScreen = false//windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
         val gesturesEnabled = !isExpandedScreen
-                && mainViewModel.gesturesEnabled
+                && !inSubView.value
                 && currentRoute != MainRoutes.SETTING
                 && currentRoute != MainRoutes.SEARCH
 
@@ -69,7 +71,7 @@ fun MainScreen(mainViewModel: MainViewModel, windowSizeClass: WindowSizeClass) {
                     )
                 }
                 MainNavGraph(
-                    mainViewModel = mainViewModel,
+                    inSubView = inSubView,
                     isExpandedScreen = isExpandedScreen,
                     navController = navController,
                     openDrawer = { coroutineScope.launch { drawerState.open() } }

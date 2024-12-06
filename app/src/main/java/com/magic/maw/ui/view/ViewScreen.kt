@@ -1,6 +1,5 @@
 package com.magic.maw.ui.view
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,12 +27,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.magic.maw.data.PostData
 import com.magic.maw.data.TagInfo
-import com.magic.maw.ui.components.RememberSystemBars
 import com.magic.maw.ui.post.PostUiState
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.isShowStatusBars
 import com.magic.maw.util.UiUtils.showSystemBars
-import com.magic.maw.util.logger
 import kotlinx.coroutines.delay
 
 @Composable
@@ -43,7 +40,6 @@ fun ViewScreen(
     onExit: () -> Unit,
     onTagClick: (TagInfo, Boolean) -> Unit
 ) {
-    logger.info("ViewScreen re-compose")
     val pagerState = rememberPagerState(uiState.initIndex) { uiState.dataList.size }
     val topBarMaxHeight = UiUtils.getTopBarHeight()
     val context = LocalContext.current
@@ -53,7 +49,6 @@ fun ViewScreen(
         targetValue = if (showTopBar) 0.dp else -topBarMaxHeight,
         label = "showTopAppBar"
     )
-    RememberSystemBars()
     LaunchedEffect(Unit) {
         delay(1500)
         showTopBar = false
@@ -98,8 +93,6 @@ fun ViewScreen(
             maxDraggableHeight = draggableHeight,
             onTagClick = onTagClick
         )
-
-        BackHandler { onExit.invoke() }
     }
 }
 

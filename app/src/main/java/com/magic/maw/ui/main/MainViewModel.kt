@@ -7,11 +7,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.navigation.NavController
 import com.magic.maw.MyApp
-import com.magic.maw.website.parser.BaseParser
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     val app: MyApp = application as MyApp
-    val parser: BaseParser = app.parser
 
     var gesturesEnabled: Boolean by mutableStateOf(true)
 }
