@@ -2,17 +2,13 @@ package com.magic.maw.website
 
 import android.content.Context
 import android.os.Environment
-import androidx.compose.runtime.MutableFloatState
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.snapshots.SnapshotMutableState
 import com.magic.maw.MyApp
 import com.magic.maw.data.BaseData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
-import com.magic.maw.util.client
 import com.magic.maw.util.Logger
+import com.magic.maw.util.client
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
 import io.ktor.client.plugins.onDownload
@@ -24,11 +20,11 @@ import io.ktor.utils.io.copyAndClose
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -161,6 +157,7 @@ data class DLTask(
             val file = File(path)
             file.parentFile?.apply { if (!exists()) mkdirs() }
             channel.copyAndClose(file.writeChannel())
+            delay(100)
             statusFlow.value = LoadStatus.Success(file)
             logger.info("download success, $url")
         } catch (e: Exception) {
