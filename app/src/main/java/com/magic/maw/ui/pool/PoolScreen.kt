@@ -47,8 +47,6 @@ import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.post.PostDefaults
 import com.magic.maw.ui.post.UiStateType
 import com.magic.maw.util.UiUtils.getStatusBarHeight
-import com.magic.maw.util.UiUtils.hideSystemBars
-import com.magic.maw.util.UiUtils.showSystemBars
 import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,14 +60,14 @@ fun PoolScreen(
     openDrawer: () -> Unit,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
+    onShowSystemBar: (Boolean) -> Unit,
     onItemClick: (Int) -> Unit,
 ) {
-    val context = LocalContext.current
     LaunchedEffect(scaffoldState) {
         if (scaffoldState.scrollValue == scaffoldState.minPx) {
-            context.hideSystemBars()
+            onShowSystemBar.invoke(false)
         } else if (scaffoldState.scrollValue == scaffoldState.maxPx) {
-            context.showSystemBars()
+            onShowSystemBar.invoke(true)
         }
     }
     NestedScaffold(
@@ -86,8 +84,8 @@ fun PoolScreen(
         canScroll = {
             refreshState.distanceFraction <= 0 && uiState.dataList.isNotEmpty()
         },
-        onScrollToTop = { context.hideSystemBars() },
-        onScrollToBottom = { context.showSystemBars() },
+        onScrollToTop = { onShowSystemBar.invoke(false) },
+        onScrollToBottom = { onShowSystemBar.invoke(true) },
     ) { innerPadding ->
         PoolRefreshBody(
             uiState = uiState,

@@ -27,11 +27,14 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.magic.maw.data.PostData
 import com.magic.maw.data.TagInfo
+import com.magic.maw.ui.components.RegisterView
+import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.post.PostUiState
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.isShowStatusBars
-import com.magic.maw.util.UiUtils.showSystemBars
 import kotlinx.coroutines.delay
+
+private const val viewName = "View"
 
 @Composable
 fun ViewScreen(
@@ -53,8 +56,10 @@ fun ViewScreen(
         delay(1500)
         showTopBar = false
     }
+    RegisterView(name = viewName, showTopBar)
+
     LaunchedEffect(showTopBar) {
-        context.showSystemBars(showTopBar)
+        changeSystemBarStatus(context, viewName, showTopBar)
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {

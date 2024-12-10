@@ -21,14 +21,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.magic.maw.data.PoolData
 import com.magic.maw.ui.components.ConfigChangeChecker
+import com.magic.maw.ui.components.RegisterView
+import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.post.PostRoute
 import com.magic.maw.ui.post.PostViewModel
-import com.magic.maw.util.UiUtils.showSystemBars
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.launch
+
+private const val viewName = "Pool"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,9 +76,11 @@ private fun PoolRoute(
     val scaffoldState = rememberNestedScaffoldState()
     val refreshState = rememberPullToRefreshState()
 
+    RegisterView(name = viewName)
+
     ConfigChangeChecker {
         scope.launch {
-            context.showSystemBars()
+            changeSystemBarStatus(context, viewName, true)
             lazyState.scrollToItem(0, 0)
             scaffoldState.snapTo(scaffoldState.maxPx)
         }
@@ -96,6 +101,7 @@ private fun PoolRoute(
             openDrawer = openDrawer,
             onRefresh = onRefresh,
             onLoadMore = onLoadMore,
+            onShowSystemBar = { changeSystemBarStatus(context, viewName, it) },
             onItemClick = onItemClick
         )
     }

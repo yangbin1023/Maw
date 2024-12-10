@@ -26,11 +26,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hjq.toast.Toaster
 import com.magic.maw.R
 import com.magic.maw.ui.components.ConfigChangeChecker
-import com.magic.maw.ui.components.RememberSystemBars
+import com.magic.maw.ui.components.RegisterView
+import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.view.ViewScreen
-import com.magic.maw.util.UiUtils.showSystemBars
 import kotlinx.coroutines.launch
+
+private const val viewName = "Post"
 
 @Composable
 fun PostRoute(
@@ -55,7 +57,10 @@ fun PostRoute(
         onNegative = onNegative,
         openSearch = openSearch,
         onRefresh = { postViewModel.refresh() },
-        onForceRefresh = { postViewModel.refresh(true) },
+        onForceRefresh = {
+            postViewModel.clearTags()
+            postViewModel.refresh(true)
+        },
         onLoadMore = { postViewModel.loadMore() },
         onItemClick = { postViewModel.setViewIndex(it) },
         onExitView = { postViewModel.exitView() },
@@ -97,7 +102,7 @@ fun PostRoute(
     val context = LocalContext.current
 
     val resetTopBar: suspend () -> Unit = {
-        context.showSystemBars()
+        changeSystemBarStatus(context, viewName, true)
         lazyState.scrollToItem(0, 0)
         scaffoldState.animateTo(scaffoldState.maxPx)
     }
@@ -114,17 +119,19 @@ fun PostRoute(
     } else {
         Icons.Default.Menu
     }
+    RegisterView(name = viewName)
+
     LaunchedEffect(searchText) {
         if (searchText.isNotEmpty()) {
             isSearch.value = true
-            context.showSystemBars()
+            changeSystemBarStatus(context, viewName, true)
             onExitView.invoke()
             onSearch.invoke(searchText)
         }
     }
     ConfigChangeChecker {
         scope.launch {
-            context.showSystemBars()
+            changeSystemBarStatus(context, viewName, true)
             lazyState.scrollToItem(0, 0)
             scaffoldState.snapTo(scaffoldState.maxPx)
         }
@@ -154,6 +161,7 @@ fun PostRoute(
             openSearch = openSearch?.let { { it.invoke("") } },
             onRefresh = onRefresh,
             onLoadMore = onLoadMore,
+            onShowSystemBar = { changeSystemBarStatus(context, viewName, it) },
             onItemClick = onItemClick
         )
         BackHandler(enabled = state.isSearch, onBack = {
@@ -168,7 +176,6 @@ fun PostRoute(
         exit = slideOut + fadeOut
     ) {
         val state = viewState ?: return@AnimatedVisibility
-        RememberSystemBars(enable = { !isSearch.value })
         ViewScreen(
             uiState = state,
             onLoadMore = onLoadMore,

@@ -62,7 +62,7 @@ import androidx.compose.ui.unit.dp
 import com.magic.maw.R
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
-import com.magic.maw.ui.components.ShowSystemBars
+import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.theme.PreviewTheme
 import com.magic.maw.util.Logger
@@ -72,6 +72,7 @@ import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.delay
 
 private val logger = Logger("SearchScreen")
+private const val viewName = "Search"
 
 @Composable
 fun SearchScreen(
@@ -86,7 +87,7 @@ fun SearchScreen(
         val text = initText.toSearchTagText()
         mutableStateOf(TextFieldValue(text = text, selection = TextRange(text.length)))
     }
-    ShowSystemBars(needHideStatusBar = { !isSearch.value })
+    RegisterView(name = viewName)
     Scaffold(
         topBar = {
             SearchTopBar(

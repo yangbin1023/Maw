@@ -38,8 +38,8 @@ import com.magic.maw.data.Rating.Companion.hasRating
 import com.magic.maw.ui.components.DialogSettingItem
 import com.magic.maw.ui.components.MenuSettingItem
 import com.magic.maw.ui.components.MultipleChoiceDialog
+import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.SettingItem
-import com.magic.maw.ui.components.ShowSystemBars
 import com.magic.maw.ui.components.SingleChoiceDialog
 import com.magic.maw.ui.components.SwitchSettingItem
 import com.magic.maw.ui.components.throttle
@@ -51,7 +51,7 @@ import com.magic.maw.website.parser.DanbooruParser
 import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.flow.update
 
-private const val TAG = "SettingScreen"
+private const val viewName = "Setting"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,7 +62,7 @@ fun SettingScreen(
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
     val changeSetting = remember { mutableStateOf(false) }
-    ShowSystemBars(needHideStatusBar = { !changeSetting.value })
+    RegisterView(name = viewName)
     Scaffold(topBar = {
         SettingTopBar(
             enableShadow = false,

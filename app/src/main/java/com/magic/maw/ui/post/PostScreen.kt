@@ -54,10 +54,8 @@ import com.magic.maw.ui.components.NestedScaffoldState
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.theme.TableLayout
 import com.magic.maw.ui.theme.WaterLayout
-import com.magic.maw.util.UiUtils.getStatusBarHeight
-import com.magic.maw.util.UiUtils.hideSystemBars
-import com.magic.maw.util.UiUtils.showSystemBars
 import com.magic.maw.util.Logger
+import com.magic.maw.util.UiUtils.getStatusBarHeight
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
@@ -79,6 +77,7 @@ fun PostScreen(
     openSearch: (() -> Unit)? = null,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
+    onShowSystemBar: (Boolean) -> Unit,
     onItemClick: (Int) -> Unit,
 ) {
     val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
@@ -94,6 +93,7 @@ fun PostScreen(
         openSearch = openSearch,
         onRefresh = onRefresh,
         onLoadMore = onLoadMore,
+        onShowSystemBar = onShowSystemBar,
         onItemClick = onItemClick
     )
 }
@@ -112,6 +112,7 @@ private fun NestedScaffoldBody(
     openSearch: (() -> Unit)? = null,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
+    onShowSystemBar: (Boolean) -> Unit,
     onItemClick: (Int) -> Unit,
 ) {
     val context = LocalContext.current
@@ -119,9 +120,9 @@ private fun NestedScaffoldBody(
     val scrollToTop: () -> Unit = { scope.launch { lazyState.scrollToItem(0, 0) } }
     LaunchedEffect(scaffoldState) {
         if (scaffoldState.scrollValue == scaffoldState.minPx) {
-            context.hideSystemBars()
+            onShowSystemBar.invoke(false)
         } else if (scaffoldState.scrollValue == scaffoldState.maxPx) {
-            context.showSystemBars()
+            onShowSystemBar.invoke(true)
         }
     }
     NestedScaffold(
@@ -142,8 +143,8 @@ private fun NestedScaffoldBody(
         canScroll = {
             refreshState.distanceFraction <= 0 && uiState.dataList.isNotEmpty()
         },
-        onScrollToTop = { context.hideSystemBars() },
-        onScrollToBottom = { context.showSystemBars() },
+        onScrollToTop = { onShowSystemBar.invoke(false) },
+        onScrollToBottom = { onShowSystemBar.invoke(true) },
     ) { innerPadding ->
         PostRefreshBody(
             modifier = Modifier
