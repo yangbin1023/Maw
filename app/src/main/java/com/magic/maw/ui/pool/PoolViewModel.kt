@@ -8,6 +8,7 @@ import com.magic.maw.util.Logger
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -24,6 +25,9 @@ data class PoolUiState(
     val requestOption: RequestOption
 ) {
     private val dataMap: HashMap<Int, PoolData> = HashMap()
+
+    val isPoolView: Boolean get() = viewIndex < 0
+    val isPostView: Boolean get() = viewIndex >= 0
 
     init {
         for (data in dataList) {
@@ -63,7 +67,6 @@ class PoolViewModel : ViewModel() {
         val websiteConfig = configFlow.value.websiteConfig
         val option = RequestOption(page = parser.firstPageIndex, ratings = websiteConfig.rating)
         viewModelState = MutableStateFlow(PoolUiState(noMore = false, requestOption = option))
-        refresh(true)
     }
 
     val uiState = viewModelState
@@ -75,8 +78,9 @@ class PoolViewModel : ViewModel() {
                 return
             viewModelState.update { it.copy(type = UiStateType.Refresh) }
         }
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
+                logger.info("pool refresh.")
                 val parser = getParser()
                 val option = viewModelState.value.requestOption
                 option.ratings = configFlow.value.websiteConfig.rating
@@ -102,7 +106,7 @@ class PoolViewModel : ViewModel() {
                 return
             viewModelState.update { it.copy(type = UiStateType.LoadMore) }
         }
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val parser = getParser()
                 val option = viewModelState.value.requestOption
@@ -122,14 +126,25 @@ class PoolViewModel : ViewModel() {
         }
     }
 
+    fun clearData() {
+        viewModelState.update { it.copy(dataList = emptyList()) }
+    }
+
     fun setViewIndex(viewIndex: Int) {
         viewModelState.update { it.copy(viewIndex = viewIndex) }
+    }
+
+    fun exitPostView() {
+        if (viewModelState.value.isPoolView)
+            return
+        viewModelState.update { it.copy(viewIndex = -1) }
     }
 
     private fun checkForceRefresh(): Boolean {
         val websiteConfig = configFlow.value.websiteConfig
         val state = viewModelState.value
-        return websiteConfig.rating != state.requestOption.ratings
+        return state.dataList.isEmpty()
+                || websiteConfig.rating != state.requestOption.ratings
     }
 
     private fun getParser(): BaseParser {

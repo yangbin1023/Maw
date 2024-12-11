@@ -27,6 +27,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.magic.maw.R
+import com.magic.maw.ui.components.ConfigChangeChecker
 import com.magic.maw.ui.pool.PoolRoute
 import com.magic.maw.ui.pool.PoolViewModel
 import com.magic.maw.ui.post.PostRoute
@@ -44,6 +45,13 @@ fun MainNavGraph(
     openDrawer: () -> Unit
 ) {
     val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
+    val poolViewModel: PoolViewModel = viewModel()
+
+    ConfigChangeChecker {
+        postViewModel.clearData()
+        poolViewModel.clearData()
+    }
+
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -54,18 +62,15 @@ fun MainNavGraph(
         composable(
             route = MainRoutes.POST,
             arguments = listOf(navArgument("tagText") { type = NavType.StringType })
-        ) { navBackStackEntry ->
-            val tagText = navBackStackEntry.arguments?.getString("tagText") ?: ""
+        ) {
             PostRoute(
                 postViewModel = postViewModel,
-                searchText = tagText,
                 onNegative = openDrawer,
                 openSearch = { navController.navigate(MainRoutes.search(it)) },
                 onOpenSubView = { inSubView.value = it }
             )
         }
         composable(route = MainRoutes.POOL) {
-            val poolViewModel: PoolViewModel = viewModel()
             PoolRoute(
                 poolViewModel = poolViewModel,
                 openDrawer = openDrawer,
@@ -98,7 +103,10 @@ fun MainNavGraph(
             SearchScreen(
                 initText = initText,
                 onFinish = { navController.popBackStack() },
-                onSearch = { navController.onNavigate(MainRoutes.POST, it) }
+                onSearch = {
+                    postViewModel.search(it)
+                    navController.popBackStack()
+                }
             )
         }
     }

@@ -37,7 +37,6 @@ private const val viewName = "Post"
 @Composable
 fun PostRoute(
     postViewModel: PostViewModel,
-    searchText: String = "",
     titleText: String = stringResource(R.string.post),
     isSubView: Boolean = false,
     staggeredEnable: Boolean = true,
@@ -53,7 +52,6 @@ fun PostRoute(
         titleText = titleText,
         isSubView = isSubView,
         staggeredEnable = staggeredEnable,
-        searchText = searchText,
         onNegative = onNegative,
         openSearch = openSearch,
         onRefresh = { postViewModel.refresh() },
@@ -68,7 +66,10 @@ fun PostRoute(
             postViewModel.clearTags()
             postViewModel.refresh(true)
         },
-        onSearch = { postViewModel.search(it) }
+        onSearch = {
+            postViewModel.search(it)
+            postViewModel.exitView()
+        }
     )
 }
 
@@ -79,7 +80,6 @@ fun PostRoute(
     titleText: String = stringResource(R.string.post),
     isSubView: Boolean = false,
     staggeredEnable: Boolean = true,
-    searchText: String = "",
     onNegative: () -> Unit,
     openSearch: ((String) -> Unit)? = null,
     onRefresh: () -> Unit,
@@ -107,7 +107,6 @@ fun PostRoute(
         scaffoldState.animateTo(scaffoldState.maxPx)
     }
 
-    val isSearch = remember { mutableStateOf(false) }
     var postState by remember { mutableStateOf<PostUiState.Post?>(null) }
     var viewState by remember { mutableStateOf<PostUiState.View?>(null) }
     when (uiState) {
@@ -121,12 +120,10 @@ fun PostRoute(
     }
     RegisterView(name = viewName)
 
-    LaunchedEffect(searchText) {
-        if (searchText.isNotEmpty()) {
-            isSearch.value = true
-            changeSystemBarStatus(context, viewName, true)
+    LaunchedEffect(uiState.type) {
+        if (uiState.type == UiStateType.Refresh) {
             onExitView.invoke()
-            onSearch.invoke(searchText)
+            resetTopBar.invoke()
         }
     }
     ConfigChangeChecker {
@@ -144,11 +141,6 @@ fun PostRoute(
         exit = fadeOut
     ) {
         val state = postState ?: return@AnimatedVisibility
-        LaunchedEffect(state.type) {
-            if (state.type == UiStateType.Refresh) {
-                resetTopBar.invoke()
-            }
-        }
         PostScreen(
             uiState = state,
             lazyState = lazyState,

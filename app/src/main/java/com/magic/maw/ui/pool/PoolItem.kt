@@ -13,9 +13,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -29,10 +31,16 @@ import coil.request.ImageRequest
 import com.magic.maw.R
 import com.magic.maw.data.PoolData
 import com.magic.maw.data.Quality
+import com.magic.maw.ui.components.ConfigChangeChecker
 import com.magic.maw.util.TimeUtils
+import com.magic.maw.util.configFlow
 import com.magic.maw.website.LoadStatus
+import com.magic.maw.website.LoadType
+import com.magic.maw.website.RequestOption
 import com.magic.maw.website.loadDLFile
-import java.io.File
+import com.magic.maw.website.parser.BaseParser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun PoolItem(
@@ -40,28 +48,13 @@ fun PoolItem(
     poolData: PoolData,
     onClick: () -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
     Card(
         modifier = modifier,
         onClick = onClick,
         shape = RoundedCornerShape(5.dp)
     ) {
         Box(modifier = Modifier.aspectRatio(1.78f)) {
-            if (poolData.posts.isNotEmpty()) {
-                val postData = poolData.posts[0]
-                val status by loadDLFile(postData, Quality.Sample, scope).collectAsState()
-                if (status is LoadStatus.Success<File>) {
-                    val file = (status as? LoadStatus.Success<File>)?.result
-                    val model = ImageRequest.Builder(LocalContext.current).data(file).build()
-                    AsyncImage(
-                        modifier = Modifier.fillMaxSize(),
-                        model = model,
-                        alignment = Alignment.Center,
-                        contentScale = ContentScale.Crop,
-                        contentDescription = null,
-                    )
-                }
-            }
+            ItemImageView(modifier = Modifier.fillMaxSize(), poolData)
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -107,5 +100,70 @@ fun PoolItem(
                 style = MaterialTheme.typography.bodySmall
             )
         }
+    }
+}
+
+@Composable
+private fun ItemImageView(modifier: Modifier = Modifier, poolData: PoolData) {
+    val scope = rememberCoroutineScope()
+    val type = rememberSaveable { mutableStateOf(LoadType.Waiting) }
+    val noMore = rememberSaveable { mutableStateOf(false) }
+    val model = remember { mutableStateOf<Any?>(null) }
+    val context = LocalContext.current
+    if (noMore.value) {
+        ConfigChangeChecker {
+            noMore.value = false
+        }
+    }
+    LaunchedEffect(poolData, noMore.value) {
+        if (poolData.posts.isEmpty() && !noMore.value) {
+            val list = withContext(Dispatchers.IO) {
+                try {
+                    val parser = BaseParser.get(poolData.source)
+                    val option = RequestOption(
+                        page = parser.firstPageIndex,
+                        poolId = poolData.id,
+                        ratings = configFlow.value.getWebsiteConfig(poolData.source).rating
+                    )
+                    parser.requestPoolPostData(option)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }
+            poolData.posts = list
+            noMore.value = list.isEmpty()
+        }
+        if (noMore.value && poolData.posts.isEmpty()) {
+            type.value = LoadType.Error
+            return@LaunchedEffect
+        }
+        val postData = try {
+            poolData.posts.last()
+        } catch (_:Throwable) {
+            type.value = LoadType.Error
+            return@LaunchedEffect
+        }
+        withContext(Dispatchers.IO) {
+            loadDLFile(postData, Quality.Sample, scope)
+        }.collect {
+            if (it is LoadStatus.Success) {
+                model.value = ImageRequest.Builder(context).data(it.result).build()
+                type.value = LoadType.Success
+            } else if (it is LoadStatus.Error) {
+                type.value = LoadType.Error
+            } else {
+                type.value = LoadType.Loading
+            }
+        }
+    }
+
+    if (type.value == LoadType.Success) {
+        AsyncImage(
+            modifier = modifier,
+            model = model.value,
+            alignment = Alignment.Center,
+            contentScale = ContentScale.Crop,
+            contentDescription = null,
+        )
     }
 }

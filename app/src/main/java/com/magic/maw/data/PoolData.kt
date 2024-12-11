@@ -12,6 +12,7 @@ data class PoolData(
     var uploader: String? = null,
     var category: String? = null,
     var posts: List<PostData> = emptyList(),
+    var noMore: Boolean = false,
 ) {
     fun updateFrom(data: PoolData) {
         this.name = data.name

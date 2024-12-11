@@ -59,15 +59,19 @@ data class Config(
     val dynamicColor: Boolean = supportDynamicColor
 ) {
     val websiteConfig: WebsiteConfig
-        get() = when (source) {
-            YandeParser.SOURCE -> yandeConfig
-            DanbooruParser.SOURCE -> danbooruConfig
-            else -> throw RuntimeException("不支持的网站")
-        }
+        get() = getWebsiteConfig(source)
 
     val darkTheme: Boolean
         @Composable
         get() = if (darkMode == 0) isSystemInDarkTheme() else darkMode == 1
+
+    fun getWebsiteConfig(source: String): WebsiteConfig {
+        return when (source) {
+            YandeParser.SOURCE -> yandeConfig
+            DanbooruParser.SOURCE -> danbooruConfig
+            else -> throw RuntimeException("不支持的网站")
+        }
+    }
 }
 
 @Serializable

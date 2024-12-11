@@ -207,7 +207,6 @@ private fun DetailContent(
         }
         if (tagChanged) {
             postData.tags.sort()
-            tagChanged = false
         }
         for (tagInfo in postData.tags) {
             TagInfoItem(info = tagInfo, onTagClick = onTagClick)
@@ -245,7 +244,7 @@ private fun DetailContent(
         }
         SettingItem(
             title = stringResource(R.string.author),
-            tips = postData.uploader,
+            tips = postData.uploader ?: stringResource(R.string.unknown),
             showIcon = false
         )
         SettingItem(
@@ -329,7 +328,9 @@ private fun TagInfoItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier
+                    .padding(vertical = 3.dp)
+                    .size(16.dp),
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
                 tint = searchColor

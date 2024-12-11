@@ -42,16 +42,12 @@ class TagManager(val source: String) {
         loadTagHistory()
     }
 
-    fun addAll(tagList: List<TagInfo>) {
+    fun add(tagInfo: TagInfo) {
         synchronized(tagMap) {
-            for (item in tagList) {
-                tagMap[item.name] = item
-            }
+            tagMap[tagInfo.name] = tagInfo
         }
         dbHandler.post {
-            for (item in tagList) {
-                dao.updateOrInsert(item)
-            }
+            dao.updateOrInsert(tagInfo)
         }
     }
 
@@ -64,6 +60,22 @@ class TagManager(val source: String) {
                 dao.updateOrInsert(item.value)
             }
         }
+    }
+
+    fun get(name: String): TagInfo? {
+        synchronized(tagMap) {
+            tagMap[name]?.let {
+                it.readTime = Date()
+                dbHandler.post { dao.updateReadTime(it.id, it.readTime) }
+                return it
+            }
+        }
+        dao.get(source, name)?.let {
+            it.readTime = Date()
+            add(it)
+            return it
+        }
+        return null
     }
 
     fun getInfoStatus(
@@ -155,6 +167,7 @@ class TagManager(val source: String) {
             return
         }
         // 网络请求
+        delay((0..3000L).random())
         var retryCount = 0
         do {
             parser.requestTagInfo(name)?.let {

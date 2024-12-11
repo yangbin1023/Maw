@@ -8,6 +8,7 @@ import com.magic.maw.util.Logger
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
@@ -150,7 +151,7 @@ class PostViewModel(
                 return
             viewModelState.update { it.copy(type = UiStateType.Refresh) }
         }
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val option = viewModelState.value.requestOption
                 val parser = getParser()
@@ -179,7 +180,7 @@ class PostViewModel(
         if (viewModelState.value.type.isLoading())
             return
         viewModelState.update { it.copy(type = UiStateType.LoadMore) }
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val parser = getParser()
                 val option = viewModelState.value.requestOption
@@ -217,6 +218,10 @@ class PostViewModel(
         val notEmpty = viewModelState.value.requestOption.tags.isNotEmpty()
         viewModelState.value.requestOption.clearTags()
         return notEmpty
+    }
+
+    fun clearData() {
+        viewModelState.update { it.copy(dataList = emptyList()) }
     }
 
     fun setViewIndex(index: Int) {

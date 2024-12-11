@@ -107,6 +107,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.exifinterface)
     implementation(libs.mmkv)
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)

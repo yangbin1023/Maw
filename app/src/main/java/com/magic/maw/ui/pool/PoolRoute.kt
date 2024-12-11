@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridS
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +27,7 @@ import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.post.PostRoute
 import com.magic.maw.ui.post.PostViewModel
+import com.magic.maw.ui.post.UiStateType
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
@@ -33,7 +35,6 @@ import kotlinx.coroutines.launch
 
 private const val viewName = "Pool"
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PoolRoute(
     poolViewModel: PoolViewModel,
@@ -41,7 +42,17 @@ fun PoolRoute(
     onOpenSubView: (Boolean) -> Unit
 ) {
     val uiState by poolViewModel.uiState.collectAsStateWithLifecycle()
-    onOpenSubView.invoke(uiState.viewIndex >= 0)
+    onOpenSubView.invoke(uiState.isPostView)
+
+    LaunchedEffect(Unit) {
+        if (uiState.isPoolView
+            && uiState.dataList.isEmpty()
+            && !uiState.noMore
+            && uiState.type != UiStateType.Refresh
+        ) {
+            poolViewModel.refresh()
+        }
+    }
 
     PoolRoute(
         uiState = uiState,
@@ -50,7 +61,7 @@ fun PoolRoute(
         onForceRefresh = { poolViewModel.refresh(true) },
         onLoadMore = { poolViewModel.loadMore() },
         onItemClick = { poolViewModel.setViewIndex(it) },
-        onExitPost = { poolViewModel.setViewIndex(-1) }
+        onExitPost = { poolViewModel.exitPostView() }
     )
 }
 
@@ -89,7 +100,7 @@ private fun PoolRoute(
     }
 
     AnimatedVisibility(
-        visible = uiState.viewIndex < 0,
+        visible = uiState.isPoolView,
         enter = fadeIn,
         exit = fadeOut
     ) {
@@ -107,7 +118,7 @@ private fun PoolRoute(
     }
 
     AnimatedVisibility(
-        visible = uiState.viewIndex >= 0,
+        visible = uiState.isPostView,
         enter = slideIn + fadeIn,
         exit = slideOut + fadeOut
     ) {
@@ -120,7 +131,6 @@ private fun PoolRoute(
         }
         PostRoute(
             postViewModel = postViewModel,
-            searchText = "",
             isSubView = true,
             titleText = title.value,
             onNegative = onExitPost,
@@ -130,7 +140,7 @@ private fun PoolRoute(
 }
 
 private fun getPoolPostInfo(uiState: PoolUiState): Pair<PoolData?, ViewModelProvider.Factory> {
-    if (uiState.viewIndex < 0 || uiState.viewIndex >= uiState.dataList.size)
+    if (uiState.isPoolView || uiState.viewIndex >= uiState.dataList.size)
         return Pair(null, PostViewModel.providerFactory())
     val parser = BaseParser.get(configFlow.value.source)
     val poolData = uiState.dataList[uiState.viewIndex]

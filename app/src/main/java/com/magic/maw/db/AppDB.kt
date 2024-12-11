@@ -48,7 +48,11 @@ abstract class AppDB : RoomDatabase() {
 
 fun TagDao.updateOrInsert(tagInfo: TagInfo) {
     get(tagInfo.source, tagInfo.name)?.let {
-        update(tagInfo.copy(id = it.id))
+        if (tagInfo.count == 0 && it.count > 0 || tagInfo.tagId == 0) {
+            update(it.copy(type = tagInfo.type, readTime = tagInfo.readTime))
+        } else {
+            update(tagInfo.copy(id = it.id))
+        }
     } ?: insert(tagInfo)
 }
 

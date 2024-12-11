@@ -122,7 +122,10 @@ fun SearchScreen(
             SearchSuggestion(
                 modifier = Modifier.fillMaxWidth(),
                 text = inputText.text,
-                onGetHistory = { BaseParser.get(source).requestSuggestTagInfo(it) },
+                onGetHistory = {
+                    delay(500)
+                    BaseParser.get(source).requestSuggestTagInfo(it)
+                },
                 onItemClick = {
                     val old = inputText.text.substring(0, inputText.text.lastIndexOf(" ") + 1)
                     val new = "${old.trim()} ${it.trim()}".toSearchTagText()

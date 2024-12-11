@@ -13,16 +13,11 @@ import com.magic.maw.util.Logger
 import com.magic.maw.util.TimeUtils
 import com.magic.maw.util.client
 import com.magic.maw.util.hasFlag
-import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.UserManager
 import io.ktor.client.call.body
 import io.ktor.client.request.get
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -35,24 +30,23 @@ class DanbooruParser : BaseParser() {
     override val supportRating: Int get() = Rating.General.value or Rating.Sensitive.value or Rating.Questionable.value or Rating.Explicit.value
     override val tagManager: TagManager by lazy { TagManager.get(source) }
     override val userManager: UserManager by lazy { UserManager.get(source) }
-    private val scope by lazy { CoroutineScope(Dispatchers.IO) }
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         val danbooruList: List<DanbooruData> = client.get(getPostUrl(option)).body()
         val list = ArrayList<PostData>()
         for (item in danbooruList) {
             val data = item.toPostData() ?: continue
-            data.createId?.let { createId->
-                (userManager.getStatus(createId).value as? LoadStatus.Success)?.let {
-                    data.uploader = it.result.name
+            data.createId?.let { createId ->
+                userManager.get(createId)?.let {
+                    data.uploader = it.name
                 }
             }
-//            for ((index, tag) in data.tags.withIndex()) {
-//                (tagManager.getInfoStatus(tag.name).value as? LoadStatus.Success)?.let {
-//                    data.tags[index] = it.result
-//                }
-//            }
-//            data.tags.sort()
+            for ((index, tag) in data.tags.withIndex()) {
+                tagManager.get(tag.name)?.let {
+                    data.tags[index] = it
+                }
+            }
+            data.tags.sort()
             list.add(data)
         }
         return list
@@ -61,20 +55,9 @@ class DanbooruParser : BaseParser() {
     override suspend fun requestPoolData(option: RequestOption): List<PoolData> {
         val danbooruList: List<DanbooruPool> = client.get(getPoolUrl(option)).body()
         val list: ArrayList<PoolData> = ArrayList()
-        val taskList: ArrayList<Deferred<List<PostData>>> = ArrayList()
         for (item in danbooruList) {
             val data = item.toPoolData() ?: continue
-            taskList.add(scope.async {
-                requestPoolPostData(option.copy(page = firstPageIndex, poolId = data.id))
-            }.apply { start() })
             list.add(data)
-        }
-        for ((index, task) in taskList.withIndex()) {
-            try {
-                list[index].posts = task.await()
-            } catch (e: Exception) {
-                println("get pool data failed $e")
-            }
         }
         return list
     }
@@ -84,17 +67,17 @@ class DanbooruParser : BaseParser() {
         val list = ArrayList<PostData>()
         for (item in danbooruList) {
             val data = item.toPostData() ?: continue
-            data.createId?.let { createId->
-                (userManager.getStatus(createId).value as? LoadStatus.Success)?.let {
-                    data.uploader = it.result.name
+            data.createId?.let { createId ->
+                userManager.get(createId)?.let {
+                    data.uploader = it.name
                 }
             }
-//            for ((index, tag) in data.tags.withIndex()) {
-//                (tagManager.getInfoStatus(tag.name).value as? LoadStatus.Success)?.let {
-//                    data.tags[index] = it.result
-//                }
-//            }
-//            data.tags.sort()
+            for ((index, tag) in data.tags.withIndex()) {
+                tagManager.get(tag.name)?.let {
+                    data.tags[index] = it
+                }
+            }
+            data.tags.sort()
             list.add(data)
         }
         return list
@@ -187,7 +170,7 @@ class DanbooruParser : BaseParser() {
     }
 
     override fun getPoolUrl(option: RequestOption): String {
-        return "$baseUrl/pools.json?page=${option.page}&${"search[order]=created_at"}"
+        return "$baseUrl/pools.json?page=${option.page}&${"search[order]=created_at".encode()}"
     }
 
     override fun getPoolPostUrl(option: RequestOption): String {
@@ -205,15 +188,16 @@ class DanbooruParser : BaseParser() {
     }
 
     override fun getTagUrl(name: String, page: Int, limit: Int): String {
-        val paramMap = mapOf<String, String>(
+        val searchTag = if (limit <= 1) name.encode() else "*${name.encode()}*"
+        val paramMap = mapOf(
             "search[order]" to "count",
-            "search[name_or_alias_matches]" to if (limit <= 1) name else "*$name*",
+            "search[name_or_alias_matches]" to searchTag,
             "limit" to if (limit < 5) "5" else "$limit",
             "page" to "$page",
         )
         val builder = StringBuilder()
         for ((key, value) in paramMap) {
-            builder.append("${key.encode()}=${value.encode()}")
+            builder.append("${key.encode()}=$value").append("&")
         }
         return "$baseUrl/tags.json?$builder"
     }

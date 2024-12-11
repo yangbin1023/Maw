@@ -95,6 +95,7 @@ class UserManager(val source: String) {
             add(it)
             return
         }
+        delay((0..1000L).random())
         var retryCount = 0
         do {
             try {

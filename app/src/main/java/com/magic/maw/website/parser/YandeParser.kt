@@ -17,10 +17,6 @@ import com.magic.maw.website.TagManager
 import com.magic.maw.website.UserManager
 import io.ktor.client.call.body
 import io.ktor.client.request.get
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 
 private val logger = Logger("YandeParser")
 
@@ -30,7 +26,6 @@ class YandeParser : BaseParser() {
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
     override val tagManager: TagManager by lazy { TagManager.get(source) }
     override val userManager: UserManager by lazy { UserManager.get(source) }
-    private val scope by lazy { CoroutineScope(Dispatchers.IO) }
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         val yandeList: ArrayList<YandeData> = client.get(getPostUrl(option)).body()
@@ -51,7 +46,6 @@ class YandeParser : BaseParser() {
     override suspend fun requestPoolData(option: RequestOption): List<PoolData> {
         val poolList: ArrayList<YandePool> = client.get(getPoolUrl(option)).body()
         val list: ArrayList<PoolData> = ArrayList()
-        val taskList: ArrayList<Deferred<List<PostData>>> = ArrayList()
         for (item in poolList) {
             val data = item.toPoolData() ?: continue
             data.createUid?.let { userId ->
@@ -64,17 +58,7 @@ class YandeParser : BaseParser() {
                     }
                 }
             }
-            taskList.add(scope.async {
-                requestPoolPostData(option.copy(page = firstPageIndex, poolId = data.id))
-            }.apply { start() })
             list.add(data)
-        }
-        for ((index, task) in taskList.withIndex()) {
-            try {
-                list[index].posts = task.await()
-            } catch (e: Exception) {
-                logger.severe("get pool post data failed, $e")
-            }
         }
         return list
     }

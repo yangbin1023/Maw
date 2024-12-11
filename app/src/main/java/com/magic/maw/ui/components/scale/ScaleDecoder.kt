@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -307,9 +308,9 @@ class ScaleDecoder(
  */
 fun createScaleDecoder(file: File): ScaleDecoder? {
     val inputStream = FileInputStream(file)
-//    val exifInterface = ExifInterface(file)
+    val exifInterface = ExifInterface(file)
     val decoder = createBitmapRegionDecoder(inputStream)
-    val rotation = ScaleDecoder.Rotation.ROTATION_0 //exifInterface.getDecoderRotation()
+    val rotation = exifInterface.getDecoderRotation()
     return decoder?.let { createScaleDecoder(it, rotation) }
 }
 
@@ -332,18 +333,18 @@ fun createBitmapRegionDecoder(inputStream: InputStream): BitmapRegionDecoder? {
  *
  * @return
  */
-//fun ExifInterface.getDecoderRotation(): ScaleDecoder.Rotation {
-//    val orientation = getAttributeInt(
-//        ExifInterface.TAG_ORIENTATION,
-//        ExifInterface.ORIENTATION_NORMAL
-//    )
-//    return when (orientation) {
-//        ExifInterface.ORIENTATION_ROTATE_90 -> ScaleDecoder.Rotation.ROTATION_90
-//        ExifInterface.ORIENTATION_ROTATE_180 -> ScaleDecoder.Rotation.ROTATION_180
-//        ExifInterface.ORIENTATION_ROTATE_270 -> ScaleDecoder.Rotation.ROTATION_270
-//        else -> ScaleDecoder.Rotation.ROTATION_0
-//    }
-//}
+fun ExifInterface.getDecoderRotation(): ScaleDecoder.Rotation {
+    val orientation = getAttributeInt(
+        ExifInterface.TAG_ORIENTATION,
+        ExifInterface.ORIENTATION_NORMAL
+    )
+    return when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> ScaleDecoder.Rotation.ROTATION_90
+        ExifInterface.ORIENTATION_ROTATE_180 -> ScaleDecoder.Rotation.ROTATION_180
+        ExifInterface.ORIENTATION_ROTATE_270 -> ScaleDecoder.Rotation.ROTATION_270
+        else -> ScaleDecoder.Rotation.ROTATION_0
+    }
+}
 
 /**
  * 创建ScaleDecoder的主要方法

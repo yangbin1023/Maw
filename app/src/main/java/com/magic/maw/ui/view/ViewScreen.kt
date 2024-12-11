@@ -47,9 +47,10 @@ fun ViewScreen(
     val topBarMaxHeight = UiUtils.getTopBarHeight()
     val context = LocalContext.current
     var showTopBar by remember { mutableStateOf(context.isShowStatusBars()) }
+    val offsetValue = if (showTopBar) topBarMaxHeight else 0.dp
     val onTap: () -> Unit = { showTopBar = !showTopBar }
     val topAppBarOffset by animateDpAsState(
-        targetValue = if (showTopBar) 0.dp else -topBarMaxHeight,
+        targetValue = offsetValue - topBarMaxHeight,
         label = "showTopAppBar"
     )
     LaunchedEffect(Unit) {
@@ -69,7 +70,7 @@ fun ViewScreen(
             onExit.invoke()
             return@BoxWithConstraints
         }
-        val draggableHeight = if (showTopBar) this.maxHeight - topBarMaxHeight else this.maxHeight
+        val draggableHeight = this.maxHeight - offsetValue
 
         ViewContent(
             pagerState = pagerState,
