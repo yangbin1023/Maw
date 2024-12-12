@@ -10,15 +10,35 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.magic.maw.util.configFlow
 
 @Composable
-fun ConfigChangeChecker(onForceRefresh: () -> Unit) {
+fun ConfigChangeChecker(onChanged: () -> Unit) {
     val config by configFlow.collectAsStateWithLifecycle()
     var source by rememberSaveable { mutableStateOf(config.source) }
     var rating by rememberSaveable { mutableIntStateOf(config.websiteConfig.rating) }
     if (source != config.source) {
         source = config.source
-        onForceRefresh.invoke()
+        onChanged.invoke()
     } else if (rating != config.websiteConfig.rating) {
         rating = config.websiteConfig.rating
-        onForceRefresh.invoke()
+        onChanged.invoke()
+    }
+}
+
+@Composable
+fun SourceChangeChecker(onChanged: () -> Unit) {
+    val config by configFlow.collectAsStateWithLifecycle()
+    var source by rememberSaveable { mutableStateOf(config.source) }
+    if (source != config.source) {
+        source = config.source
+        onChanged.invoke()
+    }
+}
+
+@Composable
+fun RatingChangeChecker(onChanged: () -> Unit) {
+    val config by configFlow.collectAsStateWithLifecycle()
+    var rating by rememberSaveable { mutableIntStateOf(config.websiteConfig.rating) }
+    if (rating != config.websiteConfig.rating) {
+        rating = config.websiteConfig.rating
+        onChanged.invoke()
     }
 }

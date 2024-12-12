@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
 import com.magic.maw.util.UiUtils.showSystemBars
+import com.magic.maw.util.logger
 
 private val viewInfoList by lazy { ArrayList<ViewInfo>() }
 
@@ -34,7 +35,7 @@ fun RegisterView(name: String, showSystemBar: Boolean = true) {
     }
 }
 
-fun changeSystemBarStatus(context: Context, name: String, showSystemBar: Boolean): Boolean {
+fun changeSystemBarStatus(context: Context, name: String, showSystemBar: Boolean) {
     synchronized(viewInfoList) {
         var index = viewInfoList.size - 1
         while (index >= 0) {
@@ -43,12 +44,14 @@ fun changeSystemBarStatus(context: Context, name: String, showSystemBar: Boolean
                 if (index == viewInfoList.size - 1) {
                     context.showSystemBars(showSystemBar)
                 }
-                return true
+                logger.info("set system bar status, [$name][$showSystemBar][${index + 1}/${viewInfoList.size}]")
+                return
             }
             index--
         }
     }
-    return false
+    logger.severe("can't find view. [$name][$showSystemBar]")
+    return
 }
 
 private data class ViewInfo(

@@ -1,12 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.MobileAnimeWallpaper" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowTranslucentStatus">true</item>
-        <!--状态栏背景颜色-->
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <!--导航栏背景颜色-->
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-    </style>
+    <style name="Base.Theme.MobileAnimeWallpaper" parent="android:Theme.Material.Light.NoActionBar" />
 
     <style name="Theme.Maw" parent="Base.Theme.MobileAnimeWallpaper" />
 

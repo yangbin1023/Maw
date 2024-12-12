@@ -25,8 +25,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hjq.toast.Toaster
 import com.magic.maw.R
-import com.magic.maw.ui.components.ConfigChangeChecker
+import com.magic.maw.ui.components.RatingChangeChecker
 import com.magic.maw.ui.components.RegisterView
+import com.magic.maw.ui.components.SourceChangeChecker
 import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.view.ViewScreen
@@ -55,10 +56,7 @@ fun PostRoute(
         onNegative = onNegative,
         openSearch = openSearch,
         onRefresh = { postViewModel.refresh() },
-        onForceRefresh = {
-            postViewModel.clearTags()
-            postViewModel.refresh(true)
-        },
+        onForceRefresh = { postViewModel.refresh(true) },
         onLoadMore = { postViewModel.loadMore() },
         onItemClick = { postViewModel.setViewIndex(it) },
         onExitView = { postViewModel.exitView() },
@@ -101,10 +99,12 @@ fun PostRoute(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val resetTopBar: suspend () -> Unit = {
+    val resetTopBar: () -> Unit = {
         changeSystemBarStatus(context, viewName, true)
-        lazyState.scrollToItem(0, 0)
-        scaffoldState.animateTo(scaffoldState.maxPx)
+        scope.launch {
+            lazyState.scrollToItem(0, 0)
+            scaffoldState.snapTo(scaffoldState.maxPx)
+        }
     }
 
     var postState by remember { mutableStateOf<PostUiState.Post?>(null) }
@@ -122,18 +122,19 @@ fun PostRoute(
 
     LaunchedEffect(uiState.type) {
         if (uiState.type == UiStateType.Refresh) {
-            onExitView.invoke()
             resetTopBar.invoke()
+            onExitView.invoke()
         }
     }
-    ConfigChangeChecker {
-        scope.launch {
-            changeSystemBarStatus(context, viewName, true)
-            lazyState.scrollToItem(0, 0)
-            scaffoldState.snapTo(scaffoldState.maxPx)
-        }
-        onForceRefresh.invoke()
+    SourceChangeChecker {
+        resetTopBar.invoke()
         onExitView.invoke()
+        onClearSearch.invoke()
+    }
+    RatingChangeChecker {
+        resetTopBar.invoke()
+        onExitView.invoke()
+        onForceRefresh.invoke()
     }
     AnimatedVisibility(
         visible = uiState is PostUiState.Post,
@@ -158,7 +159,7 @@ fun PostRoute(
         )
         BackHandler(enabled = state.isSearch, onBack = {
             onClearSearch.invoke()
-            scope.launch { resetTopBar.invoke() }
+            resetTopBar.invoke()
             Toaster.show(R.string.click_again_to_exit)
         })
     }
@@ -176,9 +177,8 @@ fun PostRoute(
                 if (isSubView)
                     return@onTagClick
                 if (justSearch || openSearch == null) {
-                    onExitView.invoke()
+                    resetTopBar.invoke()
                     onSearch.invoke(tag.name)
-                    scope.launch { resetTopBar.invoke() }
                 } else {
                     openSearch.invoke(tag.name)
                 }

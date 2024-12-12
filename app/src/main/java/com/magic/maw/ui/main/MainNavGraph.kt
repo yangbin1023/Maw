@@ -27,7 +27,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.magic.maw.R
-import com.magic.maw.ui.components.ConfigChangeChecker
+import com.magic.maw.ui.components.SourceChangeChecker
 import com.magic.maw.ui.pool.PoolRoute
 import com.magic.maw.ui.pool.PoolViewModel
 import com.magic.maw.ui.post.PostRoute
@@ -47,7 +47,7 @@ fun MainNavGraph(
     val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
     val poolViewModel: PoolViewModel = viewModel()
 
-    ConfigChangeChecker {
+    SourceChangeChecker {
         postViewModel.clearData()
         poolViewModel.clearData()
     }

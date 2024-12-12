@@ -115,7 +115,6 @@ private fun NestedScaffoldBody(
     onShowSystemBar: (Boolean) -> Unit,
     onItemClick: (Int) -> Unit,
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val scrollToTop: () -> Unit = { scope.launch { lazyState.scrollToItem(0, 0) } }
     LaunchedEffect(scaffoldState) {
