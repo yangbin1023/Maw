@@ -117,6 +117,7 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.toaster)
+    implementation(libs.atomicfu)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

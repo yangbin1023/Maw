@@ -8,6 +8,7 @@ import com.magic.maw.db.updateOrInsertHistory
 import com.magic.maw.util.dbHandler
 import com.magic.maw.website.parser.BaseParser
 import com.magic.maw.website.parser.DanbooruParser
+import com.magic.maw.website.parser.KonachanParser
 import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -191,6 +192,7 @@ class TagManager(val source: String) {
             map[source]?.get()?.let { return it }
             val manager = when (source) {
                 YandeParser.SOURCE -> TagManager(YandeParser.SOURCE)
+                KonachanParser.SOURCE -> TagManager(KonachanParser.SOURCE)
                 DanbooruParser.SOURCE -> TagManager(DanbooruParser.SOURCE)
                 else -> throw RuntimeException("Unknown source: $source")
             }

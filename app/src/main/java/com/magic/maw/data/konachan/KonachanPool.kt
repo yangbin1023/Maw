@@ -1,4 +1,4 @@
-package com.magic.maw.data.yande
+package com.magic.maw.data.konachan
 
 import com.magic.maw.data.FileType
 import com.magic.maw.data.PoolData
@@ -6,11 +6,11 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
 import com.magic.maw.data.TagInfo
 import com.magic.maw.util.TimeUtils
-import com.magic.maw.website.parser.YandeParser
+import com.magic.maw.website.parser.KonachanParser
 import kotlinx.serialization.Serializable
 
 @Serializable
-class YandePool {
+class KonachanPool {
     var id: Int? = null
     var name: String? = null
     var created_at: String? = null
@@ -19,13 +19,13 @@ class YandePool {
     var is_public: Boolean? = null
     var post_count: Int? = null
     var description: String? = null
-    var posts: Array<YandePoolItem>? = null
+    var posts: ArrayList<KonachanPoolItem>? = null
 
     fun toPoolData(): PoolData? {
         val id = id ?: return null
         val name = name ?: return null
         return PoolData(
-            source = YandeParser.SOURCE,
+            source = KonachanParser.SOURCE,
             id = id,
             name = name,
             description = description,
@@ -38,7 +38,7 @@ class YandePool {
 }
 
 @Serializable
-class YandePoolItem {
+class KonachanPoolItem {
     var id: Int = 0
     var tags: String? = null
     var created_at: String? = null
@@ -72,7 +72,7 @@ class YandePoolItem {
     var height: Int? = null
     var is_held: Boolean? = null
     var frames_pending_string: String? = null
-//    var frames_pending : Array<Any?> = arrayOf() //类型未知，数组
+    //    var frames_pending : Array<Any?> = arrayOf() //类型未知，数组
     var frames_string: String? = null
 //    var frames : Array<Any?> = arrayOf() //类型未知，数组
 
@@ -93,7 +93,7 @@ class YandePoolItem {
         if (invalid() || preview_url == null) {
             return null
         }
-        val data = PostData(YandeParser.SOURCE, id)
+        val data = PostData(KonachanParser.SOURCE, id)
         data.createId = creator_id
         data.uploader = author
         data.score = score
@@ -102,7 +102,7 @@ class YandePoolItem {
         data.uploadTime = created_at?.let { TimeUtils.getUnixTime(TimeUtils.FORMAT_5, it) }
         tags?.split(" ")?.toSet()?.let { tagNames ->
             for (tagName in tagNames) {
-                data.tags.add(TagInfo(source = YandeParser.SOURCE, name = tagName))
+                data.tags.add(TagInfo(source = KonachanParser.SOURCE, name = tagName))
             }
         }
         if (file_url?.endsWith("png") == true)

@@ -86,7 +86,8 @@ private data class PostViewModelState(
     fun append(
         dataList: List<PostData>,
         end: Boolean = true,
-        type: UiStateType = UiStateType.None
+        type: UiStateType = UiStateType.None,
+        checkReplace: Boolean = false,
     ): PostViewModelState {
         val list: MutableList<PostData> = ArrayList()
         for (data in dataList) {
@@ -94,6 +95,9 @@ private data class PostViewModelState(
                 dataMap[data.id] = data
                 list.add(data)
             }
+        }
+        if (checkReplace && list.size == dataList.size && !end) {
+            return copy(dataList = list, noMore = false, type = UiStateType.None)
         }
         val newList = if (list.isEmpty()) {
             this.dataList
@@ -166,7 +170,7 @@ class PostViewModel(
                         it.requestOption.page = parser.firstPageIndex
                         it.copy(dataList = list, noMore = false, type = UiStateType.None)
                     } else {
-                        it.append(dataList = list, end = false, type = UiStateType.None)
+                        it.append(dataList = list, end = false, checkReplace = true)
                     }
                 }
             } catch (e: Throwable) {
@@ -192,7 +196,7 @@ class PostViewModel(
                 viewModelState.update {
                     if (it.type != UiStateType.Refresh && list.isNotEmpty()) {
                         it.requestOption.page++
-                        it.append(dataList = list, type = UiStateType.None)
+                        it.append(dataList = list)
                     } else {
                         it
                     }

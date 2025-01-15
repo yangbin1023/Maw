@@ -15,14 +15,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 }
 
 object MainRoutes {
-    const val POST = "post?tagText={tagText}"
+    const val POST = "post"
     const val POOL = "pool"
     const val POPULAR = "popular"
     const val SETTING = "setting"
     const val SEARCH = "search?text={text}"
+    const val VERIFY = "verify?url={url}&source={source}"
 
     fun post(tagText: String = ""): String = POST.replace("{tagText}", tagText)
     fun search(text: String = ""): String = SEARCH.replace("{text}", text)
+    fun verify(url: String = "", source: String = ""): String =
+        VERIFY.replace("{url}", url).replace("{source}", source)
+
+    fun isMainView(route: String?): Boolean {
+        return when (route) {
+            POST, POOL, POPULAR -> true
+            else -> false
+        }
+    }
 }
 
 fun NavController.onNavigate(route: String, vararg args: Any) {

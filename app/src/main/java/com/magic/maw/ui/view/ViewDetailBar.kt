@@ -22,27 +22,35 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,6 +66,8 @@ import com.magic.maw.ui.components.ScrollableView
 import com.magic.maw.ui.components.SettingItem
 import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.components.rememberScrollableViewState
+import com.magic.maw.ui.components.throttle
+import com.magic.maw.ui.theme.PreviewTheme
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
 import com.magic.maw.util.TimeUtils.toFormatStr
@@ -96,10 +106,14 @@ fun ViewDetailBar(
             }
         },
         toolbar = {
+            var isFavorite by remember { mutableStateOf(false) }
             DetailBar(
                 postData = postData,
                 expand = scrollableViewState.expand,
-                onExpandClick = {
+                isFavorite = isFavorite,
+                onFavorite = { isFavorite = !isFavorite },
+                onDownload = {},
+                onExpand = {
                     scrollableViewState.expand = !scrollableViewState.expand
                     scope.launch { scrollableViewState.animateToExpand() }
                 }
@@ -121,14 +135,48 @@ private fun DetailBar(
     modifier: Modifier = Modifier,
     postData: PostData,
     expand: Boolean,
-    onExpandClick: () -> Unit,
+    isFavorite: Boolean = false,
+    onFavorite: () -> Unit,
+    onDownload: () -> Unit,
+    onExpand: () -> Unit,
 ) {
-    Box(
+    Row(
         modifier = modifier
             .padding(horizontal = 15.dp)
             .fillMaxSize(),
-        contentAlignment = Alignment.CenterStart
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        val info = postData.getInfo(postData.quality) ?: postData.originalInfo
+        val text = "${postData.id} (${info.width}x${info.height})"
+        Text(text = text)
+
+        Spacer(modifier = Modifier.weight(1.0f))
+
+        Icon(
+            modifier = Modifier
+                .height(40.dp)
+                .width(40.dp)
+                .scale(0.8f)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = throttle(func = onFavorite)
+                ),
+            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+            tint = if (isFavorite) Color.Red else LocalContentColor.current,
+            contentDescription = null
+        )
+
+        Icon(
+            modifier = Modifier
+                .height(40.dp)
+                .width(40.dp)
+                .scale(0.8f)
+                .clickable(onClick = throttle(func = onDownload)),
+            imageVector = Icons.Default.SaveAlt,
+            contentDescription = null
+        )
+
         val expandIconDegree by animateFloatAsState(
             targetValue = if (expand) 90f else 270f, label = ""
         )
@@ -137,21 +185,13 @@ private fun DetailBar(
                 .rotate(expandIconDegree)
                 .height(40.dp)
                 .width(40.dp)
-                .align(Alignment.CenterEnd)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onExpandClick
+                    onClick = throttle(func = onExpand)
                 ),
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null
-        )
-
-        val info = postData.getInfo(postData.quality) ?: postData.originalInfo
-        val text = "${postData.id} (${info.width}x${info.height})"
-        Text(
-            modifier = Modifier.align(Alignment.CenterStart),
-            text = text
         )
     }
 }
@@ -217,10 +257,14 @@ private fun DetailContent(
         var qualityIndex by remember { mutableIntStateOf(qualityList.indexOf(postData.quality)) }
         if (qualityIndex < 0) {
             qualityIndex = 0
+        } else if (qualityIndex >= qualityItems.size) {
+            qualityIndex = 0
         }
         LaunchedEffect(postData) {
             qualityIndex = qualityList.indexOf(postData.quality)
             if (qualityIndex < 0) {
+                qualityIndex = 0
+            } else if (qualityIndex >= qualityItems.size) {
                 qualityIndex = 0
             }
         }
@@ -342,6 +386,45 @@ private fun TagInfoItem(
                     color = searchColor,
                     fontSize = 14.sp
                 )
+            }
+        }
+    }
+}
+
+@Preview(widthDp = 360, heightDp = 480)
+@Composable
+private fun DetailBarPreview() {
+    val postData = PostData(
+        source = "yande",
+        id = 1210648,
+        uploader = "BattlequeenYume",
+        sampleInfo = PostData.Info(width = 927, height = 1500, size = 2889300),
+        originalInfo = PostData.Info(width = 1500, height = 2427, size = 22900000),
+    )
+    postData.quality = Quality.Sample
+
+    PreviewTheme {
+        Scaffold {
+            Box(
+                modifier = Modifier
+                    .padding(it)
+                    .fillMaxSize()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .height(64.dp)
+                ) {
+                    DetailBar(
+                        modifier = Modifier,
+                        postData = postData,
+                        expand = false,
+                        isFavorite = true,
+                        onFavorite = {},
+                        onDownload = {},
+                        onExpand = {}
+                    )
+                }
             }
         }
     }

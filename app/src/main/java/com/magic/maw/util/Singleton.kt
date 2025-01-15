@@ -3,9 +3,11 @@ package com.magic.maw.util
 import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.HandlerThread
+import com.magic.maw.ui.verify.VerifyViewDefaults
 import com.tencent.mmkv.MMKV
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
 import io.ktor.client.plugins.cookies.HttpCookies
@@ -47,6 +49,9 @@ private val mySSLSocketFactory by lazy {
 
 val client by lazy {
     HttpClient(OkHttp) {
+        install(UserAgent) {
+            agent = VerifyViewDefaults.UserAgent
+        }
         install(ContentNegotiation) {
             json(json, ContentType.Any)
         }

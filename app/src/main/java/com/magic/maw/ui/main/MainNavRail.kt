@@ -6,16 +6,27 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationRail
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
 import com.magic.maw.R
 import com.magic.maw.ui.components.RailItem
+import com.magic.maw.util.UiUtils.currentRoute
 
 @Composable
 fun MainNavRail(
     modifier: Modifier = Modifier,
-    currentRoute: String,
-    onNavigate: (String) -> Unit,
+    navController: NavController,
 ) {
+    val currentRoute = navController.currentRoute ?: MainRoutes.POST
+    val lastRoute = remember { mutableStateOf(currentRoute) }
+    if (MainRoutes.isMainView(currentRoute) || currentRoute == MainRoutes.SETTING) {
+        lastRoute.value = currentRoute
+    }
+    val onNavigate: (String) -> Unit = {
+        navController.onNavigate(it)
+    }
     NavigationRail(
         modifier = modifier,
         header = {

@@ -3,10 +3,12 @@ package com.magic.maw.ui.main
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -14,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.magic.maw.ui.theme.MawTheme
 import com.magic.maw.util.UiUtils.currentRoute
@@ -30,26 +33,27 @@ fun MainScreen() {
 
         val coroutineScope = rememberCoroutineScope()
         val inSubView = remember { mutableStateOf(false) }
-        val currentRoute = navController.currentRoute ?: MainRoutes.POST
-
         val screenWidth = LocalConfiguration.current.screenWidthDp * LocalDensity.current.density
         val dragThreshold = screenWidth * 0.3f
         val isExpandedScreen = false//windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
-        val gesturesEnabled = !isExpandedScreen
-                && !inSubView.value
-                && currentRoute != MainRoutes.SETTING
-                && currentRoute != MainRoutes.SEARCH
+        val gesturesEnabled = remember { mutableStateOf(true) }
+
+        CheckGestureEnable(
+            navController = navController,
+            isExpandedScreen = isExpandedScreen,
+            inSubView = inSubView,
+            enable = gesturesEnabled
+        )
 
         ModalNavigationDrawer(
             drawerContent = {
-                MainDrawer(
-                    currentRoute = currentRoute,
+                MainDrawerContent(
                     navController = navController,
-                    closeDrawer = { coroutineScope.launch { drawerState.close() } }
+                    drawerState = drawerState
                 )
             },
             drawerState = drawerState,
-            gesturesEnabled = gesturesEnabled
+            gesturesEnabled = gesturesEnabled.value
         ) {
             Row(modifier = Modifier.apply {
                 if (!isExpandedScreen) {
@@ -65,10 +69,7 @@ fun MainScreen() {
                 }
             }) {
                 if (isExpandedScreen) {
-                    MainNavRail(
-                        currentRoute = currentRoute,
-                        onNavigate = { navController.onNavigate(it) }
-                    )
+                    MainNavRail(navController = navController)
                 }
                 MainNavGraph(
                     inSubView = inSubView,
@@ -84,4 +85,32 @@ fun MainScreen() {
             }
         }
     }
+}
+
+@Composable
+private fun MainDrawerContent(navController: NavController, drawerState: DrawerState) {
+    val scope = rememberCoroutineScope()
+    val currentRoute = navController.currentRoute ?: MainRoutes.POST
+    val lastRoute = remember { mutableStateOf(currentRoute) }
+    if (MainRoutes.isMainView(currentRoute) || currentRoute == MainRoutes.SETTING) {
+        lastRoute.value = currentRoute
+    }
+    MainDrawer(
+        currentRoute = lastRoute.value,
+        navController = navController,
+        closeDrawer = { scope.launch { drawerState.close() } }
+    )
+}
+
+@Composable
+private fun CheckGestureEnable(
+    navController: NavController,
+    isExpandedScreen: Boolean,
+    inSubView: MutableState<Boolean>,
+    enable: MutableState<Boolean>
+) {
+    val currentRoute = navController.currentRoute ?: MainRoutes.POST
+    enable.value = !isExpandedScreen
+                && !inSubView.value
+                && MainRoutes.isMainView(currentRoute)
 }

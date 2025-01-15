@@ -37,4 +37,5 @@
     <string name="upload_time">Upload time</string>
     <string name="score">Score</string>
     <string name="unknown">Unknown</string>
+    <string name="verification">Verification</string>
 </resources>

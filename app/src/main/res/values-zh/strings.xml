@@ -38,4 +38,5 @@
     <string name="upload_time">上传时间</string>
     <string name="score">评分</string>
     <string name="unknown">未知</string>
+    <string name="verification">验证</string>
 </resources>

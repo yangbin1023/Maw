@@ -6,6 +6,7 @@ import com.magic.maw.db.updateOrInsert
 import com.magic.maw.util.dbHandler
 import com.magic.maw.website.parser.BaseParser
 import com.magic.maw.website.parser.DanbooruParser
+import com.magic.maw.website.parser.KonachanParser
 import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -119,6 +120,7 @@ class UserManager(val source: String) {
             map[source]?.get()?.let { return it }
             val manager = when (source) {
                 YandeParser.SOURCE -> UserManager(YandeParser.SOURCE)
+                KonachanParser.SOURCE -> UserManager(KonachanParser.SOURCE)
                 DanbooruParser.SOURCE -> UserManager(DanbooruParser.SOURCE)
                 else -> throw RuntimeException("Unknown source: $source")
             }

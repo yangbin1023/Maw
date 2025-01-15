@@ -11,6 +11,7 @@ import com.magic.maw.util.Logger
 import com.magic.maw.util.client
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
+import com.magic.maw.website.parser.BaseParser
 import io.ktor.client.plugins.onDownload
 import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.IOException
 
 private const val TAG = "DLManager"
 private val logger = Logger(TAG)
@@ -158,8 +160,13 @@ data class DLTask(
             file.parentFile?.apply { if (!exists()) mkdirs() }
             channel.copyAndClose(file.writeChannel())
             delay(100)
-            statusFlow.value = LoadStatus.Success(file)
-            logger.info("download success, $url")
+            if (!BaseParser.get(baseData.source).checkFile(file)) {
+                file.delete()
+                statusFlow.value = LoadStatus.Error(IOException("check file failed"))
+            } else {
+                statusFlow.value = LoadStatus.Success(file)
+                logger.info("download success, $url")
+            }
         } catch (e: Exception) {
             if (statusFlow.value !is LoadStatus.Success) {
                 statusFlow.value = LoadStatus.Error(e)

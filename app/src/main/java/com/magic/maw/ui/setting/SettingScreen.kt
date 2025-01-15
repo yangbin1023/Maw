@@ -1,5 +1,6 @@
 package com.magic.maw.ui.setting
 
+import android.webkit.CookieManager
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -43,15 +44,20 @@ import com.magic.maw.ui.components.SettingItem
 import com.magic.maw.ui.components.SingleChoiceDialog
 import com.magic.maw.ui.components.SwitchSettingItem
 import com.magic.maw.ui.components.throttle
+import com.magic.maw.ui.main.MainRoutes
 import com.magic.maw.ui.theme.supportDynamicColor
+import com.magic.maw.util.Logger
 import com.magic.maw.util.configFlow
 import com.magic.maw.util.updateWebConfig
 import com.magic.maw.website.parser.BaseParser
 import com.magic.maw.website.parser.DanbooruParser
+import com.magic.maw.website.parser.KonachanParser
 import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 private const val viewName = "Setting"
+private val logger = Logger(viewName)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,7 +113,7 @@ private fun SettingTopBar(
 private fun SettingBody(
     modifier: Modifier = Modifier,
     isExpandedScreen: Boolean,
-    changeSetting: MutableState<Boolean>
+    changeSetting: MutableState<Boolean>,
 ) {
     val config by configFlow.collectAsState()
     Column(
@@ -119,6 +125,7 @@ private fun SettingBody(
         val options = LocalContext.current.resources.getStringArray(R.array.website).toList()
         val initValue = when (config.source) {
             YandeParser.SOURCE -> 0
+            KonachanParser.SOURCE -> 1
             DanbooruParser.SOURCE -> 2
             else -> 0
         }
@@ -136,6 +143,7 @@ private fun SettingBody(
                     selectIndex = it
                     val source = when (options[selectIndex]) {
                         "Yande" -> YandeParser.SOURCE
+                        "Konachan" -> KonachanParser.SOURCE
                         "Danbooru" -> DanbooruParser.SOURCE
                         else -> ""
                     }
@@ -246,5 +254,14 @@ private fun SettingBody(
         val appInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         SettingItem(title = stringResource(id = R.string.version), tips = appInfo.versionName)
 
+        SettingItem(title = "清除Cookie", onClick = {
+            CookieManager.getInstance().removeAllCookies(null)
+        })
+
+        SettingItem(title = "Test", onClick = {
+            val ret = BaseParser.callGotoVerifyUrlCallback("https://konachan.net/post.json",
+                KonachanParser.SOURCE)
+            logger.info("call goto verify ret: $ret")
+        })
     }
 }
