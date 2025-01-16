@@ -1,6 +1,5 @@
 package com.magic.maw.ui.setting
 
-import android.webkit.CookieManager
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,9 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -27,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -44,9 +40,7 @@ import com.magic.maw.ui.components.SettingItem
 import com.magic.maw.ui.components.SingleChoiceDialog
 import com.magic.maw.ui.components.SwitchSettingItem
 import com.magic.maw.ui.components.throttle
-import com.magic.maw.ui.main.MainRoutes
 import com.magic.maw.ui.theme.supportDynamicColor
-import com.magic.maw.util.Logger
 import com.magic.maw.util.configFlow
 import com.magic.maw.util.updateWebConfig
 import com.magic.maw.website.parser.BaseParser
@@ -54,10 +48,8 @@ import com.magic.maw.website.parser.DanbooruParser
 import com.magic.maw.website.parser.KonachanParser
 import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 private const val viewName = "Setting"
-private val logger = Logger(viewName)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,21 +57,16 @@ fun SettingScreen(
     isExpandedScreen: Boolean,
     onFinish: (() -> Unit)? = null,
 ) {
-    val topAppBarState = rememberTopAppBarState()
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
     val changeSetting = remember { mutableStateOf(false) }
     RegisterView(name = viewName)
     Scaffold(topBar = {
         SettingTopBar(
             enableShadow = false,
             onFinish = onFinish ?: {},
-            scrollBehavior = scrollBehavior
         )
     }) { innerPadding ->
         SettingBody(
-            modifier = Modifier
-                .padding(innerPadding)
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            modifier = Modifier.padding(innerPadding),
             changeSetting = changeSetting,
             isExpandedScreen = isExpandedScreen,
         )
@@ -95,7 +82,7 @@ private fun SettingTopBar(
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     CenterAlignedTopAppBar(
-        modifier = modifier.let { if (enableShadow) it.shadow(5.dp) else it },
+        modifier = modifier.let { if (enableShadow) it.shadow(3.dp) else it },
         title = { Text(stringResource(R.string.setting)) },
         navigationIcon = {
             IconButton(onClick = onFinish) {
@@ -253,15 +240,5 @@ private fun SettingBody(
         val context = LocalContext.current
         val appInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         SettingItem(title = stringResource(id = R.string.version), tips = appInfo.versionName)
-
-        SettingItem(title = "清除Cookie", onClick = {
-            CookieManager.getInstance().removeAllCookies(null)
-        })
-
-        SettingItem(title = "Test", onClick = {
-            val ret = BaseParser.callGotoVerifyUrlCallback("https://konachan.net/post.json",
-                KonachanParser.SOURCE)
-            logger.info("call goto verify ret: $ret")
-        })
     }
 }

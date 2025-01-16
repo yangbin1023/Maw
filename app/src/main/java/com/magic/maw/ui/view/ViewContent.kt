@@ -39,12 +39,16 @@ import com.magic.maw.ui.components.ScaleImageView
 import com.magic.maw.ui.components.loadModel
 import com.magic.maw.ui.components.scale.ScaleDecoder
 import com.magic.maw.ui.components.scale.rememberScaleState
+import com.magic.maw.util.FileUtils.isTextFile
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.LoadType
 import com.magic.maw.website.loadDLFile
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.io.IOException
 import kotlin.math.abs
 
 @Composable
@@ -117,12 +121,17 @@ private fun ViewScreenItem(
                 progress.value = it.progress
             } else if (it is LoadStatus.Success) {
                 withContext(Dispatchers.IO) {
-                    loadModel(context, it.result, defaultSize)
+                    if (it.result.isTextFile()) {
+                        val value = LoadStatus.Error(IOException("file is text file"))
+                        MutableStateFlow<LoadStatus<Pair<Any, Size>>>(value)
+                    } else {
+                        loadModel(context, it.result, defaultSize)
+                    }
                 }.collect { pair ->
                     if (pair is LoadStatus.Success) {
-                        model.value.let {
-                            if (it is ScaleDecoder && it != pair.result.first)
-                                it.release()
+                        model.value.apply {
+                            if (this is ScaleDecoder && this != pair.result.first)
+                                release()
                         }
                         type.value = LoadType.Success
                         model.value = pair.result.first

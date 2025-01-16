@@ -11,7 +11,6 @@ import com.magic.maw.util.Logger
 import com.magic.maw.util.client
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
-import com.magic.maw.website.parser.BaseParser
 import io.ktor.client.plugins.onDownload
 import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
@@ -28,7 +27,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.IOException
 
 private const val TAG = "DLManager"
 private val logger = Logger(TAG)
@@ -160,11 +158,10 @@ data class DLTask(
             file.parentFile?.apply { if (!exists()) mkdirs() }
             channel.copyAndClose(file.writeChannel())
             delay(100)
-            if (!BaseParser.get(baseData.source).checkFile(file)) {
-                file.delete()
-                statusFlow.value = LoadStatus.Error(IOException("check file failed"))
+            statusFlow.value = LoadStatus.Success(file)
+            if (baseData.size > 0 && file.length() != baseData.size) {
+                logger.warning("file size error. expected size: ${baseData.size}, actual size: ${file.length()}")
             } else {
-                statusFlow.value = LoadStatus.Success(file)
                 logger.info("download success, $url")
             }
         } catch (e: Exception) {
@@ -183,7 +180,7 @@ fun loadDLFile(
     scope: CoroutineScope? = null
 ): StateFlow<LoadStatus<File>> {
     val info = postData.getInfo(quality) ?: postData.originalInfo
-    val baseData = BaseData(postData.source, postData.id, quality)
+    val baseData = BaseData(postData.source, postData.id, quality, info.size)
     return DLManager.addTaskAndStart(baseData, info.url, scope)
 }
 
@@ -196,7 +193,7 @@ fun loadDLFileWithTask(
         currentQuality = Quality.File
         postData.originalInfo
     }
-    val baseData = BaseData(postData.source, postData.id, currentQuality)
+    val baseData = BaseData(postData.source, postData.id, currentQuality, info.size)
     val path = getDLFullPath(baseData)
     val file = File(path)
     if (file.exists())

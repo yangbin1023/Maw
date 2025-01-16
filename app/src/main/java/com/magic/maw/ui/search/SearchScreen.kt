@@ -141,12 +141,13 @@ fun SearchScreen(
 private fun SearchTopBar(
     modifier: Modifier = Modifier,
     value: TextFieldValue,
+    enableShadow: Boolean = true,
     onValueChange: (TextFieldValue) -> Unit,
     onFinish: () -> Unit,
     onSearch: () -> Unit,
 ) {
     TopAppBar(
-        modifier = modifier.shadow(3.dp),
+        modifier = modifier.let { if (enableShadow) it.shadow(3.dp) else it },
         navigationIcon = {
             IconButton(onClick = onFinish) {
                 Icon(

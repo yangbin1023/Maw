@@ -127,9 +127,7 @@ private fun NestedScaffoldBody(
     NestedScaffold(
         topBar = { offset ->
             PostTopBar(
-                modifier = Modifier
-                    .offset { offset }
-                    .shadow(5.dp),
+                modifier = Modifier.offset { offset },
                 titleText = titleText,
                 negativeIcon = negativeIcon,
                 staggeredState = staggeredState,
@@ -166,6 +164,7 @@ private fun PostTopBar(
     modifier: Modifier = Modifier,
     titleText: String = stringResource(id = R.string.post),
     negativeIcon: ImageVector = Icons.Default.Menu,
+    enableShadow: Boolean = true,
     staggeredState: MutableState<Boolean>? = null,
     scrollToTop: () -> Unit = {},
     onNegative: () -> Unit = {},
@@ -174,7 +173,7 @@ private fun PostTopBar(
 ) {
     TopAppBar(
         title = { Text(text = titleText) },
-        modifier = modifier.shadow(3.dp),
+        modifier = modifier.let { if (enableShadow) it.shadow(3.dp) else it },
         navigationIcon = {
             IconButton(onClick = onNegative) {
                 Icon(

@@ -46,7 +46,6 @@ abstract class BaseParser {
     fun setOnVerifyCallback(callback: OnVerifyCallback?) = apply { onVerifyCallback = callback }
     open fun checkVerifyResult(url: String, text: String): Boolean = false
     open fun cancelVerify() {}
-    open fun checkFile(file: File): Boolean = true
 
     companion object {
         private val parserMap = HashMap<String, SoftReference<BaseParser>>()
@@ -63,14 +62,6 @@ abstract class BaseParser {
                 parserMap[source] = SoftReference(parser)
                 return parser
             }
-        }
-
-        fun callGotoVerifyUrlCallback(url: String, source: String): Boolean {
-            get(source).onVerifyCallback?.let {
-                it.invoke(url, source)
-                return true
-            }
-            return false
         }
 
         fun String.encode(enc: String = "UTF-8"): String {

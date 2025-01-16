@@ -248,29 +248,6 @@ class KonachanParser : BaseParser() {
         verifyChannel.trySend(VerifyResult(result = false))
     }
 
-    override fun checkFile(file: File): Boolean {
-        var stream: FileInputStream? = null
-        try {
-            if (!file.exists()) {
-                return false
-            }
-            if (file.length() > 80 * 1024) {
-                return true
-            }
-            FileInputStream(file).apply {
-                stream = this
-            }.buffered().reader().use {
-                if (isVerifyHtml(it.readText())) {
-                    return false
-                }
-            }
-        } catch (_: Exception) {
-        } finally {
-            stream?.close()
-        }
-        return true
-    }
-
     private fun getRatingTag(ratings: Int): String {
         if ((ratings and supportRating) == supportRating)
             return ""

@@ -12,7 +12,8 @@ import java.util.Locale
 data class BaseData(
     val source: String,
     val id: Int,
-    val quality: Quality
+    val quality: Quality,
+    val size: Long = 0
 ) {
     override fun toString(): String {
         return "${source}_${id}_${quality.name.lowercase()}"

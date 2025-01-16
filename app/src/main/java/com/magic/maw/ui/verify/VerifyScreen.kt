@@ -53,7 +53,7 @@ private val logger = Logger(viewName)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VerifyView(
+fun VerifyScreen(
     modifier: Modifier = Modifier,
     url: String,
     source: String,
@@ -73,7 +73,7 @@ fun VerifyView(
         topBar = {
             VerifyTopBar(
                 title = title,
-                enableShadow = false,
+                enableShadow = true,
                 onFinish = finishFunc
             )
         }
@@ -107,7 +107,7 @@ private fun VerifyTopBar(
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     CenterAlignedTopAppBar(
-        modifier = modifier.let { if (enableShadow) it.shadow(5.dp) else it },
+        modifier = modifier.let { if (enableShadow) it.shadow(3.dp) else it },
         title = { Text(title.value) },
         navigationIcon = {
             IconButton(onClick = onFinish) {
@@ -191,7 +191,7 @@ private fun VerifyContent(
                                 isCloudflareChallenge = true
                             } else if (isCloudflareChallenge) {
                                 scope.launch {
-                                    delay(800)
+                                    delay(500)
                                     view.evaluateJavascript(VerifyViewDefaults.JSK_CHECK) {}
                                 }
                             }

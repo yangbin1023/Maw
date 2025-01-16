@@ -74,9 +74,7 @@ fun PoolScreen(
         modifier = modifier,
         topBar = { offset ->
             PoolTopBar(
-                modifier = Modifier
-                    .offset { offset }
-                    .shadow(5.dp),
+                modifier = Modifier.offset { offset },
                 openDrawer = openDrawer
             )
         },
@@ -103,12 +101,13 @@ fun PoolScreen(
 @Composable
 private fun PoolTopBar(
     modifier: Modifier = Modifier,
+    enableShadow: Boolean = true,
     openDrawer: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
     TopAppBar(
         title = { Text(text = stringResource(id = R.string.pool)) },
-        modifier = modifier.shadow(3.dp),
+        modifier = modifier.let { if (enableShadow) it.shadow(3.dp) else it },
         navigationIcon = {
             IconButton(onClick = openDrawer) {
                 Icon(

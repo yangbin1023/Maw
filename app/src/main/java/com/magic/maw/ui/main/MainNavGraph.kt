@@ -7,8 +7,6 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,7 +28,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.magic.maw.R
-import com.magic.maw.ui.verify.VerifyView
 import com.magic.maw.ui.components.SourceChangeChecker
 import com.magic.maw.ui.pool.PoolRoute
 import com.magic.maw.ui.pool.PoolViewModel
@@ -38,6 +35,7 @@ import com.magic.maw.ui.post.PostRoute
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.search.SearchScreen
 import com.magic.maw.ui.setting.SettingScreen
+import com.magic.maw.ui.verify.VerifyScreen
 import com.magic.maw.util.Logger
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.parser.BaseParser
@@ -130,7 +128,7 @@ fun MainNavGraph(
             val url = navBackStackEntry.arguments?.getString("url") ?: ""
             val source = navBackStackEntry.arguments?.getString("source") ?: ""
             printNavBackStack(navController)
-            VerifyView(
+            VerifyScreen(
                 url = url,
                 source = source,
                 onFinish = { navController.popBackStack() }
