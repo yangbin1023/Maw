@@ -172,7 +172,11 @@ private fun DetailBar(
                 .height(40.dp)
                 .width(40.dp)
                 .scale(0.8f)
-                .clickable(onClick = throttle(func = onDownload)),
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = throttle(func = onDownload)
+                ),
             imageVector = Icons.Default.SaveAlt,
             contentDescription = null
         )
@@ -254,13 +258,10 @@ private fun DetailContent(
 
         ContentHeader(stringResource(R.string.others))
 
+        // Quality
         var qualityIndex by remember { mutableIntStateOf(qualityList.indexOf(postData.quality)) }
-        if (qualityIndex < 0) {
-            qualityIndex = 0
-        } else if (qualityIndex >= qualityItems.size) {
-            qualityIndex = 0
-        }
-        LaunchedEffect(postData) {
+        val localDataState = remember { mutableStateOf(postData) }
+        if (localDataState.value != postData) {
             qualityIndex = qualityList.indexOf(postData.quality)
             if (qualityIndex < 0) {
                 qualityIndex = 0
@@ -277,6 +278,7 @@ private fun DetailContent(
                 qualityIndex = it
             }
         )
+        // Author
         if (postData.uploader.isNullOrEmpty()) {
             postData.createId?.let { createId ->
                 val userManager = BaseParser.get(config.source).userManager
@@ -291,11 +293,13 @@ private fun DetailContent(
             tips = postData.uploader ?: stringResource(R.string.unknown),
             showIcon = false
         )
+        // Rating
         SettingItem(
             title = stringResource(R.string.rating),
             tips = postData.rating.name,
             showIcon = false
         )
+        // Upload time
         postData.uploadTime?.let {
             SettingItem(
                 title = stringResource(R.string.upload_time),
@@ -303,7 +307,7 @@ private fun DetailContent(
                 showIcon = false
             )
         }
-
+        // source
         val srcUrl = postData.srcUrl ?: ""
         if (srcUrl.isNotEmpty()) {
             SettingItem(
@@ -314,6 +318,7 @@ private fun DetailContent(
                 onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(srcUrl))) }
             )
         }
+        // score
         postData.score?.let {
             SettingItem(
                 title = stringResource(R.string.score),

@@ -144,7 +144,7 @@ private fun SettingBody(
         }
 
         // 分级
-        val parser = BaseParser.get(config.source.lowercase())
+        val parser = BaseParser.get(config.source)
         val websiteConfig = config.websiteConfig
         val supportRatings = parser.supportRating.getRatings()
         val selectedRatings = websiteConfig.rating.getRatings()
