@@ -34,8 +34,8 @@ object FileUtils {
         }
         return true
     }
+}
 
-    fun File.isTextFile(): Boolean {
-        return isTextFile(this)
-    }
+fun File.isTextFile(checkLen: Int = 256): Boolean {
+    return FileUtils.isTextFile(this, checkLen)
 }

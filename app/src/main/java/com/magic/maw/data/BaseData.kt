@@ -13,11 +13,22 @@ data class BaseData(
     val source: String,
     val id: Int,
     val quality: Quality,
+    val fileType: FileType,
     val size: Long = 0
 ) {
     override fun toString(): String {
         return "${source}_${id}_${quality.name.lowercase()}"
     }
+}
+
+fun BaseData(postData: PostData, quality: Quality = postData.quality, size: Long = 0): BaseData {
+    return BaseData(
+        source = postData.source,
+        id = postData.id,
+        quality = quality,
+        fileType = postData.fileType,
+        size = size
+    )
 }
 
 data class PostData(
@@ -41,7 +52,7 @@ data class PostData(
     fun getDefaultQuality(): Quality {
         val targetQuality = configFlow.value.websiteConfig.quality.toQuality()
         val qualities = Quality.getQualities()
-        val baseData = BaseData(source, id, Quality.File)
+        val baseData = BaseData(this, Quality.File)
         for (quality in qualities) {
             val path = DLManager.getDLFullPath(baseData.copy(quality = quality))
             if (File(path).exists()) {

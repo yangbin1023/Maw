@@ -39,7 +39,7 @@ import com.magic.maw.ui.components.ScaleImageView
 import com.magic.maw.ui.components.loadModel
 import com.magic.maw.ui.components.scale.ScaleDecoder
 import com.magic.maw.ui.components.scale.rememberScaleState
-import com.magic.maw.util.FileUtils.isTextFile
+import com.magic.maw.util.isTextFile
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.LoadType
 import com.magic.maw.website.loadDLFile

@@ -8,6 +8,7 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.util.Logger
 import com.magic.maw.util.client
+import com.magic.maw.util.isTextFile
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
 import io.ktor.client.plugins.onDownload
@@ -163,7 +164,13 @@ data class DLTask(
             } else {
                 logger.info("download success, $url")
             }
-            statusFlow.update { LoadStatus.Success(file) }
+            if (!baseData.fileType.isText() && file.isTextFile()) {
+//                val parser = BaseParser.get(baseData.source)
+                statusFlow.update { LoadStatus.Error(RuntimeException("The request result is not the target file")) }
+                return@launch
+            } else {
+                statusFlow.update { LoadStatus.Success(file) }
+            }
         } catch (e: Exception) {
             if (statusFlow.value !is LoadStatus.Success) {
                 statusFlow.value = LoadStatus.Error(e)
@@ -180,7 +187,7 @@ fun loadDLFile(
     scope: CoroutineScope? = null
 ): StateFlow<LoadStatus<File>> {
     val info = postData.getInfo(quality) ?: postData.originalInfo
-    val baseData = BaseData(postData.source, postData.id, quality, info.size)
+    val baseData = BaseData(postData, quality, info.size)
     return DLManager.addTaskAndStart(baseData, info.url, scope)
 }
 
@@ -193,7 +200,7 @@ fun loadDLFileWithTask(
         currentQuality = Quality.File
         postData.originalInfo
     }
-    val baseData = BaseData(postData.source, postData.id, currentQuality, info.size)
+    val baseData = BaseData(postData, currentQuality, info.size)
     val path = getDLFullPath(baseData)
     val file = File(path)
     if (file.exists())

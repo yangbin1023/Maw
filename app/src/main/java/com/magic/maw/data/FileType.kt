@@ -18,6 +18,10 @@ enum class FileType(val value: Int) {
         return this == Mp4 || this == Webm || this == Swf
     }
 
+    fun isText(): Boolean {
+        return false
+    }
+
     fun getPrefixName(): String {
         return when (this) {
             Jpeg -> "jpg"

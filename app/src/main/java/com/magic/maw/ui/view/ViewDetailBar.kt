@@ -78,13 +78,13 @@ import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.PreviewTheme
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
-import com.magic.maw.util.FileUtils.isTextFile
 import com.magic.maw.util.Logger
 import com.magic.maw.util.ProgressNotification
 import com.magic.maw.util.TimeUtils.toFormatStr
 import com.magic.maw.util.configFlow
 import com.magic.maw.util.getNotificationChannelId
 import com.magic.maw.util.hasPermission
+import com.magic.maw.util.isTextFile
 import com.magic.maw.util.needNotificationPermission
 import com.magic.maw.util.needStoragePermission
 import com.magic.maw.util.saveToPicture
@@ -526,15 +526,9 @@ private suspend fun saveFile(context: Context, postData: PostData, quality: Qual
                     }
                     val uri = saveToPicture(context, postData, infoQuality, status.result)
                     logger.info("保存文件成功")
-                    val previewFilePath = DLManager.getDLFullPath(
-                        BaseData(
-                            source = postData.source,
-                            id = postData.id,
-                            quality = Quality.Preview
-                        )
-                    )
+                    val iconFilePath = DLManager.getDLFullPath(BaseData(postData, Quality.Preview))
                     val title = context.getString(R.string.save_success_click_to_open)
-                    val iconUri = Uri.fromFile(File(previewFilePath))
+                    val iconUri = Uri.fromFile(File(iconFilePath))
                     notification?.finish(title = title, iconUri = iconUri, uri = uri)
                     Toaster.show(context.getString(R.string.save_success))
                 } catch (e: Exception) {
