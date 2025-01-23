@@ -225,14 +225,16 @@ private fun SearchTopBarTitle(
                     innerTextField()
                 }
                 if (hasFocus && value.text.isNotEmpty()) {
-                    Icon(
-                        imageVector = Icons.Filled.Clear,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(horizontal = 10.dp)
-                            .clickable { onValueChange(TextFieldValue(text = "")) },
-                        tint = textColor
-                    )
+                    IconButton(
+                        onClick = { onValueChange(TextFieldValue(text = "")) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Clear,
+                            contentDescription = null,
+                            modifier = Modifier.padding(horizontal = 10.dp),
+                            tint = textColor
+                        )
+                    }
                 }
             }
         }

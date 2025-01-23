@@ -62,7 +62,7 @@ val client by lazy {
             config {
                 hostnameVerifier { _, _ -> true }
                 sslSocketFactory(mySSLSocketFactory, myTrustManager)
-//                proxy()
+                proxySelector(SwitchProxySelector)
             }
         }
     }

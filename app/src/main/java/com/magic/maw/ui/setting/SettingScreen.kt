@@ -41,6 +41,7 @@ import com.magic.maw.ui.components.SingleChoiceDialog
 import com.magic.maw.ui.components.SwitchSettingItem
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.supportDynamicColor
+import com.magic.maw.ui.view.SaveDialog
 import com.magic.maw.util.configFlow
 import com.magic.maw.util.updateWebConfig
 import com.magic.maw.website.parser.BaseParser
@@ -126,8 +127,8 @@ private fun SettingBody(
                 options = options,
                 selectedOptionIndex = selectIndex,
                 onDismissRequest = onDismiss,
-                onOptionSelected = {
-                    selectIndex = it
+                onOptionSelected = { index ->
+                    selectIndex = index
                     val source = when (options[selectIndex]) {
                         "Yande" -> YandeParser.SOURCE
                         "Konachan" -> KonachanParser.SOURCE
@@ -212,6 +213,15 @@ private fun SettingBody(
                     onDismiss.invoke()
                 })
             )
+        }
+
+        // 保存文件
+        val saveQuality = websiteConfig.saveQuality.toQuality()
+        DialogSettingItem(
+            title = stringResource(id = R.string.save),
+            tips = saveQuality.toResString(LocalContext.current)
+        ) { onDismiss ->
+            SaveDialog(onDismiss = onDismiss, showSaveTips = true)
         }
 
         // 深色模式

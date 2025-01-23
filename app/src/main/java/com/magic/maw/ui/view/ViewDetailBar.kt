@@ -1,12 +1,16 @@
 package com.magic.maw.ui.view
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,10 +28,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -49,14 +53,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hjq.toast.Toaster
 import com.magic.maw.R
+import com.magic.maw.data.BaseData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
+import com.magic.maw.data.Quality.Companion.toQuality
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
 import com.magic.maw.data.UserInfo
@@ -70,12 +78,28 @@ import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.PreviewTheme
 import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.ui.theme.ViewDetailBarFold
+import com.magic.maw.util.FileUtils.isTextFile
+import com.magic.maw.util.Logger
+import com.magic.maw.util.ProgressNotification
 import com.magic.maw.util.TimeUtils.toFormatStr
 import com.magic.maw.util.configFlow
+import com.magic.maw.util.getNotificationChannelId
+import com.magic.maw.util.hasPermission
+import com.magic.maw.util.needNotificationPermission
+import com.magic.maw.util.needStoragePermission
+import com.magic.maw.util.saveToPicture
+import com.magic.maw.website.DLManager
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.TagManager
+import com.magic.maw.website.loadDLFile
 import com.magic.maw.website.parser.BaseParser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+
+private val logger = Logger("ViewTAG")
 
 @Composable
 fun ViewDetailBar(
@@ -87,12 +111,18 @@ fun ViewDetailBar(
     val scrollableViewState = rememberScrollableViewState()
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val showSaveDialog = remember { mutableStateOf(false) }
+    val saveQualityList = ArrayList<Quality>()
+    postData.sampleInfo?.let { saveQualityList.add(Quality.Sample) }
+    postData.largeInfo?.let { saveQualityList.add(Quality.Large) }
+    postData.originalInfo.let { saveQualityList.add(Quality.File) }
     LaunchedEffect(maxDraggableHeight) {
         scrollableViewState.updateData(
             density = density,
             maxDraggableHeight = maxDraggableHeight
         )
     }
+    val onSave = getOnSaveCallback()
     ScrollableView(
         modifier = modifier.fillMaxWidth(),
         state = scrollableViewState,
@@ -112,7 +142,14 @@ fun ViewDetailBar(
                 expand = scrollableViewState.expand,
                 isFavorite = isFavorite,
                 onFavorite = { isFavorite = !isFavorite },
-                onDownload = {},
+                onSave = {
+                    val websiteConfig = configFlow.value.websiteConfig
+                    if (!websiteConfig.showSaveDialog) {
+                        onSave(postData, websiteConfig.saveQuality.toQuality())
+                    } else {
+                        showSaveDialog.value = true
+                    }
+                },
                 onExpand = {
                     scrollableViewState.expand = !scrollableViewState.expand
                     scope.launch { scrollableViewState.animateToExpand() }
@@ -126,6 +163,11 @@ fun ViewDetailBar(
                 postData = postData,
                 onTagClick = onTagClick
             )
+            SaveDialog(
+                showDialog = showSaveDialog,
+                qualityList = saveQualityList,
+                onConfirm = { quality -> onSave(postData, quality) }
+            )
         }
     )
 }
@@ -137,7 +179,7 @@ private fun DetailBar(
     expand: Boolean,
     isFavorite: Boolean = false,
     onFavorite: () -> Unit,
-    onDownload: () -> Unit,
+    onSave: () -> Unit,
     onExpand: () -> Unit,
 ) {
     Row(
@@ -152,51 +194,55 @@ private fun DetailBar(
 
         Spacer(modifier = Modifier.weight(1.0f))
 
-        Icon(
-            modifier = Modifier
-                .height(40.dp)
-                .width(40.dp)
-                .scale(0.8f)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = throttle(func = onFavorite)
-                ),
-            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-            tint = if (isFavorite) Color.Red else LocalContentColor.current,
-            contentDescription = null
-        )
+        // Like
+        IconButton(
+            onClick = throttle(func = onFavorite),
+            modifier = Modifier.width(40.dp)
+        ) {
+            Icon(
+                modifier = Modifier
+                    .height(40.dp)
+                    .width(40.dp)
+                    .scale(0.8f),
+                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                tint = if (isFavorite) Color.Red else LocalContentColor.current,
+                contentDescription = null
+            )
+        }
 
-        Icon(
-            modifier = Modifier
-                .height(40.dp)
-                .width(40.dp)
-                .scale(0.8f)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = throttle(func = onDownload)
-                ),
-            imageVector = Icons.Default.SaveAlt,
-            contentDescription = null
-        )
+        // Save
+        IconButton(
+            onClick = throttle(func = onSave),
+            modifier = Modifier.width(40.dp)
+        ) {
+            Icon(
+                modifier = Modifier
+                    .height(40.dp)
+                    .width(40.dp)
+                    .scale(0.8f),
+                painter = painterResource(R.drawable.ic_save),
+                contentDescription = null
+            )
+        }
 
+        // Expand
         val expandIconDegree by animateFloatAsState(
             targetValue = if (expand) 90f else 270f, label = ""
         )
-        Icon(
-            modifier = Modifier
-                .rotate(expandIconDegree)
-                .height(40.dp)
-                .width(40.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = throttle(func = onExpand)
-                ),
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null
-        )
+
+        IconButton(
+            onClick = throttle(func = onExpand),
+            modifier = Modifier.width(40.dp)
+        ) {
+            Icon(
+                modifier = Modifier
+                    .rotate(expandIconDegree)
+                    .height(40.dp)
+                    .width(40.dp),
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null
+            )
+        }
     }
 }
 
@@ -396,6 +442,112 @@ private fun TagInfoItem(
     }
 }
 
+@Composable
+private fun getOnSaveCallback(): (PostData, Quality) -> Unit {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val channel = remember { mutableStateOf(Channel<Boolean>()) }
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = {
+            channel.value.trySend(it)
+        }
+    )
+    return { postData, quality ->
+        scope.launch {
+            if (needNotificationPermission && !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
+                // 没有通知权限，申请通知权限
+                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                channel.value.receive()
+            }
+            if (!needStoragePermission || context.hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                saveFile(context, postData, quality)
+            } else {
+                launcher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                if (channel.value.receive()) {
+                    saveFile(context, postData, quality)
+                } else {
+                    Toaster.show(context.getString(R.string.no_storage_permission))
+                }
+            }
+        }
+    }
+}
+
+@SuppressLint("MissingPermission")
+private suspend fun saveFile(context: Context, postData: PostData, quality: Quality) {
+    var found = false
+    var info: PostData.Info? = null
+    var infoQuality: Quality = quality
+    for (item in Quality.SaveList) {
+        if (item == quality) {
+            found = true
+        }
+        if (found) {
+            info = postData.getInfo(item)
+            if (info != null) {
+                infoQuality = item
+                break
+            }
+        }
+    }
+    info ?: return
+    var notification: ProgressNotification? = null
+    var lastProgress = -1
+    if (!needNotificationPermission || context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
+        val channelId = getNotificationChannelId(context, postData, infoQuality)
+        notification = ProgressNotification(context, channelId)
+    }
+    withContext(Dispatchers.IO) {
+        loadDLFile(postData, infoQuality)
+    }.collect { status ->
+        if (status is LoadStatus.Error) {
+            Toaster.show(context.getString(R.string.download_failed))
+        } else if (status is LoadStatus.Loading) {
+            // 限制更新频率
+            if (lastProgress == -1) {
+                Toaster.show("开始下载")
+            }
+            val progress = (status.progress * 100).toInt()
+            if (progress / 10 > lastProgress) {
+                lastProgress = progress / 10
+                notification?.update(progress)
+            }
+        } else if (status is LoadStatus.Success) {
+            withContext(Dispatchers.IO) {
+                try {
+                    if (status.result.isTextFile()) {
+                        status.result.delete()
+                        logger.info("保存文件失败，文本文件")
+                        val msg = context.getString(R.string.download_failed)
+                        Toaster.show(msg)
+                        notification?.finish(title = msg)
+                        return@withContext
+                    }
+                    val uri = saveToPicture(context, postData, infoQuality, status.result)
+                    logger.info("保存文件成功")
+                    val previewFilePath = DLManager.getDLFullPath(
+                        BaseData(
+                            source = postData.source,
+                            id = postData.id,
+                            quality = Quality.Preview
+                        )
+                    )
+                    val title = context.getString(R.string.save_success_click_to_open)
+                    val iconUri = Uri.fromFile(File(previewFilePath))
+                    notification?.finish(title = title, iconUri = iconUri, uri = uri)
+                    Toaster.show(context.getString(R.string.save_success))
+                } catch (e: Exception) {
+                    val msg = context.getString(R.string.save_failed)
+                    logger.info("$msg: ${e.message}")
+                    notification?.finish(title = msg)
+                    Toaster.show(msg)
+                }
+            }
+        }
+    }
+}
+
 @Preview(widthDp = 360, heightDp = 480)
 @Composable
 private fun DetailBarPreview() {
@@ -426,7 +578,7 @@ private fun DetailBarPreview() {
                         expand = false,
                         isFavorite = true,
                         onFavorite = {},
-                        onDownload = {},
+                        onSave = {},
                         onExpand = {}
                     )
                 }

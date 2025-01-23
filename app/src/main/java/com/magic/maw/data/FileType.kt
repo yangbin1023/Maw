@@ -18,6 +18,32 @@ enum class FileType(val value: Int) {
         return this == Mp4 || this == Webm || this == Swf
     }
 
+    fun getPrefixName(): String {
+        return when (this) {
+            Jpeg -> "jpg"
+            Png -> "png"
+            Webp -> "webp"
+            Gif -> "gif"
+            Mp4 -> "mp4"
+            Webm -> "webm"
+            Swf -> "swf"
+            Ugoira -> "zip"
+        }
+    }
+
+    fun getMediaType(): String {
+        return when (this) {
+            Jpeg -> "image/jpeg"
+            Png -> "image/png"
+            Webp -> "image/webp"
+            Gif -> "image/gif"
+            Mp4 -> "video/mp4"
+            Webm -> "video/webm"
+            Swf -> "*/*"
+            Ugoira -> "*/*"
+        }
+    }
+
     companion object {
         fun getType(name: String): FileType? {
             for (item in entries) {

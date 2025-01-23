@@ -39,4 +39,14 @@
     <string name="score">评分</string>
     <string name="unknown">未知</string>
     <string name="verification">验证</string>
+    <string name="save">保存</string>
+    <string name="not_show_again">不再显示</string>
+    <string name="save_tips">若不存在当前质量的文件，则会保存更高质量的文件。</string>
+    <string name="no_storage_permission">无存储权限</string>
+    <string name="download_failed">下载失败</string>
+    <string name="save_success">保存文件成功</string>
+    <string name="save_failed">保存文件失败</string>
+    <string name="download_finish">下载完成</string>
+    <string name="save_success_click_to_open">保存成功，点击打开</string>
+    <string name="download_progress">下载进度</string>
 </resources>

@@ -23,6 +23,8 @@ enum class Quality(val value: Int) {
     }
 
     companion object {
+        val SaveList: List<Quality> = listOf(Sample, Large, File)
+
         fun Int.toQuality(): Quality {
             for (item in entries) {
                 if (item.value == this)

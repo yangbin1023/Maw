@@ -38,4 +38,14 @@
     <string name="score">Score</string>
     <string name="unknown">Unknown</string>
     <string name="verification">Verification</string>
+    <string name="save">Save</string>
+    <string name="not_show_again">Don\'t show again</string>
+    <string name="save_tips">If a file of the current quality does not exist, a higher quality file is saved.</string>
+    <string name="no_storage_permission">No storage permission</string>
+    <string name="download_failed">Download failed</string>
+    <string name="save_success">Save file successfully</string>
+    <string name="save_failed">Save file failed</string>
+    <string name="download_finish">Download completed</string>
+    <string name="save_success_click_to_open">Saved successfully, click to open</string>
+    <string name="download_progress">Download progress</string>
 </resources>

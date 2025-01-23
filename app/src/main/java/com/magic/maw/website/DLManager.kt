@@ -2,7 +2,6 @@ package com.magic.maw.website
 
 import android.content.Context
 import android.os.Environment
-import androidx.compose.runtime.mutableFloatStateOf
 import com.magic.maw.MyApp
 import com.magic.maw.data.BaseData
 import com.magic.maw.data.PostData
@@ -25,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -146,9 +146,9 @@ data class DLTask(
                     if (status is LoadStatus.Error) {
                         cancel()
                     } else if (status is LoadStatus.Loading) {
-                        status.progress.floatValue = progress
+                        statusFlow.update { LoadStatus.Loading(progress) }
                     } else if (status !is LoadStatus.Success) {
-                        statusFlow.value = LoadStatus.Loading(mutableFloatStateOf(0f))
+                        statusFlow.update { LoadStatus.Loading(0f) }
                     }
                 }
             }.apply {
@@ -158,12 +158,12 @@ data class DLTask(
             file.parentFile?.apply { if (!exists()) mkdirs() }
             channel.copyAndClose(file.writeChannel())
             delay(100)
-            statusFlow.value = LoadStatus.Success(file)
             if (baseData.size > 0 && file.length() != baseData.size) {
                 logger.warning("file size error. expected size: ${baseData.size}, actual size: ${file.length()}")
             } else {
                 logger.info("download success, $url")
             }
+            statusFlow.update { LoadStatus.Success(file) }
         } catch (e: Exception) {
             if (statusFlow.value !is LoadStatus.Success) {
                 statusFlow.value = LoadStatus.Error(e)

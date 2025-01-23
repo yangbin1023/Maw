@@ -81,7 +81,9 @@ data class Config(
 @Serializable
 data class WebsiteConfig(
     val rating: Int = Rating.Safe.value,
-    val quality: Int = Quality.Sample.value
+    val quality: Int = Quality.Sample.value,
+    val saveQuality: Int = Quality.File.value,
+    val showSaveDialog: Boolean = true
 )
 
 fun Int.hasFlag(flag: Int): Boolean = (this and flag) == flag
