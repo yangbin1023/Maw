@@ -8,6 +8,7 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.util.Logger
 import com.magic.maw.util.client
+import com.magic.maw.util.cookie
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
 import com.magic.maw.website.parser.BaseParser
@@ -141,6 +142,7 @@ data class DLTask(
         }
         try {
             val channel = client.get(url) {
+                cookie()
                 onDownload { currentLen, contentLen ->
                     val progress = contentLen?.let { currentLen.toFloat() / it.toFloat() } ?: 0f
                     val status = statusFlow.value
@@ -166,6 +168,7 @@ data class DLTask(
             }
             val verifyContainer = BaseParser.get(baseData.source).getVerifyContainer()
             if (verifyContainer?.checkDlFile(file, task = this@DLTask) == false) {
+                file.delete()
                 statusFlow.update { LoadStatus.Error(RuntimeException("The request result is not the target file")) }
             } else {
                 statusFlow.update { LoadStatus.Success(file) }

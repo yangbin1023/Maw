@@ -3,6 +3,7 @@ package com.magic.maw.util
 import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.HandlerThread
+import android.webkit.CookieManager
 import com.magic.maw.ui.verify.VerifyViewDefaults
 import com.tencent.mmkv.MMKV
 import io.ktor.client.HttpClient
@@ -11,6 +12,8 @@ import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
 import io.ktor.client.plugins.cookies.HttpCookies
+import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.header
 import io.ktor.http.ContentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -65,6 +68,12 @@ val client by lazy {
                 proxySelector(SwitchProxySelector)
             }
         }
+    }
+}
+
+fun HttpRequestBuilder.cookie() = apply {
+    CookieManager.getInstance().getCookie(url.toString())?.let {
+        header("Cookie", it)
     }
 }
 

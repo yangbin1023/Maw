@@ -12,6 +12,7 @@ import com.magic.maw.data.konachan.KonachanTag
 import com.magic.maw.data.konachan.KonachanUser
 import com.magic.maw.util.Logger
 import com.magic.maw.util.client
+import com.magic.maw.util.cookie
 import com.magic.maw.util.isTextFile
 import com.magic.maw.util.json
 import com.magic.maw.util.readString
@@ -20,9 +21,7 @@ import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.UserManager
 import io.ktor.client.call.body
-import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
-import io.ktor.client.request.header
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -282,15 +281,6 @@ class KonachanParser : BaseParser(), VerifyContainer {
             Rating.Safe.value or Rating.Explicit.value -> "-rating:q"
             Rating.Questionable.value or Rating.Explicit.value -> "-rating:s"
             else -> ""
-        }
-    }
-
-    private fun HttpRequestBuilder.cookie() {
-        manager.getCookie(url.toString())?.let {
-            logger.info("konachan cookie: $it")
-            //this.headers["Cookie"]
-//            header("Referer", url)
-            header("Cookie", it)
         }
     }
 
