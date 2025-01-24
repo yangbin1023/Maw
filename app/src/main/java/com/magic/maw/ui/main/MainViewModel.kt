@@ -20,12 +20,11 @@ object MainRoutes {
     const val POPULAR = "popular"
     const val SETTING = "setting"
     const val SEARCH = "search?text={text}"
-    const val VERIFY = "verify?url={url}&source={source}"
+    const val VERIFY = "verify?url={url}"
 
     fun post(tagText: String = ""): String = POST.replace("{tagText}", tagText)
     fun search(text: String = ""): String = SEARCH.replace("{text}", text)
-    fun verify(url: String = "", source: String = ""): String =
-        VERIFY.replace("{url}", url).replace("{source}", source)
+    fun verify(url: String = ""): String = VERIFY.replace("{url}", url)
 
     fun isMainView(route: String?): Boolean {
         return when (route) {

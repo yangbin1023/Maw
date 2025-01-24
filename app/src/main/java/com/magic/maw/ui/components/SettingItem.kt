@@ -52,6 +52,7 @@ fun SettingItem(
     enable: Boolean = true,
     showIcon: Boolean = true,
     imageVector: ImageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+    onClickWidthThrottle: Boolean = true,
     onClick: () -> Unit = {}
 ) {
     val paddingModifier = if (modifier == Modifier) Modifier.itemPadding() else modifier
@@ -63,9 +64,10 @@ fun SettingItem(
     } else {
         Modifier
     }
+    val targetOnClick = if (onClickWidthThrottle) throttle(func = onClick) else onClick
     Row(
         modifier = Modifier
-            .clickable(enabled = enable, onClick = throttle(func = onClick))
+            .clickable(enabled = enable, onClick = targetOnClick)
             .fillMaxWidth()
             .defaultMinSize(minHeight = SettingItemDefaults.defaultMinHeight)
             .then(paddingModifier)

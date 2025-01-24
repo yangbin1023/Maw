@@ -4,6 +4,7 @@ import com.magic.maw.data.PoolData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.UserInfo
+import com.magic.maw.website.DLTask
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.UserManager
@@ -12,13 +13,19 @@ import java.lang.ref.SoftReference
 import java.net.URLDecoder
 import java.net.URLEncoder
 
-typealias OnVerifyCallback = (String, String) -> Unit
+typealias OnVerifyCallback = (String) -> Unit
 
 data class VerifyResult(
     val result: Boolean = false,
     val url: String = "",
     val text: String = "",
 )
+
+interface VerifyContainer {
+    suspend fun checkDlFile(file: File, task: DLTask): Boolean
+    fun verifySuccess(url: String, text: String)
+    fun cancelVerify()
+}
 
 abstract class BaseParser {
     protected abstract val baseUrl: String
@@ -44,8 +51,7 @@ abstract class BaseParser {
     protected abstract fun getUserUrl(userId: Int): String
 
     fun setOnVerifyCallback(callback: OnVerifyCallback?) = apply { onVerifyCallback = callback }
-    open fun checkVerifyResult(url: String, text: String): Boolean = false
-    open fun cancelVerify() {}
+    open fun getVerifyContainer(): VerifyContainer? = null
 
     companion object {
         private val parserMap = HashMap<String, SoftReference<BaseParser>>()

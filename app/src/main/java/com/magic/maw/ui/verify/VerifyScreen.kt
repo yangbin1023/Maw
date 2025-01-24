@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,8 +43,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.magic.maw.MyApp
 import com.magic.maw.R
 import com.magic.maw.ui.components.RegisterView
+import com.magic.maw.ui.components.SourceChangeChecker
 import com.magic.maw.util.Logger
-import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -56,25 +56,20 @@ private val logger = Logger(viewName)
 fun VerifyScreen(
     modifier: Modifier = Modifier,
     url: String,
-    source: String,
-    onFinish: () -> Unit,
+    onSuccess: (String) -> Unit,
+    onCancel: () -> Unit,
 ) {
     val defaultTitle = stringResource(R.string.verification)
     val title = remember { mutableStateOf(defaultTitle) }
-    val scope = rememberCoroutineScope()
-    val parser = BaseParser.get(source)
-    val finishFunc: () -> Unit = {
-        parser.cancelVerify()
-        onFinish.invoke()
-    }
     RegisterView(name = viewName)
+    SourceChangeChecker(onChanged = onCancel)
     Scaffold(
         modifier = modifier,
         topBar = {
             VerifyTopBar(
                 title = title,
                 enableShadow = true,
-                onFinish = finishFunc
+                onFinish = onCancel
             )
         }
     ) { innerPadding ->
@@ -82,18 +77,9 @@ fun VerifyScreen(
             modifier = Modifier.padding(innerPadding),
             url = url,
             onUpdateTitle = { title.value = it },
-            onCheck = {
-                if (parser.checkVerifyResult(url, it)) {
-                    val cookie = CookieManager.getInstance().getCookie(url)
-                    logger.info("check verify success, url: $url, cookie: $cookie")
-                    scope.launch { onFinish.invoke() }
-                }
-            }
+            onSuccess = onSuccess,
+            onCancel = onCancel,
         )
-
-        BackHandler {
-            finishFunc.invoke()
-        }
     }
 }
 
@@ -112,7 +98,7 @@ private fun VerifyTopBar(
         navigationIcon = {
             IconButton(onClick = onFinish) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = Icons.Default.Close,
                     contentDescription = "",
                 )
             }
@@ -127,7 +113,8 @@ private fun VerifyContent(
     modifier: Modifier = Modifier,
     url: String,
     onUpdateTitle: (String) -> Unit,
-    onCheck: (String) -> Unit
+    onSuccess: (String) -> Unit,
+    onCancel: () -> Unit,
 ) {
     val progress = remember { mutableFloatStateOf(0f) }
     val webView = remember { mutableStateOf<WebView?>(null) }
@@ -224,11 +211,21 @@ private fun VerifyContent(
             val headerMap = hashMapOf(
                 "User-Agent" to VerifyViewDefaults.UserAgent,
             )
-            it.addJavascriptInterface(JsKit(onCheck), "jsk")
+            it.addJavascriptInterface(JsKit(onSuccess), "jsk")
             it.loadUrl(url, headerMap)
         }
 
         VerifyProgressBar(progress = progress)
+
+        BackHandler {
+            webView.value?.let {
+                if (it.canGoBack()) {
+                    it.goBack()
+                    return@BackHandler
+                }
+            }
+            onCancel()
+        }
     }
 }
 

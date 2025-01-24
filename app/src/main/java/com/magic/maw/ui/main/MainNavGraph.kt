@@ -37,9 +37,11 @@ import com.magic.maw.ui.search.SearchScreen
 import com.magic.maw.ui.setting.SettingScreen
 import com.magic.maw.ui.verify.VerifyScreen
 import com.magic.maw.util.Logger
+import com.magic.maw.util.UiUtils.checkTopRoute
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.parser.BaseParser
 import com.magic.maw.website.parser.OnVerifyCallback
+import com.magic.maw.website.parser.VerifyContainer
 import kotlinx.coroutines.launch
 
 private val logger = Logger("MainNavGraph")
@@ -55,8 +57,12 @@ fun MainNavGraph(
 ) {
     val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
     val poolViewModel: PoolViewModel = viewModel()
+    val scope = rememberCoroutineScope()
 
-    SetVerifyCallback { url, source -> navController.navigate(MainRoutes.verify(url, source)) }
+    val verifyContainer = registerVerifyCallback { url ->
+        logger.info("call on verify url: $url")
+        navController.navigate(MainRoutes.verify(url))
+    }
 
     SourceChangeChecker {
         postViewModel.clearData()
@@ -121,31 +127,43 @@ fun MainNavGraph(
         }
         composable(
             route = MainRoutes.VERIFY,
-            arguments = listOf(
-                navArgument("url") { type = NavType.StringType },
-                navArgument("source") { type = NavType.StringType })
+            arguments = listOf(navArgument("url") { type = NavType.StringType })
         ) { navBackStackEntry ->
             val url = navBackStackEntry.arguments?.getString("url") ?: ""
-            val source = navBackStackEntry.arguments?.getString("source") ?: ""
             printNavBackStack(navController)
             VerifyScreen(
                 url = url,
-                source = source,
-                onFinish = { navController.popBackStack() }
+                onSuccess = { text ->
+                    verifyContainer?.verifySuccess(url, text)
+                    scope.launch {
+                        if (navController.checkTopRoute(MainRoutes.VERIFY)) {
+                            navController.popBackStack()
+                        }
+                    }
+                },
+                onCancel = {
+                    verifyContainer?.cancelVerify()
+                    scope.launch {
+                        if (navController.checkTopRoute(MainRoutes.VERIFY)) {
+                            navController.popBackStack()
+                        }
+                    }
+                }
             )
         }
     }
 }
 
 @Composable
-private fun SetVerifyCallback(verifyCallback: OnVerifyCallback?) {
+private fun registerVerifyCallback(verifyCallback: OnVerifyCallback?): VerifyContainer? {
     val scope = rememberCoroutineScope()
     val parser = BaseParser.get(configFlow.collectAsStateWithLifecycle().value.source)
-    parser.setOnVerifyCallback { url, source ->
+    parser.setOnVerifyCallback { url ->
         scope.launch {
-            verifyCallback?.invoke(url, source)
+            verifyCallback?.invoke(url)
         }
     }
+    return parser.getVerifyContainer()
 }
 
 typealias AnimatedScope = AnimatedContentTransitionScope<NavBackStackEntry>

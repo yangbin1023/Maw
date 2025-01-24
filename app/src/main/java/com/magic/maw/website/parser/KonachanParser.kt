@@ -12,7 +12,10 @@ import com.magic.maw.data.konachan.KonachanTag
 import com.magic.maw.data.konachan.KonachanUser
 import com.magic.maw.util.Logger
 import com.magic.maw.util.client
+import com.magic.maw.util.isTextFile
 import com.magic.maw.util.json
+import com.magic.maw.util.readString
+import com.magic.maw.website.DLTask
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.UserManager
@@ -24,12 +27,11 @@ import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import java.io.File
-import java.io.FileInputStream
 
 private val logger = Logger("KonachanTAG")
 
-class KonachanParser : BaseParser() {
-    override val baseUrl: String get() = "https://konachan.com"
+class KonachanParser : BaseParser(), VerifyContainer {
+    override val baseUrl: String get() = "https://konachan.net"
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
     override val tagManager: TagManager by lazy { TagManager.get(source) }
@@ -229,22 +231,41 @@ class KonachanParser : BaseParser() {
         return "$baseUrl/user.json?id=$userId"
     }
 
-    override fun checkVerifyResult(url: String, text: String): Boolean {
-        if (!isVerifyHtml(text) && isJsonStr(text)) {
-            logger.info("verify result success")
-            verifying.value = false
-            verifySuccess.value = true
-            verifyChannel.trySend(VerifyResult(result = true, url = url, text = text))
-        } else {
-            verifySuccess.value = false
+    override fun getVerifyContainer(): VerifyContainer? {
+        return if (onVerifyCallback == null) null else this
+    }
+
+    override suspend fun checkDlFile(file: File, task: DLTask): Boolean {
+        if (file.isTextFile() && !task.baseData.fileType.isText()) {
+            val text = file.readString()
+            if (isVerifyHtml(text)) {
+                if (!verifying.getAndSet(true)) {
+                    logger.info("konachan download failed. invoke onVerifyCallback, url: ${task.url}")
+                    onVerifyCallback?.invoke(task.url)
+                }
+                verifyChannel.receive()
+            }
+            // TODO: 从验证页面获取到待下载的图片
+            return false
         }
-        return verifySuccess.value
+        return true
+    }
+
+    override fun verifySuccess(url: String, text: String) {
+        val tmpUrl = if (isJsonStr(text)) url else ""
+        if (isVerifyHtml(text)) {
+            logger.severe("verify result error. it's still verify html")
+            verifySuccess.value = false
+        } else {
+            verifySuccess.value = true
+        }
+        verifying.value = false
+        verifyChannel.trySend(VerifyResult(result = verifySuccess.value, url = tmpUrl, text = text))
     }
 
     override fun cancelVerify() {
-        logger.info("cancel verify")
-        verifying.value = false
         verifySuccess.value = false
+        verifying.value = false
         verifyChannel.trySend(VerifyResult(result = false))
     }
 
@@ -274,8 +295,11 @@ class KonachanParser : BaseParser() {
     }
 
     private fun isVerifyHtml(msg: String): Boolean {
-        logger.info("konachan check str: $msg")
         return msg.startsWith("<!DOCTYPE") && msg.contains("<title>Just a moment...</title>")
+    }
+
+    private fun isErrorHtml(msg: String): Boolean {
+        return msg.startsWith("<!DOCTYPE") && msg.contains("<title>Error")
     }
 
     private fun isJsonStr(msg: String): Boolean {
@@ -295,16 +319,15 @@ class KonachanParser : BaseParser() {
             }
             if (!verifying.getAndSet(true)) {
                 logger.info("konachan invoke onVerifyCallback, url: $url")
-                onVerifyCallback?.invoke(url, source)
+                onVerifyCallback?.invoke(url)
             }
+            logger.info("konachan waiting for verify, url: $url")
             val result = verifyChannel.receive()
-            if (result.result) {
-                verifySuccess.value = true
-                if (result.url == url) {
-                    return Pair(true, result.text)
-                }
-            } else {
+            if (!result.result) {
                 return Pair(false, "")
+            }
+            if (result.url == url) {
+                return Pair(true, result.text)
             }
             delay(50 + (0L..150L).random())
             return securityRequest(url)

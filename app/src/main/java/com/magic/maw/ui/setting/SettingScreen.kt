@@ -1,5 +1,6 @@
 package com.magic.maw.ui.setting
 
+import android.webkit.CookieManager
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,6 +28,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.hjq.toast.Toaster
 import com.magic.maw.R
 import com.magic.maw.data.Quality
 import com.magic.maw.data.Quality.Companion.toQuality
@@ -43,6 +45,7 @@ import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.supportDynamicColor
 import com.magic.maw.ui.view.SaveDialog
 import com.magic.maw.util.configFlow
+import com.magic.maw.util.logger
 import com.magic.maw.util.updateWebConfig
 import com.magic.maw.website.parser.BaseParser
 import com.magic.maw.website.parser.DanbooruParser
@@ -51,6 +54,9 @@ import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.flow.update
 
 private const val viewName = "Setting"
+
+private var lastClickVersionItemTime = 0L
+private var clickVersionItemCount = 0
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -249,6 +255,24 @@ private fun SettingBody(
         // 版本
         val context = LocalContext.current
         val appInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        SettingItem(title = stringResource(id = R.string.version), tips = appInfo.versionName)
+        SettingItem(
+            title = stringResource(id = R.string.version),
+            tips = appInfo.versionName,
+            onClickWidthThrottle = false
+        ) {
+            val now = System.currentTimeMillis()
+            if (now - lastClickVersionItemTime < 1000) {
+                clickVersionItemCount++
+            } else {
+                clickVersionItemCount = 1
+            }
+            lastClickVersionItemTime = now
+            logger.info("click version item count: $clickVersionItemCount")
+            if (clickVersionItemCount >= 5) {
+                clickVersionItemCount = 0
+                CookieManager.getInstance().removeAllCookies(null)
+                Toaster.show(R.string.all_cookies_cleared)
+            }
+        }
     }
 }

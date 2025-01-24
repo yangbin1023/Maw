@@ -8,9 +8,9 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.util.Logger
 import com.magic.maw.util.client
-import com.magic.maw.util.isTextFile
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
+import com.magic.maw.website.parser.BaseParser
 import io.ktor.client.plugins.onDownload
 import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
@@ -164,10 +164,9 @@ data class DLTask(
             } else {
                 logger.info("download success, $url")
             }
-            if (!baseData.fileType.isText() && file.isTextFile()) {
-//                val parser = BaseParser.get(baseData.source)
+            val verifyContainer = BaseParser.get(baseData.source).getVerifyContainer()
+            if (verifyContainer?.checkDlFile(file, task = this@DLTask) == false) {
                 statusFlow.update { LoadStatus.Error(RuntimeException("The request result is not the target file")) }
-                return@launch
             } else {
                 statusFlow.update { LoadStatus.Success(file) }
             }

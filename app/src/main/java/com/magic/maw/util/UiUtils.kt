@@ -1,5 +1,6 @@
 package com.magic.maw.util
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -16,6 +17,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 
 object UiUtils {
@@ -91,4 +93,17 @@ object UiUtils {
 
     val NavController.currentRoute: String?
         @Composable get() = currentBackStackEntryAsState().value?.destination?.route
+
+    @SuppressLint("RestrictedApi")
+    fun NavHostController.checkTopRoute(route: String): Boolean {
+        try {
+            val list = currentBackStack.value
+            list.lastOrNull()?.let {
+                return it.destination.route == route
+            }
+        } catch (e: Exception) {
+            logger.severe(e.message)
+        }
+        return false
+    }
 }
