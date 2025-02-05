@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import com.magic.maw.util.UiUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -165,8 +166,10 @@ fun NestedScaffold(
                 override fun calculateRightPadding(layoutDirection: LayoutDirection): Dp =
                     innerPadding.calculateRightPadding(layoutDirection)
 
-                override fun calculateTopPadding(): Dp = with(density) {
-                    (abs(state.maxPx - state.minPx) - abs(state.scrollValue)).roundToInt().toDp()
+                override fun calculateTopPadding(): Dp {
+                    val topPx = (abs(state.maxPx - state.minPx) - abs(state.scrollValue))
+                    val new = with(density) { topPx.roundToInt().toDp() }
+                    return min(new, innerPadding.calculateTopPadding())
                 }
             }
         }
