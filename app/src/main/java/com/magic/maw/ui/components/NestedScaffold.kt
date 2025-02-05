@@ -168,8 +168,8 @@ fun NestedScaffold(
 
                 override fun calculateTopPadding(): Dp {
                     val topPx = (abs(state.maxPx - state.minPx) - abs(state.scrollValue))
-                    val new = with(density) { topPx.roundToInt().toDp() }
-                    return min(new, innerPadding.calculateTopPadding())
+                    val newTop = with(density) { topPx.roundToInt().toDp() }
+                    return min(newTop, innerPadding.calculateTopPadding())
                 }
             }
         }

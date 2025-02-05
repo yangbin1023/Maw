@@ -61,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hjq.toast.Toaster
 import com.magic.maw.R
-import com.magic.maw.data.BaseData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.data.Quality.Companion.toQuality
@@ -88,7 +87,6 @@ import com.magic.maw.util.isTextFile
 import com.magic.maw.util.needNotificationPermission
 import com.magic.maw.util.needStoragePermission
 import com.magic.maw.util.saveToPicture
-import com.magic.maw.website.DLManager
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.loadDLFile
@@ -97,7 +95,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 private val logger = Logger("ViewTAG")
 
@@ -494,6 +491,7 @@ private suspend fun saveFile(context: Context, postData: PostData, quality: Qual
     info ?: return
     var notification: ProgressNotification? = null
     var lastProgress = -1
+    var lastUpdateTime = 0L
     if (!needNotificationPermission || context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
         val channelId = getNotificationChannelId(context, postData, infoQuality)
         notification = ProgressNotification(context, channelId)
@@ -502,15 +500,19 @@ private suspend fun saveFile(context: Context, postData: PostData, quality: Qual
         loadDLFile(postData, infoQuality)
     }.collect { status ->
         if (status is LoadStatus.Error) {
-            Toaster.show(context.getString(R.string.download_failed))
+            val msg = context.getString(R.string.download_failed)
+            Toaster.show(msg)
+            notification?.finish(text = msg)
         } else if (status is LoadStatus.Loading) {
             // 限制更新频率
             if (lastProgress == -1) {
                 Toaster.show("开始下载")
             }
+            val now = System.currentTimeMillis()
             val progress = (status.progress * 100).toInt()
-            if (progress / 10 > lastProgress) {
-                lastProgress = progress / 10
+            if (now - lastUpdateTime > 1000 || progress / 10 > lastProgress / 10) {
+                lastProgress = progress
+                lastUpdateTime = now
                 notification?.update(progress)
             }
         } else if (status is LoadStatus.Success) {
@@ -521,20 +523,18 @@ private suspend fun saveFile(context: Context, postData: PostData, quality: Qual
                         logger.info("保存文件失败，文本文件")
                         val msg = context.getString(R.string.download_failed)
                         Toaster.show(msg)
-                        notification?.finish(title = msg)
+                        notification?.finish(text = msg)
                         return@withContext
                     }
                     val uri = saveToPicture(context, postData, infoQuality, status.result)
-                    logger.info("保存文件成功")
-                    val iconFilePath = DLManager.getDLFullPath(BaseData(postData, Quality.Preview))
-                    val title = context.getString(R.string.save_success_click_to_open)
-                    val iconUri = Uri.fromFile(File(iconFilePath))
-                    notification?.finish(title = title, iconUri = iconUri, uri = uri)
+                    val text = context.getString(R.string.save_success_click_to_open)
+                    notification?.finish(text = text, uri = uri)
                     Toaster.show(context.getString(R.string.save_success))
+                    logger.info("保存文件成功, uri: $uri")
                 } catch (e: Exception) {
                     val msg = context.getString(R.string.save_failed)
                     logger.info("$msg: ${e.message}")
-                    notification?.finish(title = msg)
+                    notification?.finish(text = msg)
                     Toaster.show(msg)
                 }
             }

@@ -53,7 +53,7 @@ class ProgressNotification(
     }
 
     fun update(progress: Int) {
-        builder.setProgress(progress, 100, false)
+        builder.setProgress(100, progress, false)
         builder.setContentTitle(context.getString(R.string.download_progress))
         builder.setContentText("$progress%")
         if (context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
@@ -62,10 +62,10 @@ class ProgressNotification(
     }
 
     fun finish(
-        title: String?,
+        title: String? = context.getString(R.string.app_name),
         text: String? = null,
         iconUri: Uri? = null,
-        uri: Uri? = null
+        uri: Uri? = null,
     ) {
         builder.setProgress(0, 0, false)
         builder.setContentTitle(title)
@@ -79,9 +79,13 @@ class ProgressNotification(
         }
         uri?.let {
             val intent = Intent(Intent.ACTION_VIEW)
-            intent.setData(it)
-            val pendingIntent =
-                PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+            intent.setData(uri)
+            val flag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.FLAG_IMMUTABLE
+            } else {
+                PendingIntent.FLAG_ONE_SHOT
+            }
+            val pendingIntent = PendingIntent.getActivity(context, 0, intent, flag)
             builder.setContentIntent(pendingIntent)
         }
         if (context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
