@@ -1,5 +1,6 @@
 package com.magic.maw.ui.post
 
+import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -8,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
@@ -71,6 +73,7 @@ fun PostRoute(
     )
 }
 
+@SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostRoute(
@@ -98,6 +101,7 @@ fun PostRoute(
     val scaffoldState = rememberNestedScaffoldState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val itemHeights by remember { mutableStateOf(mutableMapOf<Int, Int>()) }
 
     val resetTopBar: () -> Unit = {
         changeSystemBarStatus(context, viewName, true)
@@ -155,6 +159,7 @@ fun PostRoute(
             onRefresh = onRefresh,
             onLoadMore = onLoadMore,
             onShowSystemBar = { changeSystemBarStatus(context, viewName, it) },
+            onGloballyPositioned = { index, height -> itemHeights[index] = height },
             onItemClick = onItemClick
         )
         BackHandler(enabled = state.isSearch, onBack = {
@@ -169,10 +174,24 @@ fun PostRoute(
         exit = slideOut + fadeOut
     ) {
         val state = viewState ?: return@AnimatedVisibility
+        val pagerState = rememberPagerState(state.initIndex) { uiState.dataList.size }
+        val onExit: () -> Unit = {
+            scope.launch {
+                if (state.initIndex != pagerState.currentPage) {
+                    // 退出View时将最后查看的item移动到视野中央
+                    val itemHeight = itemHeights[pagerState.currentPage] ?: 0
+                    val viewportHeight = lazyState.layoutInfo.viewportSize.height
+                    val offset = -(viewportHeight - itemHeight) / 2
+                    lazyState.scrollToItem(pagerState.currentPage, offset)
+                }
+                onExitView()
+            }
+        }
         ViewScreen(
             uiState = state,
+            pagerState = pagerState,
             onLoadMore = onLoadMore,
-            onExit = onExitView,
+            onExit = onExit,
             onTagClick = onTagClick@{ tag, justSearch ->
                 if (isSubView)
                     return@onTagClick
@@ -184,6 +203,6 @@ fun PostRoute(
                 }
             }
         )
-        BackHandler(onBack = onExitView)
+        BackHandler(onBack = onExit)
     }
 }

@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -78,6 +79,7 @@ fun PostScreen(
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onShowSystemBar: (Boolean) -> Unit,
+    onGloballyPositioned: (Int, Int) -> Unit,
     onItemClick: (Int) -> Unit,
 ) {
     val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
@@ -94,6 +96,7 @@ fun PostScreen(
         onRefresh = onRefresh,
         onLoadMore = onLoadMore,
         onShowSystemBar = onShowSystemBar,
+        onGloballyPositioned = onGloballyPositioned,
         onItemClick = onItemClick
     )
 }
@@ -113,6 +116,7 @@ private fun NestedScaffoldBody(
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onShowSystemBar: (Boolean) -> Unit,
+    onGloballyPositioned: (Int, Int) -> Unit,
     onItemClick: (Int) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -153,6 +157,7 @@ private fun NestedScaffoldBody(
             staggeredState = staggeredState,
             onRefresh = onRefresh,
             onLoadMore = onLoadMore,
+            onGloballyPositioned = onGloballyPositioned,
             onItemClick = onItemClick
         )
     }
@@ -219,6 +224,7 @@ private fun PostRefreshBody(
     staggeredState: MutableState<Boolean>? = null,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
+    onGloballyPositioned: (Int, Int) -> Unit,
     onItemClick: (Int) -> Unit,
 ) {
     PullToRefreshBox(
@@ -239,8 +245,9 @@ private fun PostRefreshBody(
                 uiState = uiState,
                 state = lazyState,
                 staggeredState = staggeredState,
+                onGloballyPositioned = onGloballyPositioned,
+                onItemClick = onItemClick,
                 onLoadMore = onLoadMore,
-                onItemClick = onItemClick
             )
         }
     }
@@ -283,6 +290,7 @@ private fun PostBody(
     uiState: PostUiState.Post,
     state: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     staggeredState: MutableState<Boolean>? = null,
+    onGloballyPositioned: (Int, Int) -> Unit,
     onItemClick: (Int) -> Unit,
     onLoadMore: () -> Unit,
 ) {
@@ -300,6 +308,7 @@ private fun PostBody(
                 PostItem(
                     modifier = Modifier
                         .padding(contentPadding)
+                        .onGloballyPositioned { onGloballyPositioned(index, it.size.height) }
                         .clickable {
                             if (uiState.type != UiStateType.Refresh) {
                                 onItemClick.invoke(index)

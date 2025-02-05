@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -39,11 +39,11 @@ private const val viewName = "View"
 @Composable
 fun ViewScreen(
     uiState: PostUiState.View,
+    pagerState: PagerState,
     onLoadMore: () -> Unit,
     onExit: () -> Unit,
     onTagClick: (TagInfo, Boolean) -> Unit
 ) {
-    val pagerState = rememberPagerState(uiState.initIndex) { uiState.dataList.size }
     val topBarMaxHeight = UiUtils.getTopBarHeight()
     val context = LocalContext.current
     var showTopBar by remember { mutableStateOf(context.isShowStatusBars()) }

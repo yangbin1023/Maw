@@ -244,7 +244,6 @@ class KonachanParser : BaseParser(), VerifyContainer {
                 }
                 verifyChannel.receive()
             }
-            // TODO: 从验证页面获取到待下载的图片
             return false
         }
         return true
