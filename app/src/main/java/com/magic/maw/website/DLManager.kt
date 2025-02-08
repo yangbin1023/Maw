@@ -4,11 +4,13 @@ import android.content.Context
 import android.os.Environment
 import com.magic.maw.MyApp
 import com.magic.maw.data.BaseData
+import com.magic.maw.data.FileType
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.util.Logger
 import com.magic.maw.util.client
 import com.magic.maw.util.cookie
+import com.magic.maw.util.isTextFile
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
 import com.magic.maw.website.parser.BaseParser
@@ -59,8 +61,13 @@ object DLManager {
     ): StateFlow<LoadStatus<File>> {
         val path = getDLFullPath(baseData)
         val file = File(path)
-        if (file.exists())
-            return MutableStateFlow(LoadStatus.Success(file))
+        if (file.exists()) {
+            if (file.isTextFile() && !baseData.fileType.isText()) {
+                file.delete()
+            } else {
+                return MutableStateFlow(LoadStatus.Success(file))
+            }
+        }
         val task = addTask(baseData, url, path)
         val stateFlow = scope?.let {
             val initState = task.statusFlow.value
@@ -132,6 +139,10 @@ data class DLTask(
         return "source: ${baseData.source}, id: ${baseData.id}, quality: ${baseData.quality}, url: $url"
     }
 
+    private fun defaultCheckFile(file: File): Boolean {
+        return baseData.fileType.isText() || !file.isTextFile()
+    }
+
     fun start() = scope.launch {
         if (statusFlow.value is LoadStatus.Success)
             return@launch
@@ -167,11 +178,11 @@ data class DLTask(
                 logger.info("download success, $url")
             }
             val verifyContainer = BaseParser.get(baseData.source).getVerifyContainer()
-            if (verifyContainer?.checkDlFile(file, task = this@DLTask) == false) {
+            if (verifyContainer?.checkDlFile(file, this@DLTask) ?: defaultCheckFile(file)) {
+                statusFlow.update { LoadStatus.Success(file) }
+            } else {
                 file.delete()
                 statusFlow.update { LoadStatus.Error(RuntimeException("The request result is not the target file")) }
-            } else {
-                statusFlow.update { LoadStatus.Success(file) }
             }
         } catch (e: Exception) {
             if (statusFlow.value !is LoadStatus.Success) {
