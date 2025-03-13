@@ -48,7 +48,7 @@ fun PostRoute(
     onOpenSubView: (Boolean) -> Unit = {},
 ) {
     val uiState by postViewModel.uiState.collectAsStateWithLifecycle()
-    onOpenSubView.invoke(uiState is PostUiState.View)
+    onOpenSubView(uiState is PostUiState.View)
 
     PostRoute(
         uiState = uiState,
@@ -126,19 +126,19 @@ fun PostRoute(
 
     LaunchedEffect(uiState.type) {
         if (uiState.type == UiStateType.Refresh) {
-            resetTopBar.invoke()
-            onExitView.invoke()
+            resetTopBar()
+            onExitView()
         }
     }
     SourceChangeChecker {
-        resetTopBar.invoke()
-        onExitView.invoke()
-        onClearSearch.invoke()
+        resetTopBar()
+        onExitView()
+        onClearSearch()
     }
     RatingChangeChecker {
-        resetTopBar.invoke()
-        onExitView.invoke()
-        onForceRefresh.invoke()
+        resetTopBar()
+        onExitView()
+        onForceRefresh()
     }
     AnimatedVisibility(
         visible = uiState is PostUiState.Post,
@@ -163,8 +163,8 @@ fun PostRoute(
             onItemClick = onItemClick
         )
         BackHandler(enabled = state.isSearch, onBack = {
-            onClearSearch.invoke()
-            resetTopBar.invoke()
+            onClearSearch()
+            resetTopBar()
             Toaster.show(R.string.click_again_to_exit)
         })
     }
@@ -196,10 +196,10 @@ fun PostRoute(
                 if (isSubView)
                     return@onTagClick
                 if (justSearch || openSearch == null) {
-                    resetTopBar.invoke()
-                    onSearch.invoke(tag.name)
+                    resetTopBar()
+                    onSearch(tag.name)
                 } else {
-                    openSearch.invoke(tag.name)
+                    openSearch(tag.name)
                 }
             }
         )

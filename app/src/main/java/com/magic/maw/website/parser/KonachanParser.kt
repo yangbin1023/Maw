@@ -1,6 +1,5 @@
 package com.magic.maw.website.parser
 
-import android.webkit.CookieManager
 import com.magic.maw.data.PoolData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
@@ -18,8 +17,6 @@ import com.magic.maw.util.json
 import com.magic.maw.util.readString
 import com.magic.maw.website.DLTask
 import com.magic.maw.website.RequestOption
-import com.magic.maw.website.TagManager
-import com.magic.maw.website.UserManager
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kotlinx.atomicfu.atomic
@@ -33,9 +30,6 @@ class KonachanParser : BaseParser(), VerifyContainer {
     override val baseUrl: String get() = "https://konachan.net"
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
-    override val tagManager: TagManager by lazy { TagManager.get(source) }
-    override val userManager: UserManager by lazy { UserManager.get(source) }
-    private val manager by lazy { CookieManager.getInstance() }
     private val verifying = atomic(false)
     private val verifySuccess = atomic(false)
     private val verifyChannel = Channel<VerifyResult>()

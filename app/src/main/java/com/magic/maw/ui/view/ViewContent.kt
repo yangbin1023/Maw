@@ -66,7 +66,7 @@ fun ViewContent(
             .background(MaterialTheme.colorScheme.background),
     ) { index ->
         if (index >= dataList.size || index < 0) {
-            onExit.invoke()
+            onExit()
             return@HorizontalPager
         }
         if (abs(pagerState.settledPage - index) > 1) {
@@ -158,7 +158,7 @@ private fun ViewScreenItem(
             ScaleImageView(
                 model = model.value,
                 scaleState = state,
-                onTap = { onTab.invoke() },
+                onTap = { onTab() },
                 onDoubleTap = { scope.launch { (state.toggleScale(it)) } }
             )
         }

@@ -65,9 +65,9 @@ fun PoolScreen(
 ) {
     LaunchedEffect(scaffoldState) {
         if (scaffoldState.scrollValue == scaffoldState.minPx) {
-            onShowSystemBar.invoke(false)
+            onShowSystemBar(false)
         } else if (scaffoldState.scrollValue == scaffoldState.maxPx) {
-            onShowSystemBar.invoke(true)
+            onShowSystemBar(true)
         }
     }
     NestedScaffold(
@@ -82,8 +82,8 @@ fun PoolScreen(
         canScroll = {
             refreshState.distanceFraction <= 0 && uiState.dataList.isNotEmpty()
         },
-        onScrollToTop = { onShowSystemBar.invoke(false) },
-        onScrollToBottom = { onShowSystemBar.invoke(true) },
+        onScrollToTop = { onShowSystemBar(false) },
+        onScrollToBottom = { onShowSystemBar(true) },
     ) { innerPadding ->
         PoolRefreshBody(
             uiState = uiState,
@@ -208,7 +208,7 @@ private fun PoolBody(
                         .fillMaxSize()
                         .padding(3.dp),
                     poolData = data,
-                    onClick = { onItemClick.invoke(index) }
+                    onClick = { onItemClick(index) }
                 )
             }
             checkLoadMore(uiState = uiState, state = lazyState, onLoadMore = onLoadMore)
@@ -239,7 +239,7 @@ private fun checkLoadMore(
     if (visibleItemsInfo.isNotEmpty()) {
         val lastVisibleIndex = visibleItemsInfo.last().index
         if ((totalItemsCount - lastVisibleIndex) < visibleItemsInfo.size * 1.5) {
-            onLoadMore.invoke()
+            onLoadMore()
         }
     }
 }

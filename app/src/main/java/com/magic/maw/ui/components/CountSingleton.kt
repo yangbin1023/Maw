@@ -42,7 +42,7 @@ class CountSingleton<T>(
             onDispose { unregister() }
         }
         if (initMethod) {
-            value = initFunc.invoke()
+            value = initFunc()
             initMethod = false
         }
     }

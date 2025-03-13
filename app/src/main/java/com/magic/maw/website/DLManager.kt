@@ -174,14 +174,13 @@ data class DLTask(
             delay(100)
             if (baseData.size > 0 && file.length() != baseData.size) {
                 logger.warning("file size error. expected size: ${baseData.size}, actual size: ${file.length()}")
-            } else {
-                logger.info("download success, $url")
             }
             val verifyContainer = BaseParser.get(baseData.source).getVerifyContainer()
             if (verifyContainer?.checkDlFile(file, this@DLTask) ?: defaultCheckFile(file)) {
+                logger.info("download success, $url")
                 statusFlow.update { LoadStatus.Success(file) }
             } else {
-                file.delete()
+                logger.severe("file type error. ${file.absolutePath}, $url")
                 statusFlow.update { LoadStatus.Error(RuntimeException("The request result is not the target file")) }
             }
         } catch (e: Exception) {

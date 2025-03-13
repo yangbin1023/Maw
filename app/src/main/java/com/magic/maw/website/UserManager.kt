@@ -46,7 +46,7 @@ class UserManager(val source: String) {
         }
         dao.get(source, userId)?.let {
             it.readTime = Date()
-            dbHandler.post { add(it) }
+            add(it)
             return it
         }
         return null
@@ -84,9 +84,7 @@ class UserManager(val source: String) {
         synchronized(userMap) {
             userMap[userInfo.userId] = userInfo
         }
-        dbHandler.post {
-            dao.updateOrInsert(userInfo)
-        }
+        dao.updateOrInsert(userInfo)
     }
 
     private suspend fun UserTask.start() {

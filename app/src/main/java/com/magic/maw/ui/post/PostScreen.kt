@@ -123,9 +123,9 @@ private fun NestedScaffoldBody(
     val scrollToTop: () -> Unit = { scope.launch { lazyState.scrollToItem(0, 0) } }
     LaunchedEffect(scaffoldState) {
         if (scaffoldState.scrollValue == scaffoldState.minPx) {
-            onShowSystemBar.invoke(false)
+            onShowSystemBar(false)
         } else if (scaffoldState.scrollValue == scaffoldState.maxPx) {
-            onShowSystemBar.invoke(true)
+            onShowSystemBar(true)
         }
     }
     NestedScaffold(
@@ -144,8 +144,8 @@ private fun NestedScaffoldBody(
         canScroll = {
             refreshState.distanceFraction <= 0 && uiState.dataList.isNotEmpty()
         },
-        onScrollToTop = { onShowSystemBar.invoke(false) },
-        onScrollToBottom = { onShowSystemBar.invoke(true) },
+        onScrollToTop = { onShowSystemBar(false) },
+        onScrollToBottom = { onShowSystemBar(true) },
     ) { innerPadding ->
         PostRefreshBody(
             modifier = Modifier
@@ -311,7 +311,7 @@ private fun PostBody(
                         .onGloballyPositioned { onGloballyPositioned(index, it.size.height) }
                         .clickable {
                             if (uiState.type != UiStateType.Refresh) {
-                                onItemClick.invoke(index)
+                                onItemClick(index)
                             }
                         },
                     postData = item,
@@ -369,7 +369,7 @@ private fun checkLoadMore(
     if (visibleItemsInfo.isNotEmpty()) {
         val lastVisibleIndex = visibleItemsInfo.last().index
         if ((totalItemsCount - lastVisibleIndex) < visibleItemsInfo.size * 1.5) {
-            onLoadMore.invoke()
+            onLoadMore()
         }
     }
 }

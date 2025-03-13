@@ -145,7 +145,7 @@ private fun SettingBody(
                         changeSetting.value = true
                         configFlow.update { it.copy(source = source) }
                     }
-                    onDismiss.invoke()
+                    onDismiss()
                 }
             )
         }
@@ -183,7 +183,7 @@ private fun SettingBody(
                         changeSetting.value = true
                         configFlow.updateWebConfig(websiteConfig.copy(rating = newRating))
                     }
-                    onDismiss.invoke()
+                    onDismiss()
                 })
             )
         }
@@ -216,7 +216,7 @@ private fun SettingBody(
                         else -> Quality.Sample
                     }
                     configFlow.updateWebConfig(websiteConfig.copy(quality = quality.value))
-                    onDismiss.invoke()
+                    onDismiss()
                 })
             )
         }
@@ -227,7 +227,7 @@ private fun SettingBody(
             title = stringResource(id = R.string.save),
             tips = saveQuality.toResString(LocalContext.current)
         ) { onDismiss ->
-            SaveDialog(onDismiss = onDismiss, showSaveTips = true)
+            SaveDialog(onDismiss = onDismiss)
         }
 
         // 深色模式

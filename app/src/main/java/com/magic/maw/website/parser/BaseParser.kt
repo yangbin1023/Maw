@@ -29,12 +29,12 @@ interface VerifyContainer {
 
 abstract class BaseParser {
     protected abstract val baseUrl: String
+    protected var onVerifyCallback: OnVerifyCallback? = null
     abstract val source: String
     abstract val supportRating: Int
-    abstract val tagManager: TagManager
-    abstract val userManager: UserManager
+    open val tagManager: TagManager by lazy { TagManager.get(source) }
+    open val userManager: UserManager by lazy { UserManager.get(source) }
     open val firstPageIndex: Int = 1
-    protected var onVerifyCallback: OnVerifyCallback? = null
 
     abstract suspend fun requestPostData(option: RequestOption): List<PostData>
     abstract suspend fun requestPoolData(option: RequestOption): List<PoolData>

@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
@@ -59,6 +58,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import com.hjq.toast.Toaster
 import com.magic.maw.R
 import com.magic.maw.data.PostData
@@ -109,10 +109,27 @@ fun ViewDetailBar(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val showSaveDialog = remember { mutableStateOf(false) }
-    val saveQualityList = ArrayList<Quality>()
-    postData.sampleInfo?.let { saveQualityList.add(Quality.Sample) }
-    postData.largeInfo?.let { saveQualityList.add(Quality.Large) }
-    postData.originalInfo.let { saveQualityList.add(Quality.File) }
+    val qualityList = ArrayList<Quality>()
+    val qualityItems = ArrayList<String>()
+    postData.sampleInfo?.let {
+        qualityList.add(Quality.Sample)
+        val resolutionStr = "${it.width}x${it.height}"
+        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
+        qualityItems.add("$resolutionStr$sizeStr")
+    }
+    postData.largeInfo?.let {
+        qualityList.add(Quality.Large)
+        val resolutionStr = "${it.width}x${it.height}"
+        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
+        qualityItems.add("$resolutionStr$sizeStr")
+    }
+    postData.originalInfo.let {
+        qualityList.add(Quality.File)
+        val resolutionStr = "${it.width}x${it.height}"
+        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
+        qualityItems.add("$resolutionStr$sizeStr")
+    }
+
     LaunchedEffect(maxDraggableHeight) {
         scrollableViewState.updateData(
             density = density,
@@ -158,12 +175,15 @@ fun ViewDetailBar(
             DetailContent(
                 modifier = Modifier.align(Alignment.TopCenter),
                 postData = postData,
+                qualityItems = qualityItems,
+                qualityList = qualityList,
                 onTagClick = onTagClick
             )
             SaveDialog(
                 showDialog = showSaveDialog,
-                qualityList = saveQualityList,
-                onConfirm = { quality -> onSave(postData, quality) }
+                itemList = qualityItems,
+                qualityList = qualityList,
+                onConfirm = { index -> onSave(postData, qualityList[index]) }
             )
         }
     )
@@ -247,32 +267,14 @@ private fun DetailBar(
 private fun DetailContent(
     modifier: Modifier = Modifier,
     postData: PostData,
+    qualityList: List<Quality>,
+    qualityItems: List<String>,
     onTagClick: (TagInfo, Boolean) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val config by configFlow.collectAsState()
     val tagManager = TagManager.get(config.source)
     val context = LocalContext.current
-    val qualityList = ArrayList<Quality>()
-    val qualityItems = ArrayList<String>()
-    postData.sampleInfo?.let {
-        qualityList.add(Quality.Sample)
-        val resolutionStr = "${it.width}x${it.height}"
-        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
-        qualityItems.add("$resolutionStr$sizeStr")
-    }
-    postData.largeInfo?.let {
-        qualityList.add(Quality.Large)
-        val resolutionStr = "${it.width}x${it.height}"
-        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
-        qualityItems.add("$resolutionStr$sizeStr")
-    }
-    postData.originalInfo.let {
-        qualityList.add(Quality.File)
-        val resolutionStr = "${it.width}x${it.height}"
-        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
-        qualityItems.add("$resolutionStr$sizeStr")
-    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -358,7 +360,7 @@ private fun DetailContent(
                 tips = srcUrl,
                 contentDescription = srcUrl,
                 showIcon = false,
-                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(srcUrl))) }
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, srcUrl.toUri())) }
             )
         }
         // score

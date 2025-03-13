@@ -13,8 +13,6 @@ import com.magic.maw.util.Logger
 import com.magic.maw.util.client
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.RequestOption
-import com.magic.maw.website.TagManager
-import com.magic.maw.website.UserManager
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 
@@ -24,8 +22,6 @@ class YandeParser : BaseParser() {
     override val baseUrl: String get() = "https://yande.re"
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
-    override val tagManager: TagManager by lazy { TagManager.get(source) }
-    override val userManager: UserManager by lazy { UserManager.get(source) }
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         val yandeList: ArrayList<YandeData> = client.get(getPostUrl(option)).body()

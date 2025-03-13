@@ -36,29 +36,14 @@ import com.magic.maw.util.updateWebConfig
 @Composable
 fun SaveDialog(
     showDialog: MutableState<Boolean>,
-    qualityList: List<Quality> = Quality.SaveList,
-    showSaveTips: Boolean = false,
-    onConfirm: (Quality) -> Unit = {}
+    itemList: List<String>,
+    qualityList: List<Quality>,
+    onConfirm: (Int) -> Unit = {}
 ) {
     if (!showDialog.value) {
         return
     }
-    SaveDialog(
-        onDismiss = { showDialog.value = false },
-        qualityList = qualityList,
-        showSaveTips = showSaveTips,
-        onConfirm = onConfirm
-    )
-}
 
-@Composable
-fun SaveDialog(
-    onDismiss: () -> Unit,
-    qualityList: List<Quality> = Quality.SaveList,
-    showSaveTips: Boolean = false,
-    onConfirm: (Quality) -> Unit = {}
-) {
-    SourceChangeChecker { onDismiss() }
     val config = configFlow.collectAsStateWithLifecycle().value
     val websiteConfig = config.websiteConfig
     var initialIndex = 0
@@ -68,6 +53,68 @@ fun SaveDialog(
             break
         }
     }
+    SaveDialog(
+        onDismiss = { showDialog.value = false },
+        itemList = itemList,
+        showSaveTips = false,
+        initialIndex = initialIndex
+    ) { index, showAgain ->
+        val quality = qualityList[index]
+        val newConfig = websiteConfig.copy(
+            saveQuality = quality.value,
+            showSaveDialog = showAgain
+        )
+        configFlow.updateWebConfig(newConfig)
+        onConfirm(index)
+    }
+}
+
+@Composable
+fun SaveDialog(
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val itemList = ArrayList<String>()
+    for (item in Quality.SaveList) {
+        itemList.add(item.toResString(context))
+    }
+
+    val config = configFlow.collectAsStateWithLifecycle().value
+    val websiteConfig = config.websiteConfig
+    var initialIndex = 0
+    for ((index, quality) in Quality.SaveList.withIndex()) {
+        if (websiteConfig.saveQuality == quality.value) {
+            initialIndex = index
+            break
+        }
+    }
+
+    SaveDialog(
+        onDismiss = onDismiss,
+        itemList = itemList,
+        showSaveTips = true,
+        initialIndex = initialIndex
+    ) { index, showAgain ->
+        val quality = Quality.SaveList[index]
+        val newConfig = websiteConfig.copy(
+            saveQuality = quality.value,
+            showSaveDialog = showAgain
+        )
+        configFlow.updateWebConfig(newConfig)
+    }
+}
+
+@Composable
+private fun SaveDialog(
+    onDismiss: () -> Unit,
+    itemList: List<String>,
+    showSaveTips: Boolean = false,
+    initialIndex: Int = 0,
+    onConfirm: (Int, Boolean) -> Unit
+) {
+    SourceChangeChecker { onDismiss() }
+    val config = configFlow.collectAsStateWithLifecycle().value
+    val websiteConfig = config.websiteConfig
     val selectedIndex = remember { mutableIntStateOf(initialIndex) }
     val showAgain = remember { mutableStateOf(websiteConfig.showSaveDialog) }
     val onSelected: (Int) -> Unit = { selectedIndex.intValue = it }
@@ -76,7 +123,7 @@ fun SaveDialog(
         title = { Text(text = stringResource(R.string.save)) },
         text = {
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                itemsIndexed(qualityList) { index, quality ->
+                itemsIndexed(itemList) { index, item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -89,7 +136,7 @@ fun SaveDialog(
                             onClick = { onSelected(index) }
                         )
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(text = quality.toResString(LocalContext.current))
+                        Text(text = item)
                     }
                 }
                 item {
@@ -124,14 +171,8 @@ fun SaveDialog(
             Text(
                 modifier = Modifier
                     .clickable(onClick = throttle(func = {
-                        val quality = qualityList[selectedIndex.intValue]
-                        val newConfig = websiteConfig.copy(
-                            saveQuality = quality.value,
-                            showSaveDialog = showAgain.value
-                        )
-                        configFlow.updateWebConfig(newConfig)
                         onDismiss()
-                        onConfirm(quality)
+                        onConfirm(selectedIndex.intValue, showAgain.value)
                     }))
                     .padding(5.dp),
                 text = stringResource(id = R.string.confirm)

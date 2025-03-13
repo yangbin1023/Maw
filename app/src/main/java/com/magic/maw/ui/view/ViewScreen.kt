@@ -67,7 +67,7 @@ fun ViewScreen(
         val postData = try {
             uiState.dataList[pagerState.currentPage]
         } catch (_: Throwable) {
-            onExit.invoke()
+            onExit()
             return@BoxWithConstraints
         }
         val draggableHeight = this.maxHeight - offsetValue

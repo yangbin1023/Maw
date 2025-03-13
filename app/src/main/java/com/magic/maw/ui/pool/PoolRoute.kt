@@ -42,7 +42,7 @@ fun PoolRoute(
     onOpenSubView: (Boolean) -> Unit
 ) {
     val uiState by poolViewModel.uiState.collectAsStateWithLifecycle()
-    onOpenSubView.invoke(uiState.isPostView)
+    onOpenSubView(uiState.isPostView)
 
     LaunchedEffect(Unit) {
         if (uiState.isPoolView
@@ -95,8 +95,8 @@ private fun PoolRoute(
             lazyState.scrollToItem(0, 0)
             scaffoldState.snapTo(scaffoldState.maxPx)
         }
-        onForceRefresh.invoke()
-        onExitPost.invoke()
+        onForceRefresh()
+        onExitPost()
     }
 
     AnimatedVisibility(
@@ -135,7 +135,7 @@ private fun PoolRoute(
             titleText = title.value,
             onNegative = onExitPost,
         )
-        BackHandler { onExitPost.invoke() }
+        BackHandler { onExitPost() }
     }
 }
 

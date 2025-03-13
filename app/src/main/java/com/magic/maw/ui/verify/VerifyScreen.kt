@@ -170,7 +170,7 @@ private fun VerifyContent(
                         val view = v ?: return
                         val title = view.title ?: return
                         if (title != url && title != view.url && title.isNotBlank()) {
-                            onUpdateTitle.invoke(title)
+                            onUpdateTitle(title)
                         }
                         view.evaluateJavascript("!!window._cf_chl_opt") {
                             logger.info("获取完成 ret: $it, host:${Uri.parse(url).host}")
@@ -248,7 +248,7 @@ private class JsKit(private val onCheck: (String) -> Unit) {
     @Suppress("unused")
     @JavascriptInterface
     fun checkContent(text: String) {
-        onCheck.invoke(text)
+        onCheck(text)
     }
 }
 

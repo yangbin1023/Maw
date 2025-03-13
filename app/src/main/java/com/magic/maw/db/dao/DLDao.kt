@@ -11,7 +11,7 @@ import com.magic.maw.data.Quality
 @Dao
 interface DLDao {
     @Insert
-    fun invert(info: DLInfo)
+    fun insert(info: DLInfo)
 
     @Query("SELECT * FROM dl_info")
     fun getAll(): List<DLInfo>

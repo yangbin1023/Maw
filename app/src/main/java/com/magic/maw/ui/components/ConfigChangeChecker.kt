@@ -16,10 +16,10 @@ fun ConfigChangeChecker(onChanged: () -> Unit) {
     var rating by rememberSaveable { mutableIntStateOf(config.websiteConfig.rating) }
     if (source != config.source) {
         source = config.source
-        onChanged.invoke()
+        onChanged()
     } else if (rating != config.websiteConfig.rating) {
         rating = config.websiteConfig.rating
-        onChanged.invoke()
+        onChanged()
     }
 }
 
@@ -29,7 +29,7 @@ fun SourceChangeChecker(onChanged: () -> Unit) {
     var source by rememberSaveable { mutableStateOf(config.source) }
     if (source != config.source) {
         source = config.source
-        onChanged.invoke()
+        onChanged()
     }
 }
 
@@ -39,6 +39,6 @@ fun RatingChangeChecker(onChanged: () -> Unit) {
     var rating by rememberSaveable { mutableIntStateOf(config.websiteConfig.rating) }
     if (rating != config.websiteConfig.rating) {
         rating = config.websiteConfig.rating
-        onChanged.invoke()
+        onChanged()
     }
 }

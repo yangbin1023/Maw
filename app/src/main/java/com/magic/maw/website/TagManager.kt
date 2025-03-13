@@ -47,16 +47,12 @@ class TagManager(val source: String) {
         synchronized(tagMap) {
             tagMap[tagInfo.name] = tagInfo
         }
-        dbHandler.post {
-            dao.updateOrInsert(tagInfo)
-        }
+        dao.updateOrInsert(tagInfo)
     }
 
     fun addAll(tagMap: Map<String, TagInfo>) {
         synchronized(tagMap) {
             this.tagMap.putAll(tagMap)
-        }
-        dbHandler.post {
             for (item in tagMap) {
                 dao.updateOrInsert(item.value)
             }

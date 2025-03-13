@@ -276,7 +276,7 @@ fun throttle(
 ): () -> Unit {
     return {
         if (timer.expired()) {
-            func.invoke()
+            func()
         }
     }
 }
@@ -287,7 +287,7 @@ fun <T> throttle(
 ): (T) -> Unit {
     return {
         if (timer.expired()) {
-            func.invoke(it)
+            func(it)
         }
     }
 }

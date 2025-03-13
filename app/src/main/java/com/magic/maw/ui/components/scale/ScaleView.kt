@@ -98,7 +98,7 @@ fun ScaleView(
             .width(density.run { scaleState.displayWidth.toDp() })
             .height(density.run { scaleState.displayHeight.toDp() })
         ) {
-            content.invoke()
+            content()
         }
     }
 }
