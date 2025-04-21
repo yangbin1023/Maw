@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.hjq.toast.Toaster
+import com.magic.maw.BuildConfig
 import com.magic.maw.R
 import com.magic.maw.data.Quality
 import com.magic.maw.data.Quality.Companion.toQuality
@@ -255,9 +256,13 @@ private fun SettingBody(
         // 版本
         val context = LocalContext.current
         val appInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        var versionStr = appInfo.versionName
+        if (BuildConfig.DEBUG) {
+            versionStr += "-debug"
+        }
         SettingItem(
             title = stringResource(id = R.string.version),
-            tips = appInfo.versionName,
+            tips = versionStr,
             onClickWidthThrottle = false
         ) {
             val now = System.currentTimeMillis()

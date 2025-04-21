@@ -90,10 +90,10 @@ private fun PoolRoute(
     RegisterView(name = viewName)
 
     ConfigChangeChecker {
+        changeSystemBarStatus(context, viewName, true)
         scope.launch {
-            changeSystemBarStatus(context, viewName, true)
-            lazyState.scrollToItem(0, 0)
             scaffoldState.snapTo(scaffoldState.maxPx)
+            lazyState.scrollToItem(0, 0)
         }
         onForceRefresh()
         onExitPost()

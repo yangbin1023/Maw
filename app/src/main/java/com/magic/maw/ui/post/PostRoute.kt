@@ -106,8 +106,8 @@ fun PostRoute(
     val resetTopBar: () -> Unit = {
         changeSystemBarStatus(context, viewName, true)
         scope.launch {
-            lazyState.scrollToItem(0, 0)
             scaffoldState.snapTo(scaffoldState.maxPx)
+            lazyState.scrollToItem(0, 0)
         }
     }
 
