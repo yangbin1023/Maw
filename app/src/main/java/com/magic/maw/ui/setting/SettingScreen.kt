@@ -256,13 +256,9 @@ private fun SettingBody(
         // 版本
         val context = LocalContext.current
         val appInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        var versionStr = appInfo.versionName
-        if (BuildConfig.DEBUG) {
-            versionStr += "-debug"
-        }
         SettingItem(
             title = stringResource(id = R.string.version),
-            tips = versionStr,
+            tips = appInfo.versionName,
             onClickWidthThrottle = false
         ) {
             val now = System.currentTimeMillis()
