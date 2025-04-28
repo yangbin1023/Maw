@@ -19,5 +19,6 @@ val rating_sensitive = Color(0xFFD4D72C)
 val rating_questionable = Color(0xFFF37B1D)
 val rating_explicit = Color(0xFFDD514C)
 
-val ViewDetailBarFold: Color get() = Color(0xAA555555)
+val ViewDetailBarFold: Color get() = Color(0x80555555)
+val ViewDetailBarHalfFold: Color get() = Color(0x23000000)
 val ViewDetailBarExpand: Color get() = Color(0xAAEFB8C8)

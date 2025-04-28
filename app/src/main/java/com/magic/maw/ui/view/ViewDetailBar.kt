@@ -48,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -76,7 +75,6 @@ import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.PreviewTheme
 import com.magic.maw.ui.theme.ViewDetailBarExpand
-import com.magic.maw.ui.theme.ViewDetailBarFold
 import com.magic.maw.util.Logger
 import com.magic.maw.util.ProgressNotification
 import com.magic.maw.util.TimeUtils.toFormatStr
@@ -144,9 +142,7 @@ fun ViewDetailBar(
             if (!scrollableViewState.hideContent) {
                 it.background(ViewDetailBarExpand)
             } else {
-                it.background(
-                    Brush.verticalGradient(listOf(Color.Transparent, ViewDetailBarFold))
-                )
+                it.background(ViewScreenDefaults.detailBarFoldColor)
             }
         },
         toolbar = {

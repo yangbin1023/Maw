@@ -17,6 +17,7 @@ fun RegisterView(name: String, showSystemBar: Boolean = true) {
             viewInfoList.add(ViewInfo(name, showSystemBar))
             context.showSystemBars(showSystemBar)
         }
+        logger.info("view[$name] register")
         onDispose {
             synchronized(viewInfoList) {
                 var index = viewInfoList.size - 1
@@ -31,6 +32,7 @@ fun RegisterView(name: String, showSystemBar: Boolean = true) {
                     context.showSystemBars(viewInfoList.last().showSystemBar)
                 }
             }
+            logger.info("view[$name] unregister")
         }
     }
 }

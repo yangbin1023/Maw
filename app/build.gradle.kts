@@ -1,29 +1,3 @@
-import org.apache.commons.io.output.ByteArrayOutputStream
-
-fun runCmd(cmd: String, workDir: File = file("./")): String {
-    val out = ByteArrayOutputStream()
-    project.exec {
-        workingDir = workDir
-        commandLine = cmd.split("\\s".toRegex())
-        standardOutput = out
-        errorOutput = ByteArrayOutputStream()
-    }
-    return String(out.toByteArray()).trim()
-}
-
-val tagVersion: String
-    get() {
-        val tag = try {
-            runCmd("git describe --tags")
-        } catch (e: Exception) {
-            println(e)
-            "v0.0"
-        }
-        if (tag.startsWith("v"))
-            return tag.substring(1)
-        return tag
-    }
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -33,9 +7,29 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+fun runCmd(cmd: String, workDir: File = file("./")): String {
+    val out = providers.exec {
+        workingDir = workDir
+        commandLine = cmd.split("\\s".toRegex())
+    }
+    return out.standardOutput.asText.get().trim()
+}
+
+fun getTagVersion(): String {
+    val tag = try {
+        runCmd("git describe --tags")
+    } catch (e: Exception) {
+        println(e)
+        "v0.0"
+    }
+    if (tag.startsWith("v"))
+        return tag.substring(1)
+    return tag
+}
+
 android {
     namespace = "com.magic.maw"
-    compileSdk = 34
+    compileSdk = 35
 
     val currentSigning = if (project.hasProperty("STORE_FILE")) {
         signingConfigs.create("release") {
@@ -51,9 +45,9 @@ android {
     defaultConfig {
         applicationId = "com.magic.maw"
         minSdk = 21
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
-        versionName = tagVersion
+        versionName = getTagVersion()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

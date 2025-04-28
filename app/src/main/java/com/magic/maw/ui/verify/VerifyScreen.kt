@@ -47,6 +47,7 @@ import com.magic.maw.ui.components.SourceChangeChecker
 import com.magic.maw.util.Logger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.core.net.toUri
 
 private const val viewName = "VerifyView"
 private val logger = Logger(viewName)
@@ -173,7 +174,7 @@ private fun VerifyContent(
                             onUpdateTitle(title)
                         }
                         view.evaluateJavascript("!!window._cf_chl_opt") {
-                            logger.info("获取完成 ret: $it, host:${Uri.parse(url).host}")
+                            logger.info("获取完成 ret: $it, host: ${url?.toUri()?.host}")
                             if (it == "true") {
                                 isCloudflareChallenge = true
                             } else if (isCloudflareChallenge) {

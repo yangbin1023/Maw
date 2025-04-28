@@ -36,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.magic.maw.ui.view.ViewScreenDefaults
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -213,6 +214,7 @@ private fun ScrollableViewPreview() {
         ScrollableView(
             modifier = Modifier.align(Alignment.BottomCenter),
             state = state,
+            toolbarModifier = Modifier.background(ViewScreenDefaults.detailBarFoldColor),
             toolbar = { _ ->
                 Icon(
                     modifier = Modifier.align(Alignment.CenterStart),

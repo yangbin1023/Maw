@@ -33,6 +33,7 @@ import com.magic.maw.ui.components.SourceChangeChecker
 import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.view.ViewScreen
+import com.magic.maw.util.logger
 import kotlinx.coroutines.launch
 
 private const val viewName = "Post"
@@ -184,6 +185,7 @@ fun PostRoute(
                     val offset = -(viewportHeight - itemHeight) / 2
                     lazyState.scrollToItem(pagerState.currentPage, offset)
                 }
+                logger.info("exit id: ${state.initIndex}, current id: ${pagerState.currentPage}")
                 onExitView()
             }
         }

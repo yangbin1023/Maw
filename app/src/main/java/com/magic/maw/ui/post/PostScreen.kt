@@ -308,12 +308,12 @@ private fun PostBody(
                 PostItem(
                     modifier = Modifier
                         .padding(contentPadding)
-                        .onGloballyPositioned { onGloballyPositioned(index, it.size.height) }
-                        .clickable {
-                            if (uiState.type != UiStateType.Refresh) {
-                                onItemClick(index)
-                            }
-                        },
+                        .onGloballyPositioned { onGloballyPositioned(index, it.size.height) },
+                    onClick = {
+                        if (uiState.type != UiStateType.Refresh) {
+                            onItemClick(index)
+                        }
+                    },
                     postData = item,
                     staggered = staggeredState?.value == true
                 )

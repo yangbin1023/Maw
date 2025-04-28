@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,7 @@ import java.io.File
 @Composable
 fun PostItem(
     modifier: Modifier = Modifier,
+    onClick: () -> Unit,
     postData: PostData,
     staggered: Boolean
 ) {
@@ -63,7 +65,8 @@ fun PostItem(
                 elevation = PostDefaults.ContentPadding,
                 shape = RoundedCornerShape(PostDefaults.ContentPadding)
             )
-            .background(MaterialTheme.colorScheme.surfaceContainer),
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onClick),
     ) {
         val info = localData.originalInfo
         val ratio = getPostRatio(staggered, info.width, info.height)

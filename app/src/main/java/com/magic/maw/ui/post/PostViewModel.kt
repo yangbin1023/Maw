@@ -8,6 +8,8 @@ import com.magic.maw.util.Logger
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
+import kotlinx.atomicfu.AtomicInt
+import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -54,7 +56,7 @@ private data class PostViewModelState(
     val dataList: List<PostData> = emptyList(),
     val noMore: Boolean = true,
     val type: UiStateType = UiStateType.None,
-    val viewIndex: Int = -1,
+    val viewIndex: AtomicInt = atomic(-1),
     val requestOption: RequestOption
 ) {
     private val dataMap: HashMap<Int, PostData> = HashMap()
@@ -66,7 +68,7 @@ private data class PostViewModelState(
     }
 
     fun toUiState(): PostUiState {
-        return if (viewIndex < 0) {
+        return if (viewIndex.value < 0) {
             PostUiState.Post(
                 isSearch = requestOption.tags.isNotEmpty(),
                 noMore = noMore,
@@ -75,7 +77,7 @@ private data class PostViewModelState(
             )
         } else {
             PostUiState.View(
-                initIndex = viewIndex,
+                initIndex = viewIndex.value,
                 noMore = noMore,
                 type = type,
                 dataList = dataList
@@ -231,17 +233,17 @@ class PostViewModel(
     fun setViewIndex(index: Int) {
         viewModelState.update {
             if (index >= 0 && index < it.dataList.size) {
-                it.copy(viewIndex = index)
+                it.copy(viewIndex = atomic(index))
             } else {
-                it.copy(viewIndex = -1)
+                it.copy(viewIndex = atomic(-1))
             }
         }
     }
 
     fun exitView() {
-        if (viewModelState.value.viewIndex < 0)
+        if (viewModelState.value.viewIndex.value < 0)
             return
-        viewModelState.update { it.copy(viewIndex = -1) }
+        viewModelState.update { it.copy(viewIndex = atomic(-1)) }
     }
 
     private fun getParser(): BaseParser {
