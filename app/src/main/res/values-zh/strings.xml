@@ -50,4 +50,9 @@
     <string name="save_success_click_to_open">保存成功，点击打开</string>
     <string name="download_progress">下载进度</string>
     <string name="all_cookies_cleared">已清除所有 Cookie</string>
+    <string name="every_day">每天</string>
+    <string name="every_week">每周</string>
+    <string name="every_month">每月</string>
+    <string name="every_year">每年</string>
+    <string name="file_type">文件类型</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.magic.maw.website.parser
 
+import co.touchlab.kermit.Logger
 import com.magic.maw.data.PoolData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
@@ -9,9 +10,10 @@ import com.magic.maw.data.konachan.KonachanData
 import com.magic.maw.data.konachan.KonachanPool
 import com.magic.maw.data.konachan.KonachanTag
 import com.magic.maw.data.konachan.KonachanUser
-import com.magic.maw.util.Logger
 import com.magic.maw.util.client
+import com.magic.maw.util.configFlow
 import com.magic.maw.util.cookie
+import com.magic.maw.util.hasFlag
 import com.magic.maw.util.isTextFile
 import com.magic.maw.util.json
 import com.magic.maw.util.readString
@@ -24,9 +26,12 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import java.io.File
 
-private val logger = Logger("KonachanTAG")
+private const val TAG = KonachanParser.SOURCE
 
-class KonachanParser : BaseParser(), VerifyContainer {
+/**
+ * Konachan的API和Yande的API大部分相同
+ */
+class KonachanParser : YandeParser(), VerifyContainer {
     override val baseUrl: String get() = "https://konachan.net"
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
@@ -35,22 +40,42 @@ class KonachanParser : BaseParser(), VerifyContainer {
     private val verifyChannel = Channel<VerifyResult>()
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
+        // pool.post 和 popular 没有第二页
+        if ((option.poolId >= 0 || option.popularOption != null) && option.page > firstPageIndex)
+            return emptyList()
         val url = getPostUrl(option)
         val (ret, msg) = securityRequest(url)
         if (!ret) {
             return emptyList()
         }
-        val konachanList: List<KonachanData> = json.decodeFromString(msg)
+        Logger.d(TAG) { "url: $url, msg: $msg" }
         val list = ArrayList<PostData>()
-        for (item in konachanList) {
-            val data = item.toPostData() ?: continue
+        val ratings = configFlow.value.websiteConfig.rating
+        if (option.poolId >= 0) {
+            json.decodeFromString<KonachanPool>(msg).posts?.let { posts ->
+                for (item in posts) {
+                    val data = item.toPostData() ?: continue
+                    if (ratings.hasFlag(data.rating.value)) {
+                        list.add(data)
+                    }
+                }
+            }
+        } else {
+            val konachanList: List<KonachanData> = json.decodeFromString(msg)
+            for (item in konachanList) {
+                val data = item.toPostData() ?: continue
+                if (ratings.hasFlag(data.rating.value)) {
+                    list.add(data)
+                }
+            }
+        }
+        for (data in list) {
             for ((index, tag) in data.tags.withIndex()) {
                 tagManager.get(tag.name)?.let {
                     data.tags[index] = it
                 }
             }
             data.tags.sort()
-            list.add(data)
         }
         return list
     }
@@ -76,31 +101,6 @@ class KonachanParser : BaseParser(), VerifyContainer {
                 }
             }
             list.add(data)
-        }
-        return list
-    }
-
-    override suspend fun requestPoolPostData(option: RequestOption): List<PostData> {
-        if (option.page > firstPageIndex || option.poolId < 0)
-            return emptyList()
-        val url = getPoolPostUrl(option)
-        val (ret, msg) = securityRequest(url)
-        if (!ret) {
-            return emptyList()
-        }
-        val konachanPool: KonachanPool = json.decodeFromString(msg)
-        val list = ArrayList<PostData>()
-        konachanPool.posts?.let { posts ->
-            for (item in posts) {
-                val data = item.toPostData() ?: continue
-                for ((index, tag) in data.tags.withIndex()) {
-                    tagManager.get(tag.name)?.let {
-                        data.tags[index] = it
-                    }
-                }
-                data.tags.sort()
-                list.add(data)
-            }
         }
         return list
     }
@@ -185,45 +185,6 @@ class KonachanParser : BaseParser(), VerifyContainer {
         return null
     }
 
-    override fun RequestOption.parseSearchText(text: String): List<String> {
-        if (text.isEmpty())
-            return emptyList()
-        val tagTexts = text.decode().split(" ")
-        val tagList = ArrayList<String>()
-        for (tagText in tagTexts) {
-            if (tagText.isEmpty())
-                continue
-            if (tagText.startsWith("tag:") || tagText.startsWith("-tag:"))
-                continue
-            tagList.add(tagText)
-        }
-        return tagList
-    }
-
-    override fun getPostUrl(option: RequestOption): String {
-        val tags = ArrayList<String>().apply { addAll(option.tags) }
-        getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it) }
-        val tagStr = tags.joinToString("+")
-        return "$baseUrl/post.json?page=${option.page}&limit=40&tags=$tagStr"
-    }
-
-    override fun getPoolUrl(option: RequestOption): String {
-        return "$baseUrl/pool.json?page=${option.page}"
-    }
-
-    override fun getPoolPostUrl(option: RequestOption): String {
-        return "$baseUrl/pool/show.json?id=${option.poolId}"
-    }
-
-    override fun getTagUrl(name: String, page: Int, limit: Int): String {
-        val limit2 = if (limit < 5) 5 else limit
-        return "$baseUrl/tag.json?name=$name&page=$page&limit=$limit2&order=count"
-    }
-
-    override fun getUserUrl(userId: Int): String {
-        return "$baseUrl/user.json?id=$userId"
-    }
-
     override fun getVerifyContainer(): VerifyContainer? {
         return if (onVerifyCallback == null) null else this
     }
@@ -233,7 +194,7 @@ class KonachanParser : BaseParser(), VerifyContainer {
             val text = file.readString()
             if (isVerifyHtml(text)) {
                 if (!verifying.getAndSet(true)) {
-                    logger.info("konachan download failed. invoke onVerifyCallback, url: ${task.url}")
+                    Logger.d(TAG) { "konachan download failed. invoke onVerifyCallback, url: ${task.url}" }
                     onVerifyCallback?.invoke(task.url)
                 }
                 verifyChannel.receive()
@@ -246,7 +207,7 @@ class KonachanParser : BaseParser(), VerifyContainer {
     override fun verifySuccess(url: String, text: String) {
         val tmpUrl = if (isJsonStr(text)) url else ""
         if (isVerifyHtml(text)) {
-            logger.severe("verify result error. it's still verify html")
+            Logger.w(TAG) { "verify result error. it's still verify html" }
             verifySuccess.value = false
         } else {
             verifySuccess.value = true
@@ -259,22 +220,6 @@ class KonachanParser : BaseParser(), VerifyContainer {
         verifySuccess.value = false
         verifying.value = false
         verifyChannel.trySend(VerifyResult(result = false))
-    }
-
-    private fun getRatingTag(ratings: Int): String {
-        if ((ratings and supportRating) == supportRating)
-            return ""
-        val currentRating = (ratings and supportRating)
-        println("ratings: $ratings, support rating: $supportRating, current rating: $currentRating")
-        return when (currentRating) {
-            Rating.Safe.value -> "rating:s"
-            Rating.Questionable.value -> "rating:q"
-            Rating.Explicit.value -> "rating:e"
-            Rating.Safe.value or Rating.Questionable.value -> "-rating:e"
-            Rating.Safe.value or Rating.Explicit.value -> "-rating:q"
-            Rating.Questionable.value or Rating.Explicit.value -> "-rating:s"
-            else -> ""
-        }
     }
 
     private fun isVerifyHtml(msg: String): Boolean {
@@ -301,10 +246,10 @@ class KonachanParser : BaseParser(), VerifyContainer {
                 return Pair(true, msg)
             }
             if (!verifying.getAndSet(true)) {
-                logger.info("konachan invoke onVerifyCallback, url: $url")
+                Logger.d(TAG) { "konachan invoke onVerifyCallback, url: $url" }
                 onVerifyCallback?.invoke(url)
             }
-            logger.info("konachan waiting for verify, url: $url")
+            Logger.d(TAG) { "konachan waiting for verify, url: $url" }
             val result = verifyChannel.receive()
             if (!result.result) {
                 return Pair(false, "")

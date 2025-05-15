@@ -49,4 +49,9 @@
     <string name="save_success_click_to_open">Saved successfully, click to open</string>
     <string name="download_progress">Download progress</string>
     <string name="all_cookies_cleared">All cookies cleared</string>
+    <string name="every_day">Every day</string>
+    <string name="every_week">Every week</string>
+    <string name="every_month">Every month</string>
+    <string name="every_year">Every year</string>
+    <string name="file_type">File type</string>
 </resources>

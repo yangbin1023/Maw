@@ -1,6 +1,8 @@
 package com.magic.maw.website.parser
 
+import co.touchlab.kermit.Logger
 import com.magic.maw.data.PoolData
+import com.magic.maw.data.PopularType
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
 import com.magic.maw.data.TagInfo
@@ -9,32 +11,59 @@ import com.magic.maw.data.yande.YandeData
 import com.magic.maw.data.yande.YandePool
 import com.magic.maw.data.yande.YandeTag
 import com.magic.maw.data.yande.YandeUser
-import com.magic.maw.util.Logger
 import com.magic.maw.util.client
+import com.magic.maw.util.configFlow
+import com.magic.maw.util.hasFlag
+import com.magic.maw.util.json
+import com.magic.maw.util.toMonday
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.RequestOption
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.http.URLBuilder
+import io.ktor.http.path
 
-private val logger = Logger("YandeParser")
+private const val TAG = YandeParser.SOURCE
 
-class YandeParser : BaseParser() {
+open class YandeParser : BaseParser() {
     override val baseUrl: String get() = "https://yande.re"
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
-        val yandeList: ArrayList<YandeData> = client.get(getPostUrl(option)).body()
+        // pool.post 和 popular 没有第二页
+        if ((option.poolId >= 0 || option.popularOption != null) && option.page > firstPageIndex)
+            return emptyList()
+        val url = getPostUrl(option)
         val list: ArrayList<PostData> = ArrayList()
-        for (item in yandeList) {
-            val data = item.toPostData() ?: continue
+        val msg: String = client.get(url).body()
+        Logger.d(TAG) { "url: $url, msg: $msg" }
+        val ratings = configFlow.value.websiteConfig.rating
+        if (option.poolId >= 0) {
+            json.decodeFromString<YandePool>(msg).posts?.let { posts ->
+                for (item in posts) {
+                    val data = item.toPostData() ?: continue
+                    if (ratings.hasFlag(data.rating.value)) {
+                        list.add(data)
+                    }
+                }
+            }
+        } else {
+            val yandeList: ArrayList<YandeData> = json.decodeFromString(msg)
+            for (item in yandeList) {
+                val data = item.toPostData() ?: continue
+                if (ratings.hasFlag(data.rating.value)) {
+                    list.add(data)
+                }
+            }
+        }
+        for (data in list) {
             for ((index, tag) in data.tags.withIndex()) {
                 (tagManager.getInfoStatus(tag.name).value as? LoadStatus.Success)?.let {
                     data.tags[index] = it.result
                 }
             }
             data.tags.sort()
-            list.add(data)
         }
         return list
     }
@@ -56,28 +85,6 @@ class YandeParser : BaseParser() {
             }
             list.add(data)
         }
-        return list
-    }
-
-    override suspend fun requestPoolPostData(option: RequestOption): List<PostData> {
-        if (option.page > firstPageIndex || option.poolId < 0)
-            return emptyList()
-        logger.info("start request pool post. id: ${option.poolId}")
-        val yandePool: YandePool = client.get(getPoolPostUrl(option)).body()
-        val list = ArrayList<PostData>()
-        yandePool.posts?.let { posts ->
-            for (item in posts) {
-                val data = item.toPostData() ?: continue
-                for ((index, tag) in data.tags.withIndex()) {
-                    (tagManager.getInfoStatus(tag.name).value as? LoadStatus.Success)?.let {
-                        data.tags[index] = it.result
-                    }
-                }
-                data.tags.sort()
-                list.add(data)
-            }
-        }
-        logger.info("finish request pool post. id: ${option.poolId}, size: ${list.size}")
         return list
     }
 
@@ -161,18 +168,62 @@ class YandeParser : BaseParser() {
     }
 
     override fun getPostUrl(option: RequestOption): String {
-        val tags = ArrayList<String>().apply { addAll(option.tags) }
+        if (option.poolId != -1) {
+            // 图册
+            return "$baseUrl/pool/show.json?id=${option.poolId}"
+        }
+        val builder = URLBuilder(baseUrl)
+        option.popularOption?.let { popularOption ->
+            // 热门
+            var date = popularOption.date
+            when (popularOption.type) {
+                PopularType.Day -> {
+                    builder.path("post/popular_by_day.json")
+                    builder.encodedParameters.apply {
+                        append("day", date.dayOfMonth.toString())
+                        append("month", date.monthValue.toString())
+                        append("year", date.year.toString())
+                    }
+                }
+
+                PopularType.Week -> {
+                    builder.path("post/popular_by_week.json")
+                    date = date.toMonday()
+                    builder.encodedParameters.apply {
+                        append("day", date.dayOfMonth.toString())
+                        append("month", date.monthValue.toString())
+                        append("year", date.year.toString())
+                    }
+                }
+
+                PopularType.Month -> {
+                    builder.path("post/popular_by_month.json")
+                    builder.encodedParameters.apply {
+                        append("month", date.monthValue.toString())
+                        append("year", date.year.toString())
+                    }
+                }
+
+                else -> {
+                    builder.path("post.json")
+                    option.addTag("order:score")
+                }
+            }
+        } ?: let {
+            // 普通
+            builder.path("post.json")
+        }
+        val tags = HashSet<String>().apply { addAll(option.tags) }
         getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it) }
         val tagStr = tags.joinToString("+")
-        return "$baseUrl/post.json?page=${option.page}&limit=40&tags=$tagStr"
+        builder.encodedParameters.append("page", option.page.toString())
+        builder.encodedParameters.append("limit", "40")
+        builder.encodedParameters.append("tags", tagStr)
+        return builder.build().toString()
     }
 
     override fun getPoolUrl(option: RequestOption): String {
         return "$baseUrl/pool.json?page=${option.page}"
-    }
-
-    override fun getPoolPostUrl(option: RequestOption): String {
-        return "$baseUrl/pool/show.json?id=${option.poolId}"
     }
 
     override fun getTagUrl(name: String, page: Int, limit: Int): String {

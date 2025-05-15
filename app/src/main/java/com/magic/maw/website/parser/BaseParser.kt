@@ -1,6 +1,7 @@
 package com.magic.maw.website.parser
 
 import com.magic.maw.data.PoolData
+import com.magic.maw.data.PopularType
 import com.magic.maw.data.PostData
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.UserInfo
@@ -32,13 +33,13 @@ abstract class BaseParser {
     protected var onVerifyCallback: OnVerifyCallback? = null
     abstract val source: String
     abstract val supportRating: Int
+    open val supportPopular: Int = PopularType.defaultSupport
     open val tagManager: TagManager by lazy { TagManager.get(source) }
     open val userManager: UserManager by lazy { UserManager.get(source) }
     open val firstPageIndex: Int = 1
 
     abstract suspend fun requestPostData(option: RequestOption): List<PostData>
     abstract suspend fun requestPoolData(option: RequestOption): List<PoolData>
-    abstract suspend fun requestPoolPostData(option: RequestOption): List<PostData>
     abstract suspend fun requestTagInfo(name: String): TagInfo?
     abstract suspend fun requestSuggestTagInfo(name: String, limit: Int = 10): List<TagInfo>
     abstract suspend fun requestUserInfo(userId: Int): UserInfo?
@@ -46,7 +47,6 @@ abstract class BaseParser {
 
     protected abstract fun getPostUrl(option: RequestOption): String
     protected abstract fun getPoolUrl(option: RequestOption): String
-    protected abstract fun getPoolPostUrl(option: RequestOption): String
     protected abstract fun getTagUrl(name: String, page: Int, limit: Int): String
     protected abstract fun getUserUrl(userId: Int): String
 

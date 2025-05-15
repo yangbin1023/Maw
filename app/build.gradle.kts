@@ -73,6 +73,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "1.8"
@@ -81,9 +82,6 @@ android {
         buildConfig = true
         compose = true
         viewBinding = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
     }
     packaging {
         resources {
@@ -115,6 +113,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.toaster)
     implementation(libs.atomicfu)
+    implementation(libs.kermit)
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

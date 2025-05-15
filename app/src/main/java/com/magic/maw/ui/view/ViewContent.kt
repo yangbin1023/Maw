@@ -39,6 +39,7 @@ import com.magic.maw.ui.components.ScaleImageView
 import com.magic.maw.ui.components.loadModel
 import com.magic.maw.ui.components.scale.ScaleDecoder
 import com.magic.maw.ui.components.scale.rememberScaleState
+import com.magic.maw.ui.components.throttle
 import com.magic.maw.util.isTextFile
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.LoadType
@@ -149,8 +150,8 @@ private fun ViewScreenItem(
     }
 
     when (type.value) {
-        LoadType.Waiting -> LoadingView()
-        LoadType.Loading -> LoadingView { progress.floatValue }
+        LoadType.Waiting -> LoadingView(onTab = onTab)
+        LoadType.Loading -> LoadingView(progress = { progress.floatValue }, onTab = onTab)
         LoadType.Error -> ErrorPlaceHolder { retryCount++ }
         LoadType.Success -> {
             val state = rememberScaleState(contentSize = size.value)
@@ -192,8 +193,13 @@ private fun ErrorPlaceHolder(onRetry: () -> Unit = {}) {
 }
 
 @Composable
-private fun LoadingView(progress: (() -> Float)? = null) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+private fun LoadingView(progress: (() -> Float)? = null, onTab: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(onClick = throttle(func = onTab)),
+        contentAlignment = Alignment.Center
+    ) {
         progress?.let {
             CircularProgressIndicator(progress = it)
         } ?: CircularProgressIndicator()

@@ -2,9 +2,9 @@ package com.magic.maw.ui.pool
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import com.magic.maw.data.PoolData
 import com.magic.maw.ui.post.UiStateType
-import com.magic.maw.util.Logger
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private val logger = Logger("PoolViewModel")
+private const val TAG = "PoolViewModel"
 
 data class PoolUiState(
     val dataList: List<PoolData> = emptyList(),
@@ -80,7 +80,7 @@ class PoolViewModel : ViewModel() {
         }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                logger.info("pool refresh.")
+                Logger.d(TAG) { "pool refresh." }
                 val parser = getParser()
                 val option = viewModelState.value.requestOption
                 option.ratings = configFlow.value.websiteConfig.rating
@@ -94,7 +94,7 @@ class PoolViewModel : ViewModel() {
                     }
                 }
             } catch (e: Throwable) {
-                logger.severe("refresh failed: ${e.message}")
+                Logger.e { "pool refresh failed: ${e.message}" }
                 viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }
@@ -120,7 +120,7 @@ class PoolViewModel : ViewModel() {
                     }
                 }
             } catch (e: Throwable) {
-                logger.severe("loadMore failed: ${e.message}")
+                Logger.e { "pool loadMore failed: ${e.message}" }
                 viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }

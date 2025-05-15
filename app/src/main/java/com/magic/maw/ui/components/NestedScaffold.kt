@@ -4,7 +4,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clipScrollableContainer
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -12,15 +15,19 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -91,7 +98,7 @@ private class NestedScaffoldConnection(
         }
         coroutineScope.launch { state.snapTo(targetOffset) }
         val consumedOffset = delta - (newOffset - targetOffset)
-        return available.copy(y = consumedOffset)
+        return Offset.Zero.copy(y = consumedOffset)
     }
 
     override suspend fun onPreFling(available: Velocity): Velocity {
@@ -122,8 +129,9 @@ fun rememberNestedScaffoldState(
 @Composable
 fun NestedScaffold(
     modifier: Modifier = Modifier,
-    topBar: @Composable (IntOffset) -> Unit = {},
+    topBar: @Composable () -> Unit = {},
     snackbarHost: @Composable () -> Unit = {},
+    enhancedBar: (@Composable (Modifier) -> Unit)? = null,
     state: NestedScaffoldState = rememberNestedScaffoldState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     canScroll: () -> Boolean = { true },
@@ -132,6 +140,7 @@ fun NestedScaffold(
     onScrollStop: OnScrollStop? = getDefaultOnScrollStop(onScrollToTop, onScrollToBottom),
     content: @Composable (PaddingValues) -> Unit,
 ) {
+    val density = LocalDensity.current
     val connection = remember(
         state, coroutineScope, canScroll,
         onScrollToTop, onScrollToBottom, onScrollStop
@@ -145,6 +154,7 @@ fun NestedScaffold(
             onScrollStop = onScrollStop
         )
     }
+    var enhancedBarHeight by remember { mutableStateOf(0.dp) }
 
     Scaffold(
         snackbarHost = snackbarHost,
@@ -152,10 +162,20 @@ fun NestedScaffold(
             .nestedScroll(connection)
             .clipScrollableContainer(Orientation.Vertical),
         topBar = {
-            topBar(IntOffset(0, state.scrollValue.roundToInt()))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset { IntOffset(0, state.scrollValue.roundToInt()) }
+            ) {
+                topBar()
+                enhancedBar?.invoke(
+                    Modifier.onGloballyPositioned {
+                        enhancedBarHeight = with(density) { it.size.height.toDp() }
+                    }
+                )
+            }
         }
     ) { innerPadding ->
-        val density = LocalDensity.current
         val newPadding = remember(innerPadding) {
             object : PaddingValues {
                 override fun calculateBottomPadding(): Dp = 0.dp
@@ -169,7 +189,7 @@ fun NestedScaffold(
                 override fun calculateTopPadding(): Dp {
                     val topPx = (abs(state.maxPx - state.minPx) - abs(state.scrollValue))
                     val newTop = with(density) { topPx.roundToInt().toDp() }
-                    return min(newTop, innerPadding.calculateTopPadding())
+                    return min(newTop, innerPadding.calculateTopPadding()) + enhancedBarHeight
                 }
             }
         }
@@ -185,7 +205,7 @@ fun NestedRefreshScaffold(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
-    topBar: @Composable (IntOffset) -> Unit = {},
+    topBar: @Composable () -> Unit = {},
     snackbarHost: @Composable () -> Unit = {},
     state: NestedScaffoldState = rememberNestedScaffoldState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
@@ -238,6 +258,7 @@ fun getDefaultOnScrollStop(
 
 object NestedScaffoldDefaults {
     val TopBarMinDp = 0.dp
+
     @Suppress("unused")
     val defaultOnScrollStop: OnScrollStop = func@{ scope, state, _ ->
         val percent = state.scrollPercent

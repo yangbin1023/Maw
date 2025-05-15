@@ -1,6 +1,8 @@
 package com.magic.maw.website.parser
 
+import co.touchlab.kermit.Logger
 import com.magic.maw.data.PoolData
+import com.magic.maw.data.PopularType
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
 import com.magic.maw.data.TagInfo
@@ -9,29 +11,37 @@ import com.magic.maw.data.danbooru.DanbooruData
 import com.magic.maw.data.danbooru.DanbooruPool
 import com.magic.maw.data.danbooru.DanbooruTag
 import com.magic.maw.data.danbooru.DanbooruUser
-import com.magic.maw.util.Logger
 import com.magic.maw.util.TimeUtils
 import com.magic.maw.util.client
+import com.magic.maw.util.configFlow
 import com.magic.maw.util.hasFlag
 import com.magic.maw.website.RequestOption
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.http.URLBuilder
+import io.ktor.http.path
 import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.TimeZone
 
-private val logger = Logger(DanbooruParser.SOURCE)
+private const val TAG = DanbooruParser.SOURCE
 
 class DanbooruParser : BaseParser() {
     override val baseUrl: String get() = "https://danbooru.donmai.us"
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.General.value or Rating.Sensitive.value or Rating.Questionable.value or Rating.Explicit.value
+    override val supportPopular: Int get() = PopularType.defaultSupport or PopularType.Year.value
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         val danbooruList: List<DanbooruData> = client.get(getPostUrl(option)).body()
         val list = ArrayList<PostData>()
+        val ratings = configFlow.value.websiteConfig.rating
         for (item in danbooruList) {
             val data = item.toPostData() ?: continue
+            if (!ratings.hasFlag(data.rating.value)) {
+                continue
+            }
             data.createId?.let { createId ->
                 userManager.get(createId)?.let {
                     data.uploader = it.name
@@ -44,6 +54,9 @@ class DanbooruParser : BaseParser() {
             }
             data.tags.sort()
             list.add(data)
+        }
+        if (list.isEmpty() && danbooruList.isNotEmpty()) {
+            return requestPostData(option.apply { page++ })
         }
         return list
     }
@@ -53,27 +66,6 @@ class DanbooruParser : BaseParser() {
         val list: ArrayList<PoolData> = ArrayList()
         for (item in danbooruList) {
             val data = item.toPoolData() ?: continue
-            list.add(data)
-        }
-        return list
-    }
-
-    override suspend fun requestPoolPostData(option: RequestOption): List<PostData> {
-        val danbooruList: List<DanbooruData> = client.get(getPoolPostUrl(option)).body()
-        val list = ArrayList<PostData>()
-        for (item in danbooruList) {
-            val data = item.toPostData() ?: continue
-            data.createId?.let { createId ->
-                userManager.get(createId)?.let {
-                    data.uploader = it.name
-                }
-            }
-            for ((index, tag) in data.tags.withIndex()) {
-                tagManager.get(tag.name)?.let {
-                    data.tags[index] = it
-                }
-            }
-            data.tags.sort()
             list.add(data)
         }
         return list
@@ -98,7 +90,7 @@ class DanbooruParser : BaseParser() {
                 tagManager.addAll(tagMap)
             }
         } catch (e: Exception) {
-            logger.severe("request tag info failed. name[$name], error: $e")
+            Logger.e(TAG) { "request tag info failed. name[$name], error: $e" }
         }
         return targetInfo
     }
@@ -117,7 +109,7 @@ class DanbooruParser : BaseParser() {
                 tagList.add(tag)
             }
         } catch (e: Exception) {
-            logger.severe("request suggest tag info failed. name[$name], error: $e")
+            Logger.e(TAG) { "request suggest tag info failed. name[$name], error: $e" }
         }
         tagManager.addAll(tagMap)
         return tagList
@@ -130,7 +122,7 @@ class DanbooruParser : BaseParser() {
                 return userList[0].toUserInfo()
             }
         } catch (e: Exception) {
-            logger.severe("request user info failed. id[$userId], error: $e")
+            Logger.e(TAG) { "request user info failed. id[$userId], error: $e" }
         }
         return null
     }
@@ -153,23 +145,29 @@ class DanbooruParser : BaseParser() {
     }
 
     override fun getPostUrl(option: RequestOption): String {
-        val tags = ArrayList<String>()
-        for (item in option.tags) {
-            val tag = if (item.startsWith("-")) item.substring(1).decode() else item.decode()
-            if (tag.startsWith("rating:"))
-                continue
-            tags.add(item.encode())
+        val builder = URLBuilder(baseUrl)
+        option.popularOption?.let {
+            val dateStr = it.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val scale = when (it.type) {
+                PopularType.Day -> "day"
+                PopularType.Week -> "week"
+                PopularType.Month -> "month"
+                PopularType.Year -> "year"
+                else -> ""
+            }
+            if (scale.isEmpty()) {
+                builder.path("posts.json")
+                option.tags.add("order:rank")
+            } else {
+                builder.path("explore/posts/popular.json")
+                builder.encodedParameters.apply {
+                    append("date", dateStr)
+                    append("scale", scale)
+                }
+            }
+        } ?: let {
+            builder.path("posts.json")
         }
-        getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it.encode()) }
-        tags.add("filetype:png,jpg,gif".encode())
-        return "$baseUrl/posts.json?page=${option.page}&limit=40&tags=${tags.joinToString("+")}"
-    }
-
-    override fun getPoolUrl(option: RequestOption): String {
-        return "$baseUrl/pools.json?page=${option.page}&${"search[order]=created_at".encode()}"
-    }
-
-    override fun getPoolPostUrl(option: RequestOption): String {
         val tags = ArrayList<String>()
         for (item in option.tags) {
             val tag = if (item.startsWith("-")) item.substring(1).decode() else item.decode()
@@ -179,8 +177,19 @@ class DanbooruParser : BaseParser() {
         }
         getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it.encode()) }
         tags.add("filetype:png,jpg,gif".encode())
-        tags.add("pool:${option.poolId}".encode())
-        return "$baseUrl/posts.json?page=${option.page}&limit=40&tags=${tags.joinToString("+")}"
+        if (option.poolId >= 0) {
+            tags.add("pool:${option.poolId}".encode())
+        }
+        builder.encodedParameters.apply {
+            append("page", option.page.toString())
+            append("limit", "40")
+            append("tags", tags.joinToString("+"))
+        }
+        return builder.build().toString().apply { Logger.d(TAG) { "post url: $this" } }
+    }
+
+    override fun getPoolUrl(option: RequestOption): String {
+        return "$baseUrl/pools.json?page=${option.page}&${"search[order]=created_at".encode()}"
     }
 
     override fun getTagUrl(name: String, page: Int, limit: Int): String {

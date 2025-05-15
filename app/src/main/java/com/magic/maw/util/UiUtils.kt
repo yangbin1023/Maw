@@ -19,6 +19,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import co.touchlab.kermit.Logger
 
 object UiUtils {
     fun Context.findActivity(): Activity? {
@@ -102,7 +103,7 @@ object UiUtils {
                 return it.destination.route == route
             }
         } catch (e: Exception) {
-            logger.severe(e.message)
+            Logger.e(e) { "checkTopRoute failed. ${e.message}" }
         }
         return false
     }

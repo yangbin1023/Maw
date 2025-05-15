@@ -19,8 +19,6 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
-import java.util.logging.Level
-import java.util.logging.Logger
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 
@@ -84,21 +82,4 @@ private val dbHandlerThread: HandlerThread by lazy {
 val dbHandler by lazy {
     dbHandlerThread.start()
     Handler(dbHandlerThread.looper)
-}
-
-private val loggerMap by lazy { HashMap<String, Logger>() }
-
-val logger by lazy {
-    Logger("MawTAG").apply { level = Level.ALL }
-}
-
-fun Logger(tag: String): Logger {
-    if (tag.isEmpty())
-        return logger
-    val logger: Logger
-    synchronized(loggerMap) {
-        logger = loggerMap[tag] ?: Logger.getLogger(tag)
-        loggerMap[tag] = logger
-    }
-    return logger
 }

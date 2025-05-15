@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
@@ -49,20 +48,20 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.ui.components.NestedScaffold
 import com.magic.maw.ui.components.NestedScaffoldState
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.theme.TableLayout
 import com.magic.maw.ui.theme.WaterLayout
-import com.magic.maw.util.Logger
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-private val logger = Logger("PostScreen")
+private const val TAG = "PostScreen"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,10 +71,13 @@ fun PostScreen(
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
     scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
     titleText: String = stringResource(R.string.post),
-    negativeIcon: ImageVector = Icons.Default.Menu,
     staggeredEnable: Boolean = true,
+    shadowEnable: Boolean = true,
+    searchEnable: Boolean = true,
+    negativeIcon: ImageVector = Icons.Default.Menu,
+    enhancedBar: (@Composable (Modifier) -> Unit)? = null,
     onNegative: () -> Unit = {},
-    openSearch: (() -> Unit)? = null,
+    onSearch: () -> Unit = {},
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onShowSystemBar: (Boolean) -> Unit,
@@ -88,11 +90,14 @@ fun PostScreen(
         lazyState = lazyState,
         refreshState = refreshState,
         titleText = titleText,
+        shadowEnable = shadowEnable,
+        searchEnable = searchEnable,
         negativeIcon = negativeIcon,
         staggeredState = staggeredState,
         scaffoldState = scaffoldState,
+        enhancedBar = enhancedBar,
         onNegative = onNegative,
-        openSearch = openSearch,
+        onSearch = onSearch,
         onRefresh = onRefresh,
         onLoadMore = onLoadMore,
         onShowSystemBar = onShowSystemBar,
@@ -109,10 +114,13 @@ private fun NestedScaffoldBody(
     refreshState: PullToRefreshState,
     scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
     titleText: String = stringResource(R.string.post),
+    shadowEnable: Boolean = true,
+    searchEnable: Boolean = true,
     negativeIcon: ImageVector = Icons.Default.Menu,
     staggeredState: MutableState<Boolean>? = null,
+    enhancedBar: (@Composable (Modifier) -> Unit)? = null,
     onNegative: () -> Unit = {},
-    openSearch: (() -> Unit)? = null,
+    onSearch: () -> Unit = {},
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onShowSystemBar: (Boolean) -> Unit,
@@ -129,17 +137,19 @@ private fun NestedScaffoldBody(
         }
     }
     NestedScaffold(
-        topBar = { offset ->
+        topBar = {
             PostTopBar(
-                modifier = Modifier.offset { offset },
                 titleText = titleText,
                 negativeIcon = negativeIcon,
+                shadowEnable = shadowEnable,
+                searchEnable = searchEnable,
                 staggeredState = staggeredState,
                 scrollToTop = scrollToTop,
                 onNegative = onNegative,
-                openSearch = openSearch
+                onSearch = onSearch
             )
         },
+        enhancedBar = enhancedBar,
         state = scaffoldState,
         canScroll = {
             refreshState.distanceFraction <= 0 && uiState.dataList.isNotEmpty()
@@ -169,16 +179,17 @@ private fun PostTopBar(
     modifier: Modifier = Modifier,
     titleText: String = stringResource(id = R.string.post),
     negativeIcon: ImageVector = Icons.Default.Menu,
-    enableShadow: Boolean = true,
+    shadowEnable: Boolean = true,
+    searchEnable: Boolean = true,
     staggeredState: MutableState<Boolean>? = null,
     scrollToTop: () -> Unit = {},
     onNegative: () -> Unit = {},
-    openSearch: (() -> Unit)? = null,
+    onSearch: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     TopAppBar(
         title = { Text(text = titleText) },
-        modifier = modifier.let { if (enableShadow) it.shadow(3.dp) else it },
+        modifier = modifier.let { if (shadowEnable) it.shadow(3.dp) else it },
         navigationIcon = {
             IconButton(onClick = onNegative) {
                 Icon(
@@ -200,9 +211,9 @@ private fun PostTopBar(
                     Icon(imageVector = imageVector, contentDescription = "")
                 }
             }
-            openSearch?.let {
+            if (searchEnable) {
                 IconButton(
-                    onClick = it,
+                    onClick = onSearch,
                     modifier = Modifier.width(PostDefaults.ActionsIconWidth)
                 ) {
                     Icon(imageVector = Icons.Default.Search, contentDescription = "")
@@ -295,7 +306,6 @@ private fun PostBody(
     onLoadMore: () -> Unit,
 ) {
     BoxWithConstraints(modifier = modifier) {
-
         val columns = max((this.maxWidth / 210.dp).toInt(), 2)
         val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
 
@@ -351,7 +361,7 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
     }
     if (currentSpace == Int.MAX_VALUE) {
         currentSpace = targetSpace
-        logger.warning("No suitable space found")
+        Logger.w(TAG) { "No suitable space found" }
     }
     currentSpace.toDp() / 2
 }

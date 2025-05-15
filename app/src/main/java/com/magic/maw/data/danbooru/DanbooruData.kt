@@ -184,6 +184,9 @@ class DanbooruData {
                 "original" -> variantOriginal = variant
             }
         }
+//        if (!data.fileType.isPicture()) {
+//            variantSample = null
+//        }
         var previewInfo: PostData.Info? = variant360?.toInfo()
         previewInfo ?: let { previewInfo = variant720?.toInfo() }
         previewInfo ?: let { previewInfo = variant180?.toInfo() }

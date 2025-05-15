@@ -3,9 +3,10 @@ package com.magic.maw.ui.post
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import com.magic.maw.data.PostData
-import com.magic.maw.util.Logger
 import com.magic.maw.util.configFlow
+import com.magic.maw.website.PopularOption
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.atomicfu.AtomicInt
@@ -19,7 +20,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val TAG = "PostViewModel"
-private val logger = Logger(TAG)
 
 enum class UiStateType {
     None,
@@ -151,6 +151,15 @@ class PostViewModel(
         }
     }
 
+    fun update(popularOption: PopularOption) {
+        viewModelState.value.requestOption.let {
+            if (it.popularOption != null) {
+                it.popularOption = popularOption
+                refresh(true)
+            }
+        }
+    }
+
     fun refresh(force: Boolean = checkForceRefresh()) {
         synchronized(this) {
             if (viewModelState.value.type == UiStateType.Refresh)
@@ -162,11 +171,7 @@ class PostViewModel(
                 val option = viewModelState.value.requestOption
                 val parser = getParser()
                 option.ratings = configFlow.value.websiteConfig.rating
-                val list = if (option.poolId > 0) {
-                    parser.requestPoolPostData(option.copy(page = parser.firstPageIndex))
-                } else {
-                    parser.requestPostData(option.copy(page = parser.firstPageIndex))
-                }
+                val list = parser.requestPostData(option.copy(page = parser.firstPageIndex))
                 viewModelState.update {
                     if (force) {
                         it.requestOption.page = parser.firstPageIndex
@@ -176,7 +181,7 @@ class PostViewModel(
                     }
                 }
             } catch (e: Throwable) {
-                logger.severe("refresh failed: ${e.message}")
+                Logger.e(TAG) { "post refresh failed: ${e.message}" }
                 viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }
@@ -190,11 +195,7 @@ class PostViewModel(
             try {
                 val parser = getParser()
                 val option = viewModelState.value.requestOption
-                val list = if (option.poolId > 0) {
-                    parser.requestPoolPostData(option.copy(page = option.page + 1))
-                } else {
-                    parser.requestPostData(option.copy(page = option.page + 1))
-                }
+                val list = parser.requestPostData(option.copy(page = option.page + 1))
                 viewModelState.update {
                     if (it.type != UiStateType.Refresh && list.isNotEmpty()) {
                         it.requestOption.page++
@@ -204,7 +205,7 @@ class PostViewModel(
                     }
                 }
             } catch (e: Throwable) {
-                logger.severe("loadMore failed: ${e.message}")
+                Logger.e(TAG) { "post refresh failed: ${e.message}" }
                 viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }

@@ -2,12 +2,11 @@ package com.magic.maw.website
 
 import android.content.Context
 import android.os.Environment
+import co.touchlab.kermit.Logger
 import com.magic.maw.MyApp
 import com.magic.maw.data.BaseData
-import com.magic.maw.data.FileType
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
-import com.magic.maw.util.Logger
 import com.magic.maw.util.client
 import com.magic.maw.util.cookie
 import com.magic.maw.util.isTextFile
@@ -33,7 +32,6 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 private const val TAG = "DLManager"
-private val logger = Logger(TAG)
 private val scope by lazy { CoroutineScope(Dispatchers.IO) }
 
 object DLManager {
@@ -112,7 +110,7 @@ object DLManager {
             if (taskMap[task.url] == task) {
                 taskMap.remove(task.url)
             } else {
-                logger.warning("The task is completed but does not exist in the task map.")
+                Logger.w(TAG) { "The task is completed but does not exist in the task map." }
             }
         }
     }
@@ -173,21 +171,21 @@ data class DLTask(
             channel.copyAndClose(file.writeChannel())
             delay(100)
             if (baseData.size > 0 && file.length() != baseData.size) {
-                logger.warning("file size error. expected size: ${baseData.size}, actual size: ${file.length()}")
+                Logger.w(TAG) { "file size error. expected size: ${baseData.size}, actual size: ${file.length()}" }
             }
             val verifyContainer = BaseParser.get(baseData.source).getVerifyContainer()
             if (verifyContainer?.checkDlFile(file, this@DLTask) ?: defaultCheckFile(file)) {
-                logger.info("download success, $url")
+                Logger.d(TAG) { "download success, $url" }
                 statusFlow.update { LoadStatus.Success(file) }
             } else {
-                logger.severe("file type error. ${file.absolutePath}, $url")
+                Logger.e(TAG) { "file type error. ${file.absolutePath}, $url" }
                 statusFlow.update { LoadStatus.Error(RuntimeException("The request result is not the target file")) }
             }
         } catch (e: Exception) {
             if (statusFlow.value !is LoadStatus.Success) {
                 statusFlow.value = LoadStatus.Error(e)
             }
-            logger.severe("download failed, $url, ${e.message}")
+            Logger.e(TAG) { "download failed, $url, ${e.message}" }
         }
         DLManager.removeTask(this@DLTask)
     }

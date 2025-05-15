@@ -59,19 +59,19 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
 import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.theme.PreviewTheme
-import com.magic.maw.util.Logger
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.delay
 
-private val logger = Logger("SearchScreen")
+private const val TAG = "SearchScreen"
 private const val viewName = "Search"
 
 @Composable
@@ -141,13 +141,13 @@ fun SearchScreen(
 private fun SearchTopBar(
     modifier: Modifier = Modifier,
     value: TextFieldValue,
-    enableShadow: Boolean = true,
+    shadowEnable: Boolean = true,
     onValueChange: (TextFieldValue) -> Unit,
     onFinish: () -> Unit,
     onSearch: () -> Unit,
 ) {
     TopAppBar(
-        modifier = modifier.let { if (enableShadow) it.shadow(3.dp) else it },
+        modifier = modifier.let { if (shadowEnable) it.shadow(3.dp) else it },
         navigationIcon = {
             IconButton(onClick = onFinish) {
                 Icon(
@@ -307,7 +307,7 @@ private fun SearchSuggestion(
         } else {
             suggestionList = emptyList()
         }
-        logger.info("get suggest, text: $text, list: $suggestionList")
+        Logger.d(TAG) { "get suggest, text: $text, list: $suggestionList" }
     }
     LazyColumn(
         modifier = modifier

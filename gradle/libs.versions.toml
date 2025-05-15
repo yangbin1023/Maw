@@ -18,6 +18,8 @@ ktor = "3.0.0"
 kotlinxSerializationJson = "1.7.3"
 exifinterface = "1.4.1"
 atomicfu = "0.26.1"
+desugar_jdk_libs = "2.1.5"
+kermit = "2.0.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -61,6 +63,8 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 toaster = { module = "com.github.getActivity:Toaster", version = "12.6" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 atomicfu = { group = "org.jetbrains.kotlinx", name = "atomicfu", version.ref = "atomicfu" }
+desugar_jdk_libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
+kermit = { group = "co.touchlab", name = "kermit", version.ref = "kermit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

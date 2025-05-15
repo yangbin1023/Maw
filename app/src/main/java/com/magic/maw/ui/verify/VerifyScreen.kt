@@ -40,17 +40,17 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
+import co.touchlab.kermit.Logger
 import com.magic.maw.MyApp
 import com.magic.maw.R
 import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.SourceChangeChecker
-import com.magic.maw.util.Logger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.core.net.toUri
 
 private const val viewName = "VerifyView"
-private val logger = Logger(viewName)
+private const val TAG = viewName
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +69,7 @@ fun VerifyScreen(
         topBar = {
             VerifyTopBar(
                 title = title,
-                enableShadow = true,
+                shadowEnable = true,
                 onFinish = onCancel
             )
         }
@@ -89,12 +89,12 @@ fun VerifyScreen(
 private fun VerifyTopBar(
     modifier: Modifier = Modifier,
     title: MutableState<String>,
-    enableShadow: Boolean = true,
+    shadowEnable: Boolean = true,
     onFinish: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     CenterAlignedTopAppBar(
-        modifier = modifier.let { if (enableShadow) it.shadow(3.dp) else it },
+        modifier = modifier.let { if (shadowEnable) it.shadow(3.dp) else it },
         title = { Text(title.value) },
         navigationIcon = {
             IconButton(onClick = onFinish) {
@@ -148,7 +148,7 @@ private fun VerifyContent(
 
                     @Deprecated("Deprecated in Java")
                     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                        return url?.let { shouldOverrideUrlLoading(Uri.parse(it)) } != false
+                        return url?.let { shouldOverrideUrlLoading(it.toUri()) } != false
                     }
 
                     override fun shouldOverrideUrlLoading(
@@ -166,7 +166,7 @@ private fun VerifyContent(
                         val cookieManager = CookieManager.getInstance()
                         url?.let {
                             val cookie = cookieManager.getCookie(it)
-                            logger.info("url: $url, cookie: $cookie")
+                            Logger.d(TAG) { "url: $url, cookie: $cookie" }
                         }
                         val view = v ?: return
                         val title = view.title ?: return
@@ -174,7 +174,7 @@ private fun VerifyContent(
                             onUpdateTitle(title)
                         }
                         view.evaluateJavascript("!!window._cf_chl_opt") {
-                            logger.info("获取完成 ret: $it, host: ${url?.toUri()?.host}")
+                            Logger.i(TAG) { "获取完成 ret: $it, host: ${url?.toUri()?.host}" }
                             if (it == "true") {
                                 isCloudflareChallenge = true
                             } else if (isCloudflareChallenge) {
@@ -208,7 +208,7 @@ private fun VerifyContent(
                 }
             }
         }) {
-            logger.info("reload url: $url")
+            Logger.d(TAG) { "reload url: $url" }
             val headerMap = hashMapOf(
                 "User-Agent" to VerifyViewDefaults.UserAgent,
             )
@@ -240,11 +240,6 @@ private fun VerifyProgressBar(modifier: Modifier = Modifier, progress: MutableFl
     }
 }
 
-private fun getHost(url: String): String? {
-    val uri = Uri.parse(url)
-    return uri.host
-}
-
 private class JsKit(private val onCheck: (String) -> Unit) {
     @Suppress("unused")
     @JavascriptInterface
@@ -256,7 +251,7 @@ private class JsKit(private val onCheck: (String) -> Unit) {
 object VerifyViewDefaults {
     val UserAgent: String by lazy {
         WebSettings.getDefaultUserAgent(MyApp.app).apply {
-            logger.info("Default UA: $this")
+            Logger.i(TAG) { "Default UA: $this" }
         }
     }
     const val JSK_CHECK = "javascript:jsk.checkContent(document.documentElement.textContent)"

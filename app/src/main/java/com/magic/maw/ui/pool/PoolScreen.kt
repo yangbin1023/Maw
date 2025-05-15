@@ -72,12 +72,7 @@ fun PoolScreen(
     }
     NestedScaffold(
         modifier = modifier,
-        topBar = { offset ->
-            PoolTopBar(
-                modifier = Modifier.offset { offset },
-                openDrawer = openDrawer
-            )
-        },
+        topBar = { PoolTopBar(openDrawer = openDrawer) },
         state = scaffoldState,
         canScroll = {
             refreshState.distanceFraction <= 0 && uiState.dataList.isNotEmpty()
@@ -101,13 +96,13 @@ fun PoolScreen(
 @Composable
 private fun PoolTopBar(
     modifier: Modifier = Modifier,
-    enableShadow: Boolean = true,
+    shadowEnable: Boolean = true,
     openDrawer: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
     TopAppBar(
         title = { Text(text = stringResource(id = R.string.pool)) },
-        modifier = modifier.let { if (enableShadow) it.shadow(3.dp) else it },
+        modifier = modifier.let { if (shadowEnable) it.shadow(3.dp) else it },
         navigationIcon = {
             IconButton(onClick = openDrawer) {
                 Icon(

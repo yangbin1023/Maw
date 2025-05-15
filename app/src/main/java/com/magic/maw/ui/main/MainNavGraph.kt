@@ -7,17 +7,10 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
@@ -27,16 +20,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.magic.maw.R
+import co.touchlab.kermit.Logger
 import com.magic.maw.ui.components.SourceChangeChecker
 import com.magic.maw.ui.pool.PoolRoute
 import com.magic.maw.ui.pool.PoolViewModel
+import com.magic.maw.ui.popular.PopularRoute
+import com.magic.maw.ui.popular.PopularViewModel
 import com.magic.maw.ui.post.PostRoute
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.search.SearchScreen
 import com.magic.maw.ui.setting.SettingScreen
 import com.magic.maw.ui.verify.VerifyScreen
-import com.magic.maw.util.Logger
 import com.magic.maw.util.UiUtils.checkTopRoute
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.parser.BaseParser
@@ -44,7 +38,7 @@ import com.magic.maw.website.parser.OnVerifyCallback
 import com.magic.maw.website.parser.VerifyContainer
 import kotlinx.coroutines.launch
 
-private val logger = Logger("MainNavGraph")
+private const val TAG = "MainNavGraph"
 
 @Composable
 fun MainNavGraph(
@@ -57,16 +51,18 @@ fun MainNavGraph(
 ) {
     val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
     val poolViewModel: PoolViewModel = viewModel()
+    val popularViewModel: PopularViewModel = viewModel()
     val scope = rememberCoroutineScope()
 
     val verifyContainer = registerVerifyCallback { url ->
-        logger.info("call on verify url: $url")
+        Logger.d(TAG) { "call on verify url: $url" }
         navController.navigate(MainRoutes.verify(url))
     }
 
     SourceChangeChecker {
         postViewModel.clearData()
         poolViewModel.clearData()
+        popularViewModel.clearData()
     }
 
     NavHost(
@@ -82,7 +78,7 @@ fun MainNavGraph(
             PostRoute(
                 postViewModel = postViewModel,
                 onNegative = openDrawer,
-                openSearch = { navController.navigate(MainRoutes.search(it)) },
+                onSearch = { text, _ -> navController.navigate(MainRoutes.search(text)) },
                 onOpenSubView = { inSubView.value = it }
             )
         }
@@ -94,16 +90,10 @@ fun MainNavGraph(
             )
         }
         composable(route = MainRoutes.POPULAR) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
-                Text(
-                    text = stringResource(id = R.string.popular),
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
+            PopularRoute(
+                popularViewModel = popularViewModel,
+                openDrawer = openDrawer
+            )
         }
         composable(route = MainRoutes.SETTING) {
             SettingScreen(
@@ -176,7 +166,7 @@ private val defaultEnter: AnimatedScope.() -> EnterTransition = {
     val slideIn = slideIntoContainer(slideStart, tween(700))
     val targetRoute = targetState.destination.route
     val initialRoute = initialState.destination.route
-    logger.info("enter from: $initialRoute, to: $targetRoute")
+    Logger.d(TAG) { "enter from: $initialRoute, to: $targetRoute" }
     if (!MainRoutes.isMainView(initialRoute) || !MainRoutes.isMainView(targetRoute)) {
         slideIn
     } else {
@@ -228,8 +218,8 @@ private fun printNavBackStack(navController: NavHostController) {
         for (item in list) {
             routeList.add(item.destination.route ?: "unknown")
         }
-        logger.info("current back stack list: $routeList")
+        Logger.d(TAG)  { "current back stack list: $routeList" }
     } catch (e: Exception) {
-        logger.severe(e.message)
+        Logger.e(e, TAG) { "printNavBackStack failed. ${e.message}" }
     }
 }

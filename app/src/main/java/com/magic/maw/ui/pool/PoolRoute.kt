@@ -8,6 +8,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -131,7 +133,8 @@ private fun PoolRoute(
         }
         PostRoute(
             postViewModel = postViewModel,
-            isSubView = true,
+            searchEnable = false,
+            negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
             titleText = title.value,
             onNegative = onExitPost,
         )

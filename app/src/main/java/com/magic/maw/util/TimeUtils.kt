@@ -1,6 +1,9 @@
 package com.magic.maw.util
 
 import java.text.SimpleDateFormat
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
@@ -48,4 +51,16 @@ object TimeUtils {
         val simpleDateFormat = getFormat(formatStr)
         return simpleDateFormat.format(Date(this))
     }
+}
+
+fun LocalDate.toMonday(): LocalDate {
+    return minusDays((dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
+}
+
+fun LocalDate.toSunday(): LocalDate {
+    return plusDays((DayOfWeek.SUNDAY.value - dayOfWeek.value).toLong())
+}
+
+fun LocalDate.format(): String {
+    return format(DateTimeFormatter.ofPattern("yyyy/M/d"))
 }

@@ -29,6 +29,26 @@ fun File.isTextFile(len: Int = 256): Boolean {
     return true
 }
 
+fun File.isGifFile(): Boolean {
+    if (!isFile || !exists()) {
+        return false
+    }
+    val gifSignature = byteArrayOf(0x47, 0x49, 0x46, 0x38, 0x37, 0x61) // GIF87a
+    val gifSignature2 = byteArrayOf(0x47, 0x49, 0x46, 0x38, 0x39, 0x61) // GIF89a
+    val buffer = ByteArray(6)
+
+    try {
+        FileInputStream(this).use { fis ->
+            if (fis.read(buffer) == buffer.size) {
+                return buffer.contentEquals(gifSignature) || buffer.contentEquals(gifSignature2)
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return false
+}
+
 fun File.readString(charset: String? = null): String {
     var result: String
     FileInputStream(this).use { fis ->

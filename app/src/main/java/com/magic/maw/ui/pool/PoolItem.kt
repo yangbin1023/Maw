@@ -125,7 +125,7 @@ private fun ItemImageView(modifier: Modifier = Modifier, poolData: PoolData) {
                         poolId = poolData.id,
                         ratings = configFlow.value.getWebsiteConfig(poolData.source).rating
                     )
-                    parser.requestPoolPostData(option)
+                    parser.requestPostData(option)
                 } catch (_: Exception) {
                     emptyList()
                 }
@@ -138,7 +138,7 @@ private fun ItemImageView(modifier: Modifier = Modifier, poolData: PoolData) {
             return@LaunchedEffect
         }
         val postData = try {
-            poolData.posts.last()
+            poolData.posts.first()
         } catch (_:Throwable) {
             type.value = LoadType.Error
             return@LaunchedEffect

@@ -11,7 +11,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -22,9 +21,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import co.touchlab.kermit.Logger
 import com.hjq.toast.Toaster
 import com.magic.maw.R
 import com.magic.maw.ui.components.RatingChangeChecker
@@ -33,7 +35,6 @@ import com.magic.maw.ui.components.SourceChangeChecker
 import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.view.ViewScreen
-import com.magic.maw.util.logger
 import kotlinx.coroutines.launch
 
 private const val viewName = "Post"
@@ -42,10 +43,14 @@ private const val viewName = "Post"
 fun PostRoute(
     postViewModel: PostViewModel,
     titleText: String = stringResource(R.string.post),
-    isSubView: Boolean = false,
+    viewName: String = com.magic.maw.ui.post.viewName,
     staggeredEnable: Boolean = true,
+    shadowEnable: Boolean = true,
+    searchEnable: Boolean = true,
+    negativeIcon: ImageVector = Icons.Default.Menu,
+    enhancedBar: (@Composable (Modifier) -> Unit)? = null,
     onNegative: () -> Unit = {},
-    openSearch: ((String) -> Unit)? = null,
+    onSearch: (String, Boolean) -> Unit = { t, b -> },
     onOpenSubView: (Boolean) -> Unit = {},
 ) {
     val uiState by postViewModel.uiState.collectAsStateWithLifecycle()
@@ -54,10 +59,21 @@ fun PostRoute(
     PostRoute(
         uiState = uiState,
         titleText = titleText,
-        isSubView = isSubView,
+        viewName = viewName,
         staggeredEnable = staggeredEnable,
+        shadowEnable = shadowEnable,
+        searchEnable = searchEnable,
+        negativeIcon = negativeIcon,
+        enhancedBar = enhancedBar,
         onNegative = onNegative,
-        openSearch = openSearch,
+        onSearch = { text, just ->
+            if (just) {
+                postViewModel.search(text)
+                postViewModel.exitView()
+            } else {
+                onSearch(text, false)
+            }
+        },
         onRefresh = { postViewModel.refresh() },
         onForceRefresh = { postViewModel.refresh(true) },
         onLoadMore = { postViewModel.loadMore() },
@@ -67,10 +83,6 @@ fun PostRoute(
             postViewModel.clearTags()
             postViewModel.refresh(true)
         },
-        onSearch = {
-            postViewModel.search(it)
-            postViewModel.exitView()
-        }
     )
 }
 
@@ -80,17 +92,20 @@ fun PostRoute(
 fun PostRoute(
     uiState: PostUiState,
     titleText: String = stringResource(R.string.post),
-    isSubView: Boolean = false,
+    viewName: String = com.magic.maw.ui.post.viewName,
     staggeredEnable: Boolean = true,
+    shadowEnable: Boolean = true,
+    searchEnable: Boolean = true,
+    negativeIcon: ImageVector = Icons.Default.Menu,
+    enhancedBar: (@Composable (Modifier) -> Unit)? = null,
     onNegative: () -> Unit,
-    openSearch: ((String) -> Unit)? = null,
+    onSearch: (String, Boolean) -> Unit = { t, b -> },
     onRefresh: () -> Unit,
     onForceRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onItemClick: (Int) -> Unit,
     onExitView: () -> Unit,
     onClearSearch: () -> Unit,
-    onSearch: (String) -> Unit,
 ) {
     val fadeIn = fadeIn(animationSpec = tween(700))
     val fadeOut = fadeOut(animationSpec = tween(700))
@@ -117,11 +132,6 @@ fun PostRoute(
     when (uiState) {
         is PostUiState.Post -> postState = uiState
         is PostUiState.View -> viewState = uiState
-    }
-    val negativeIcon = if (isSubView) {
-        Icons.AutoMirrored.Filled.ArrowBack
-    } else {
-        Icons.Default.Menu
     }
     RegisterView(name = viewName)
 
@@ -153,10 +163,13 @@ fun PostRoute(
             refreshState = refreshState,
             scaffoldState = scaffoldState,
             titleText = titleText,
-            negativeIcon = negativeIcon,
             staggeredEnable = staggeredEnable,
+            shadowEnable = shadowEnable,
+            searchEnable = searchEnable,
+            negativeIcon = negativeIcon,
+            enhancedBar = enhancedBar,
             onNegative = onNegative,
-            openSearch = openSearch?.let { { it.invoke("") } },
+            onSearch = { onSearch("", false) },
             onRefresh = onRefresh,
             onLoadMore = onLoadMore,
             onShowSystemBar = { changeSystemBarStatus(context, viewName, it) },
@@ -185,7 +198,7 @@ fun PostRoute(
                     val offset = -(viewportHeight - itemHeight) / 2
                     lazyState.scrollToItem(pagerState.currentPage, offset)
                 }
-                logger.info("exit id: ${state.initIndex}, current id: ${pagerState.currentPage}")
+                Logger.d(viewName) { "exit id: ${state.initIndex}, current id: ${pagerState.currentPage}" }
                 onExitView()
             }
         }
@@ -195,14 +208,12 @@ fun PostRoute(
             onLoadMore = onLoadMore,
             onExit = onExit,
             onTagClick = onTagClick@{ tag, justSearch ->
-                if (isSubView)
+                if (!searchEnable)
                     return@onTagClick
-                if (justSearch || openSearch == null) {
+                if (justSearch) {
                     resetTopBar()
-                    onSearch(tag.name)
-                } else {
-                    openSearch(tag.name)
                 }
+                onSearch(tag.name, justSearch)
             }
         )
         BackHandler(onBack = onExit)

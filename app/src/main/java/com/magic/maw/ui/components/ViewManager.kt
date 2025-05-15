@@ -4,9 +4,10 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
+import co.touchlab.kermit.Logger
 import com.magic.maw.util.UiUtils.showSystemBars
-import com.magic.maw.util.logger
 
+private const val TAG = "ViewManager"
 private val viewInfoList by lazy { ArrayList<ViewInfo>() }
 
 @Composable
@@ -17,7 +18,7 @@ fun RegisterView(name: String, showSystemBar: Boolean = true) {
             viewInfoList.add(ViewInfo(name, showSystemBar))
             context.showSystemBars(showSystemBar)
         }
-        logger.info("view[$name] register")
+        Logger.d(TAG) { "view[$name] register" }
         onDispose {
             synchronized(viewInfoList) {
                 var index = viewInfoList.size - 1
@@ -32,7 +33,7 @@ fun RegisterView(name: String, showSystemBar: Boolean = true) {
                     context.showSystemBars(viewInfoList.last().showSystemBar)
                 }
             }
-            logger.info("view[$name] unregister")
+            Logger.d(TAG) { "view[$name] unregister" }
         }
     }
 }
@@ -46,13 +47,13 @@ fun changeSystemBarStatus(context: Context, name: String, showSystemBar: Boolean
                 if (index == viewInfoList.size - 1) {
                     context.showSystemBars(showSystemBar)
                 }
-                logger.info("set system bar status, [$name][$showSystemBar][${index + 1}/${viewInfoList.size}]")
+                Logger.i(TAG) { "set system bar status, [$name][$showSystemBar][${index + 1}/${viewInfoList.size}]" }
                 return
             }
             index--
         }
     }
-    logger.severe("can't find view. [$name][$showSystemBar]")
+    Logger.e(TAG) { "can't find view. [$name][$showSystemBar]" }
     return
 }
 

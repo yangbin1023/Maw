@@ -28,8 +28,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import co.touchlab.kermit.Logger
 import com.hjq.toast.Toaster
-import com.magic.maw.BuildConfig
 import com.magic.maw.R
 import com.magic.maw.data.Quality
 import com.magic.maw.data.Quality.Companion.toQuality
@@ -46,7 +46,6 @@ import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.supportDynamicColor
 import com.magic.maw.ui.view.SaveDialog
 import com.magic.maw.util.configFlow
-import com.magic.maw.util.logger
 import com.magic.maw.util.updateWebConfig
 import com.magic.maw.website.parser.BaseParser
 import com.magic.maw.website.parser.DanbooruParser
@@ -69,7 +68,7 @@ fun SettingScreen(
     RegisterView(name = viewName)
     Scaffold(topBar = {
         SettingTopBar(
-            enableShadow = false,
+            shadowEnable = false,
             onFinish = onFinish ?: {},
         )
     }) { innerPadding ->
@@ -85,12 +84,12 @@ fun SettingScreen(
 @Composable
 private fun SettingTopBar(
     modifier: Modifier = Modifier,
-    enableShadow: Boolean = true,
+    shadowEnable: Boolean = true,
     onFinish: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     CenterAlignedTopAppBar(
-        modifier = modifier.let { if (enableShadow) it.shadow(3.dp) else it },
+        modifier = modifier.let { if (shadowEnable) it.shadow(3.dp) else it },
         title = { Text(stringResource(R.string.setting)) },
         navigationIcon = {
             IconButton(onClick = onFinish) {
@@ -268,7 +267,7 @@ private fun SettingBody(
                 clickVersionItemCount = 1
             }
             lastClickVersionItemTime = now
-            logger.info("click version item count: $clickVersionItemCount")
+            Logger.v { "click version item count: $clickVersionItemCount" }
             if (clickVersionItemCount >= 5) {
                 clickVersionItemCount = 0
                 CookieManager.getInstance().removeAllCookies(null)

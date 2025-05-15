@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.graphics.drawable.toBitmap
+import co.touchlab.kermit.Logger
 import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.request.ImageRequest
@@ -24,6 +25,7 @@ import com.magic.maw.ui.components.scale.ScaleView
 import com.magic.maw.ui.components.scale.createScaleDecoder
 import com.magic.maw.ui.components.scale.getViewPort
 import com.magic.maw.ui.components.scale.rememberScaleState
+import com.magic.maw.util.isGifFile
 import com.magic.maw.website.LoadStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +46,7 @@ fun ScaleImageView(
         onTap = onTap,
         onDoubleTap = onDoubleTap
     ) {
+        Logger.d("ScaleImageView") { "model: ${model?.javaClass?.name}" }
         when (model) {
             is ScaleDecoder -> {
                 ScaleCanvas(
@@ -98,6 +101,12 @@ fun loadModel(
         }
     } catch (e: Throwable) {
         println(e)
+    }
+    if (file.isGifFile()) {
+        flow.update {
+            LoadStatus.Success(Pair(file, defaultSize))
+        }
+        return flow
     }
     val imageRequest = ImageRequest.Builder(context)
         .data(file)

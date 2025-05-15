@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import co.touchlab.kermit.Logger
 import com.hjq.toast.Toaster
 import com.magic.maw.R
 import com.magic.maw.data.PostData
@@ -75,7 +76,6 @@ import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.PreviewTheme
 import com.magic.maw.ui.theme.ViewDetailBarExpand
-import com.magic.maw.util.Logger
 import com.magic.maw.util.ProgressNotification
 import com.magic.maw.util.TimeUtils.toFormatStr
 import com.magic.maw.util.configFlow
@@ -94,7 +94,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val logger = Logger("ViewTAG")
+private const val TAG = "ViewTAG"
 
 @Composable
 fun ViewDetailBar(
@@ -348,6 +348,12 @@ private fun DetailContent(
                 showIcon = false
             )
         }
+        // FileType
+        SettingItem(
+            title = stringResource(R.string.file_type),
+            tips = postData.fileType.name,
+            showIcon = false
+        )
         // source
         val srcUrl = postData.srcUrl ?: ""
         if (srcUrl.isNotEmpty()) {
@@ -518,7 +524,7 @@ private suspend fun saveFile(context: Context, postData: PostData, quality: Qual
                 try {
                     if (status.result.isTextFile()) {
                         status.result.delete()
-                        logger.info("保存文件失败，文本文件")
+                        Logger.e(TAG) { "保存文件失败，文本文件" }
                         val msg = context.getString(R.string.download_failed)
                         Toaster.show(msg)
                         notification?.finish(text = msg)
@@ -528,10 +534,10 @@ private suspend fun saveFile(context: Context, postData: PostData, quality: Qual
                     val text = context.getString(R.string.save_success_click_to_open)
                     notification?.finish(text = text, uri = uri)
                     Toaster.show(context.getString(R.string.save_success))
-                    logger.info("保存文件成功, uri: $uri")
+                    Logger.d(TAG) { "保存文件成功, uri: $uri" }
                 } catch (e: Exception) {
                     val msg = context.getString(R.string.save_failed)
-                    logger.info("$msg: ${e.message}")
+                    Logger.e(TAG) { "$msg: ${e.message}" }
                     notification?.finish(text = msg)
                     Toaster.show(msg)
                 }
