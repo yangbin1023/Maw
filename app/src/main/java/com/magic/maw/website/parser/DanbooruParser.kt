@@ -176,7 +176,6 @@ class DanbooruParser : BaseParser() {
             tags.add(item.encode())
         }
         getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it.encode()) }
-        tags.add("filetype:png,jpg,gif".encode())
         if (option.poolId >= 0) {
             tags.add("pool:${option.poolId}".encode())
         }

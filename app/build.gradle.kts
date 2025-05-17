@@ -114,6 +114,8 @@ dependencies {
     implementation(libs.toaster)
     implementation(libs.atomicfu)
     implementation(libs.kermit)
+    implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.media3.exoplayer)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)

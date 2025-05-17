@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +57,7 @@ fun ViewScreen(
     var showTopBar by remember { mutableStateOf(context.isShowStatusBars()) }
     val offsetValue = if (showTopBar) topBarMaxHeight else 0.dp
     val onTap: () -> Unit = { showTopBar = !showTopBar }
+    val playerState = remember { VideoPlayerState(context = context) }
     val topAppBarOffset by animateDpAsState(
         targetValue = offsetValue - topBarMaxHeight,
         label = "showTopAppBar"
@@ -63,6 +65,9 @@ fun ViewScreen(
     LaunchedEffect(Unit) {
         delay(1500)
         showTopBar = false
+    }
+    DisposableEffect(Unit) {
+        onDispose { playerState.release() }
     }
     RegisterView(name = viewName, showTopBar)
 
@@ -82,6 +87,7 @@ fun ViewScreen(
         ViewContent(
             pagerState = pagerState,
             dataList = uiState.dataList,
+            playerState = playerState,
             onLoadMore = onLoadMore,
             onExit = onExit,
             onTab = onTap
@@ -102,6 +108,7 @@ fun ViewScreen(
         ViewDetailBar(
             modifier = Modifier.align(Alignment.BottomCenter),
             postData = postData,
+            playerState = playerState,
             maxDraggableHeight = draggableHeight,
             onTagClick = onTagClick
         )

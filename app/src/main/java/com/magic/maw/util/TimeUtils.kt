@@ -51,6 +51,20 @@ object TimeUtils {
         val simpleDateFormat = getFormat(formatStr)
         return simpleDateFormat.format(Date(this))
     }
+
+    fun Long.formatTimeStr(hasHour: Boolean = false): String {
+        val value = this / 1000
+        if (hasHour) {
+            val second = value % 60
+            val minute = value / 60 % 60
+            val hour = value / 3600
+            return String.format(Locale.getDefault(), "%02d:%02d:%02d", hour, minute, second)
+        } else {
+            val second = value % 60
+            val minute = value / 60
+            return String.format(Locale.getDefault(), "%02d:%02d", minute, second)
+        }
+    }
 }
 
 fun LocalDate.toMonday(): LocalDate {

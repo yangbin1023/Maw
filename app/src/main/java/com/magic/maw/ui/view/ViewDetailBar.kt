@@ -100,6 +100,7 @@ private const val TAG = "ViewTAG"
 fun ViewDetailBar(
     modifier: Modifier = Modifier,
     postData: PostData,
+    playerState: VideoPlayerState,
     maxDraggableHeight: Dp,
     onTagClick: (TagInfo, Boolean) -> Unit
 ) {
@@ -171,6 +172,7 @@ fun ViewDetailBar(
             DetailContent(
                 modifier = Modifier.align(Alignment.TopCenter),
                 postData = postData,
+                playerState = playerState,
                 qualityItems = qualityItems,
                 qualityList = qualityList,
                 onTagClick = onTagClick
@@ -263,6 +265,7 @@ private fun DetailBar(
 private fun DetailContent(
     modifier: Modifier = Modifier,
     postData: PostData,
+    playerState: VideoPlayerState,
     qualityList: List<Quality>,
     qualityItems: List<String>,
     onTagClick: (TagInfo, Boolean) -> Unit
@@ -276,6 +279,11 @@ private fun DetailContent(
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
+
+        VideoPlayerControllerBar(
+            state = playerState,
+        )
+
         ContentHeader(stringResource(R.string.tags))
 
         var tagChanged = false

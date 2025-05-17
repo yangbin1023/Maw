@@ -33,6 +33,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.magic.maw.R
 import com.magic.maw.data.PostData
 import com.magic.maw.ui.components.ScaleImageView
@@ -49,12 +50,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
+import java.io.File
 import kotlin.math.abs
 
 @Composable
 fun ViewContent(
     pagerState: PagerState,
     dataList: List<PostData>,
+    playerState: VideoPlayerState,
     onLoadMore: () -> Unit,
     onExit: () -> Unit,
     onTab: () -> Unit = {},
@@ -78,7 +81,8 @@ fun ViewContent(
         }
         ViewScreenItem(
             data = dataList[index],
-            reset = pagerState.settledPage != index,
+            playerState = playerState,
+            focusOn = pagerState.settledPage == index,
             onTab = onTab
         )
     }
@@ -87,7 +91,8 @@ fun ViewContent(
 @Composable
 private fun ViewScreenItem(
     data: PostData,
-    reset: Boolean = false,
+    playerState: VideoPlayerState,
+    focusOn: Boolean = true,
     onTab: () -> Unit = {},
 ) {
     val quality = data.quality
@@ -120,6 +125,12 @@ private fun ViewScreenItem(
                 type.value = LoadType.Loading
                 progress.floatValue = it.progress
             } else if (it is LoadStatus.Success) {
+                if (data.fileType.isVideo()) {
+                    (model.value as? ScaleDecoder)?.release()
+                    type.value = LoadType.Success
+                    model.value = it.result
+                    return@collect
+                }
                 withContext(Dispatchers.IO) {
                     if (it.result.isTextFile()) {
                         val value = LoadStatus.Error(IOException("file is text file"))
@@ -148,20 +159,40 @@ private fun ViewScreenItem(
             }
         }
     }
+    if (focusOn) {
+        playerState.isEnable.value = data.fileType.isVideo()
+    }
 
     when (type.value) {
         LoadType.Waiting -> LoadingView(onTab = onTab)
         LoadType.Loading -> LoadingView(progress = { progress.floatValue }, onTab = onTab)
         LoadType.Error -> ErrorPlaceHolder { retryCount++ }
         LoadType.Success -> {
-            val state = rememberScaleState(contentSize = size.value)
-            LaunchedEffect(reset) { if (reset) state.resetImmediately() }
-            ScaleImageView(
-                model = model.value,
-                scaleState = state,
-                onTap = { onTab() },
-                onDoubleTap = { scope.launch { (state.toggleScale(it)) } }
-            )
+            if (data.fileType.isVideo()) {
+                if (!focusOn) return
+                val file = (model.value as? File) ?: return
+                VideoPlayerView(
+                    videoUri = file.toUri(),
+                    state = playerState,
+                    onTab = onTab
+                )
+            } else if (data.fileType.isPicture()) {
+                val state = rememberScaleState(contentSize = size.value)
+                LaunchedEffect(focusOn) { if (!focusOn) state.resetImmediately() }
+                ScaleImageView(
+                    model = model.value,
+                    scaleState = state,
+                    onTap = { onTab() },
+                    onDoubleTap = { scope.launch { (state.toggleScale(it)) } }
+                )
+            } else {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Text(
+                        text = stringResource(R.string.unknown) + " " + stringResource(R.string.file_type),
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
         }
     }
 }
@@ -197,7 +228,11 @@ private fun LoadingView(progress: (() -> Float)? = null, onTab: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clickable(onClick = throttle(func = onTab)),
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = throttle(func = onTab)
+            ),
         contentAlignment = Alignment.Center
     ) {
         progress?.let {
