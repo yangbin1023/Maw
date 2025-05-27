@@ -190,7 +190,7 @@ class KonachanParser : YandeParser(), VerifyContainer {
     }
 
     override suspend fun checkDlFile(file: File, task: DLTask): Boolean {
-        if (file.isTextFile() && !task.baseData.fileType.isText()) {
+        if (file.isTextFile() && !task.baseData.fileType.isText) {
             val text = file.readString()
             if (isVerifyHtml(text)) {
                 if (!verifying.getAndSet(true)) {

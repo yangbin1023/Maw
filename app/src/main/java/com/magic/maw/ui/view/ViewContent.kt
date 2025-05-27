@@ -125,7 +125,7 @@ private fun ViewScreenItem(
                 type.value = LoadType.Loading
                 progress.floatValue = it.progress
             } else if (it is LoadStatus.Success) {
-                if (data.fileType.isVideo()) {
+                if (data.fileType.isVideo) {
                     (model.value as? ScaleDecoder)?.release()
                     type.value = LoadType.Success
                     model.value = it.result
@@ -160,7 +160,10 @@ private fun ViewScreenItem(
         }
     }
     if (focusOn) {
-        playerState.isEnable.value = data.fileType.isVideo()
+        playerState.isEnable.value = data.fileType.isVideo
+        if (!playerState.isEnable.value && playerState.isPlaying.value) {
+            playerState.togglePlayPause()
+        }
     }
 
     when (type.value) {
@@ -168,7 +171,7 @@ private fun ViewScreenItem(
         LoadType.Loading -> LoadingView(progress = { progress.floatValue }, onTab = onTab)
         LoadType.Error -> ErrorPlaceHolder { retryCount++ }
         LoadType.Success -> {
-            if (data.fileType.isVideo()) {
+            if (data.fileType.isVideo) {
                 if (!focusOn) return
                 val file = (model.value as? File) ?: return
                 VideoPlayerView(
@@ -176,7 +179,7 @@ private fun ViewScreenItem(
                     state = playerState,
                     onTab = onTab
                 )
-            } else if (data.fileType.isPicture()) {
+            } else if (data.fileType.isPicture) {
                 val state = rememberScaleState(contentSize = size.value)
                 LaunchedEffect(focusOn) { if (!focusOn) state.resetImmediately() }
                 ScaleImageView(

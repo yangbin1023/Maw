@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">动漫壁纸</string>
     <string name="setting">设置</string>
+    <string name="theme">主题</string>
     <string name="post">图像</string>
     <string name="pool">图册</string>
     <string name="popular">热门</string>
@@ -55,4 +56,8 @@
     <string name="every_month">每月</string>
     <string name="every_year">每年</string>
     <string name="file_type">文件类型</string>
+    <string name="other">其他</string>
+    <string name="video">视频</string>
+    <string name="autoplay">自动播放</string>
+    <string name="mute">静音</string>
 </resources>

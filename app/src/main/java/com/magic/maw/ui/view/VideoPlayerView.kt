@@ -43,6 +43,7 @@ import com.magic.maw.ui.components.ThumbSizeSlider
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.PreviewTheme
 import com.magic.maw.util.TimeUtils.formatTimeStr
+import com.magic.maw.util.configFlow
 import kotlinx.coroutines.delay
 
 private const val TAG = "VideoPlayer"
@@ -74,8 +75,8 @@ fun VideoPlayerView(
         AndroidView(
             factory = { context ->
                 PlayerView(context).apply {
-                    player = state.exoPlayer
                     useController = false
+                    player = state.exoPlayer
                 }
             },
             modifier = Modifier
@@ -164,13 +165,13 @@ fun VideoPlayerControllerBarPreview() {
 }
 
 class VideoPlayerState(
-    isPlaying: Boolean = true,
-    isMuted: Boolean = true,
+    isPlaying: Boolean = configFlow.value.autoplay,
+    isMuted: Boolean = configFlow.value.mute,
     context: Context
 ) : Player.Listener {
     val exoPlayer = ExoPlayer.Builder(context).build().apply {
         repeatMode = Player.REPEAT_MODE_ALL
-        playWhenReady = true
+        playWhenReady = isPlaying
         volume = if (isMuted) 0f else 1f
     }
 
@@ -205,6 +206,9 @@ class VideoPlayerState(
     fun changeVideoSource(uri: Uri) {
         exoPlayer.setMediaItem(MediaItem.fromUri(uri))
         exoPlayer.prepare()
+        if (!exoPlayer.isPlaying && configFlow.value.autoplay) {
+            exoPlayer.play()
+        }
         currentPosition.longValue = 0
     }
 

@@ -70,6 +70,24 @@ abstract class BaseParser {
             }
         }
 
+        fun getIndex(source: String): Int {
+            return when (source) {
+                YandeParser.SOURCE -> 0
+                KonachanParser.SOURCE -> 1
+                DanbooruParser.SOURCE -> 2
+                else -> 0
+            }
+        }
+
+        fun getTag(source: String): String {
+            return when (source) {
+                "Yande" -> YandeParser.SOURCE
+                "Konachan" -> KonachanParser.SOURCE
+                "Danbooru" -> DanbooruParser.SOURCE
+                else -> ""
+            }
+        }
+
         fun String.encode(enc: String = "UTF-8"): String {
             return URLEncoder.encode(this, enc)
         }

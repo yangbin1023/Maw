@@ -136,7 +136,6 @@ class DanbooruParser : BaseParser() {
             val tmp = if (tagText.startsWith("-")) tagText.substring(1) else tagText
             if (tmp.isEmpty()
                 || tmp.startsWith("tag:")
-                || tmp.startsWith("filetype:")
             )
                 continue
             tagList.add(tagText)

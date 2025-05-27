@@ -10,17 +10,14 @@ enum class FileType(val value: Int) {
     Swf(1 shl 6),
     Ugoira(1 shl 7);
 
-    fun isPicture(): Boolean {
-        return this == Jpeg || this == Png || this == Webp || this == Gif
-    }
+    val isPicture: Boolean
+        get() = this == Jpeg || this == Png || this == Webp || this == Gif
 
-    fun isVideo(): Boolean {
-        return this == Mp4 || this == Webm || this == Swf
-    }
+    val isVideo: Boolean
+        get() = this == Mp4 || this == Webm || this == Swf
 
-    fun isText(): Boolean {
-        return false
-    }
+    val isText: Boolean
+        get() = false
 
     fun getPrefixName(): String {
         return when (this) {

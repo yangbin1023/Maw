@@ -58,6 +58,8 @@ data class Config(
     val yandeConfig: WebsiteConfig = WebsiteConfig(),
     val konachanConfig: WebsiteConfig = WebsiteConfig(),
     val danbooruConfig: WebsiteConfig = WebsiteConfig(rating = Rating.General.value),
+    val autoplay: Boolean = true,
+    val mute: Boolean = true,
     val darkMode: Int = 0,
     val dynamicColor: Boolean = supportDynamicColor
 ) {

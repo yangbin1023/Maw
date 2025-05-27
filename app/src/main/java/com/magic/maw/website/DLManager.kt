@@ -60,7 +60,7 @@ object DLManager {
         val path = getDLFullPath(baseData)
         val file = File(path)
         if (file.exists()) {
-            if (file.isTextFile() && !baseData.fileType.isText()) {
+            if (file.isTextFile() && !baseData.fileType.isText) {
                 file.delete()
             } else {
                 return MutableStateFlow(LoadStatus.Success(file))
@@ -138,7 +138,7 @@ data class DLTask(
     }
 
     private fun defaultCheckFile(file: File): Boolean {
-        return baseData.fileType.isText() || !file.isTextFile()
+        return baseData.fileType.isText || !file.isTextFile()
     }
 
     fun start() = scope.launch {
