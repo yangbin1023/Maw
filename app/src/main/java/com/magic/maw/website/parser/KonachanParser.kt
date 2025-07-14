@@ -14,7 +14,9 @@ import com.magic.maw.util.client
 import com.magic.maw.util.configFlow
 import com.magic.maw.util.cookie
 import com.magic.maw.util.hasFlag
+import com.magic.maw.util.isJsonStr
 import com.magic.maw.util.isTextFile
+import com.magic.maw.util.isVerifyHtml
 import com.magic.maw.util.json
 import com.magic.maw.util.readString
 import com.magic.maw.website.DLTask
@@ -191,8 +193,7 @@ class KonachanParser : YandeParser(), VerifyContainer {
 
     override suspend fun checkDlFile(file: File, task: DLTask): Boolean {
         if (file.isTextFile() && !task.baseData.fileType.isText) {
-            val text = file.readString()
-            if (isVerifyHtml(text)) {
+            if (file.readString().isVerifyHtml()) {
                 if (!verifying.getAndSet(true)) {
                     Logger.d(TAG) { "konachan download failed. invoke onVerifyCallback, url: ${task.url}" }
                     onVerifyCallback?.invoke(task.url)
@@ -205,8 +206,8 @@ class KonachanParser : YandeParser(), VerifyContainer {
     }
 
     override fun verifySuccess(url: String, text: String) {
-        val tmpUrl = if (isJsonStr(text)) url else ""
-        if (isVerifyHtml(text)) {
+        val tmpUrl = if (text.isJsonStr()) url else ""
+        if (text.isVerifyHtml()) {
             Logger.w(TAG) { "verify result error. it's still verify html" }
             verifySuccess.value = false
         } else {
@@ -222,27 +223,10 @@ class KonachanParser : YandeParser(), VerifyContainer {
         verifyChannel.trySend(VerifyResult(result = false))
     }
 
-    private fun isVerifyHtml(msg: String): Boolean {
-        return msg.startsWith("<!DOCTYPE") && msg.contains("<title>Just a moment...</title>")
-    }
-
-    private fun isErrorHtml(msg: String): Boolean {
-        return msg.startsWith("<!DOCTYPE") && msg.contains("<title>Error")
-    }
-
-    private fun isJsonStr(msg: String): Boolean {
-        try {
-            json.parseToJsonElement(msg)
-            return true
-        } catch (_: Exception) {
-        }
-        return false
-    }
-
     private suspend fun securityRequest(url: String): Pair<Boolean, String> {
         if (!verifySuccess.value) {
             val msg: String = client.get(url) { cookie() }.body()
-            if (!isVerifyHtml(msg)) {
+            if (!msg.isVerifyHtml()) {
                 return Pair(true, msg)
             }
             if (!verifying.getAndSet(true)) {
@@ -261,7 +245,7 @@ class KonachanParser : YandeParser(), VerifyContainer {
             return securityRequest(url)
         } else {
             val msg: String = client.get(url) { cookie() }.body()
-            if (isVerifyHtml(msg)) {
+            if (msg.isVerifyHtml()) {
                 this.verifySuccess.value = false
                 return securityRequest(url)
             } else {

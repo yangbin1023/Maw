@@ -14,12 +14,25 @@ import com.magic.maw.data.danbooru.DanbooruUser
 import com.magic.maw.util.TimeUtils
 import com.magic.maw.util.client
 import com.magic.maw.util.configFlow
+import com.magic.maw.util.cookie
 import com.magic.maw.util.hasFlag
+import com.magic.maw.util.isJsonStr
+import com.magic.maw.util.isTextFile
+import com.magic.maw.util.isVerifyHtml
+import com.magic.maw.util.json
+import com.magic.maw.util.readString
+import com.magic.maw.website.DLTask
 import com.magic.maw.website.RequestOption
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
+import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import java.io.File
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -27,14 +40,22 @@ import java.util.TimeZone
 
 private const val TAG = DanbooruParser.SOURCE
 
-class DanbooruParser : BaseParser() {
+class DanbooruParser : BaseParser(), VerifyContainer {
     override val baseUrl: String get() = "https://danbooru.donmai.us"
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.General.value or Rating.Sensitive.value or Rating.Questionable.value or Rating.Explicit.value
     override val supportPopular: Int get() = PopularType.defaultSupport or PopularType.Year.value
+    private val verifying = atomic(false)
+    private val verifySuccess = atomic(false)
+    private val verifyChannel = Channel<VerifyResult>()
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
-        val danbooruList: List<DanbooruData> = client.get(getPostUrl(option)).body()
+        val url = getPostUrl(option)
+        val (ret, msg) = securityRequest(url)
+        if (!ret) {
+            return emptyList()
+        }
+        val danbooruList: List<DanbooruData> = json.decodeFromString(msg)
         val list = ArrayList<PostData>()
         val ratings = configFlow.value.websiteConfig.rating
         for (item in danbooruList) {
@@ -62,7 +83,12 @@ class DanbooruParser : BaseParser() {
     }
 
     override suspend fun requestPoolData(option: RequestOption): List<PoolData> {
-        val danbooruList: List<DanbooruPool> = client.get(getPoolUrl(option)).body()
+        val url = getPoolUrl(option)
+        val (ret, msg) = securityRequest(url)
+        if (!ret) {
+            return emptyList()
+        }
+        val danbooruList: List<DanbooruPool> = json.decodeFromString(msg)
         val list: ArrayList<PoolData> = ArrayList()
         for (item in danbooruList) {
             val data = item.toPoolData() ?: continue
@@ -78,7 +104,11 @@ class DanbooruParser : BaseParser() {
         var targetInfo: TagInfo? = null
         try {
             val url = getTagUrl(name, firstPageIndex, 1)
-            val danbooruList: List<DanbooruTag> = client.get(url).body()
+            val (ret, msg) = securityRequest(url)
+            if (!ret) {
+                return null
+            }
+            val danbooruList: List<DanbooruTag> = json.decodeFromString(msg)
             for (item in danbooruList) {
                 val tag = item.toTagInfo() ?: continue
                 if (tag.name == name) {
@@ -102,7 +132,11 @@ class DanbooruParser : BaseParser() {
         val tagList = ArrayList<TagInfo>()
         try {
             val url = getTagUrl(name, firstPageIndex, limit)
-            val danbooruList: List<DanbooruTag> = client.get(url).body()
+            val (ret, msg) = securityRequest(url)
+            if (!ret) {
+                return emptyList()
+            }
+            val danbooruList: List<DanbooruTag> = json.decodeFromString(msg)
             for (item in danbooruList) {
                 val tag = item.toTagInfo() ?: continue
                 tagMap[tag.name] = tag
@@ -117,7 +151,11 @@ class DanbooruParser : BaseParser() {
 
     override suspend fun requestUserInfo(userId: Int): UserInfo? {
         try {
-            val userList: List<DanbooruUser> = client.get(getUserUrl(userId)).body()
+            val (ret, msg) = securityRequest(getUserUrl(userId))
+            if (!ret) {
+                return null
+            }
+            val userList: List<DanbooruUser> = json.decodeFromString(msg)
             if (userList.isNotEmpty()) {
                 return userList[0].toUserInfo()
             }
@@ -209,6 +247,42 @@ class DanbooruParser : BaseParser() {
         return "$baseUrl/users.json?${"search[id]=$userId".encode()}"
     }
 
+    override fun getVerifyContainer(): VerifyContainer? {
+        return if (onVerifyCallback == null) null else this
+    }
+
+    override suspend fun checkDlFile(file: File, task: DLTask): Boolean {
+        if (file.isTextFile() && !task.baseData.fileType.isText) {
+            if (file.readString().isVerifyHtml()) {
+                if (!verifying.getAndSet(true)) {
+                    Logger.d(TAG) { "konachan download failed. invoke onVerifyCallback, url: ${task.url}" }
+                    onVerifyCallback?.invoke(task.url)
+                }
+                verifyChannel.receive()
+            }
+            return false
+        }
+        return true
+    }
+
+    override fun verifySuccess(url: String, text: String) {
+        val tmpUrl = if (text.isJsonStr()) url else ""
+        if (text.isVerifyHtml()) {
+            Logger.w(TAG) { "verify result error. it's still verify html" }
+            verifySuccess.value = false
+        } else {
+            verifySuccess.value = true
+        }
+        verifying.value = false
+        verifyChannel.trySend(VerifyResult(result = verifySuccess.value, url = tmpUrl, text = text))
+    }
+
+    override fun cancelVerify() {
+        verifySuccess.value = false
+        verifying.value = false
+        verifyChannel.trySend(VerifyResult(result = false))
+    }
+
     private fun getRatingTag(ratings: Int): String {
         val tempRating = ratings and supportRating
         if (tempRating != supportRating) {
@@ -226,6 +300,41 @@ class DanbooruParser : BaseParser() {
             return "rating:" + ratingList.joinToString(",")
         }
         return ""
+    }
+
+    private suspend fun securityRequest(url: String): Pair<Boolean, String> {
+        if (!verifySuccess.value) {
+            val msg: String = client.get(url) {
+                cookie()
+                header(HttpHeaders.Referrer, baseUrl)
+            }.body()
+            if (!msg.isVerifyHtml()) {
+                return Pair(true, msg)
+            }
+            if (!verifying.getAndSet(true)) {
+                Logger.d(TAG) { "invoke onVerifyCallback, url: $url. msg: $msg" }
+                onVerifyCallback?.invoke(url)
+            }
+            Logger.d(TAG) { "waiting for verify, url: $url" }
+            val result = verifyChannel.receive()
+            Logger.d(TAG) { "receive for verify, $result" }
+            if (!result.result) {
+                return Pair(false, "")
+            }
+            if (result.url == url) {
+                return Pair(true, result.text)
+            }
+            delay(50 + (0L..150L).random())
+            return securityRequest(url)
+        } else {
+            val msg: String = client.get(url) { cookie() }.body()
+            if (msg.isVerifyHtml()) {
+                this.verifySuccess.value = false
+                return securityRequest(url)
+            } else {
+                return Pair(true, msg)
+            }
+        }
     }
 
     companion object {
