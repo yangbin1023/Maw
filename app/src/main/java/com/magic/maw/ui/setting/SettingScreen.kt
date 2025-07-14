@@ -186,7 +186,7 @@ private fun WebsiteSetting(
                 val sourceTag = BaseParser.getTag(options[selectIndex])
                 if (sourceTag.isNotEmpty() && sourceTag != source) {
                     changeSetting.value = true
-                    configFlow.update { it.copy(source = source) }
+                    configFlow.update { it.copy(source = sourceTag) }
                 }
                 onDismiss()
             }
