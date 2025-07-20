@@ -197,15 +197,17 @@ class PostViewModel(
                 val option = viewModelState.value.requestOption
                 val list = parser.requestPostData(option.copy(page = option.page + 1))
                 viewModelState.update {
-                    if (it.type != UiStateType.Refresh && list.isNotEmpty()) {
+                    if (it.type == UiStateType.Refresh) {
+                        it
+                    } else if (list.isNotEmpty()) {
                         it.requestOption.page++
                         it.append(dataList = list)
                     } else {
-                        it
+                        it.copy(noMore = true)
                     }
                 }
             } catch (e: Throwable) {
-                Logger.e(TAG) { "post refresh failed: ${e.message}" }
+                Logger.e(TAG) { "post loadMore failed: ${e.message}" }
                 viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }

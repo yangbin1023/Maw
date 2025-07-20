@@ -312,7 +312,7 @@ private fun PostBody(
         val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
 
         // 检测加载进度，实现自动加载更多
-        LaunchedEffect(state) {
+        LaunchedEffect(uiState, state) {
             snapshotFlow {
                 state.layoutInfo.visibleItemsInfo.lastOrNull()?.index
             }.distinctUntilChanged().collect { lastVisibleIndex ->
@@ -322,7 +322,7 @@ private fun PostBody(
                 val totalItemsCount = state.layoutInfo.totalItemsCount
                 val remainingItemsCount = totalItemsCount - (lastVisibleIndex + 1)
                 val visibleItemsCount = state.layoutInfo.visibleItemsInfo.size
-                if (remainingItemsCount < visibleItemsCount * 1.5) {
+                if (remainingItemsCount < visibleItemsCount * 2) {
                     Logger.d(TAG) { "call post on load more" }
                     onLoadMore()
                 }
