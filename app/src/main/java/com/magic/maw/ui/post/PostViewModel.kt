@@ -181,7 +181,7 @@ class PostViewModel(
                     }
                 }
             } catch (e: Throwable) {
-                Logger.e(TAG) { "post refresh failed: ${e.message}" }
+                Logger.e(TAG, e) { "post refresh failed: ${e.message}" }
                 viewModelState.update { it.copy(type = UiStateType.LoadFailed) }
             }
         }

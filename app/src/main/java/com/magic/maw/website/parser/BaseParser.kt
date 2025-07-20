@@ -5,32 +5,15 @@ import com.magic.maw.data.PopularType
 import com.magic.maw.data.PostData
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.UserInfo
-import com.magic.maw.website.DLTask
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.UserManager
-import java.io.File
 import java.lang.ref.SoftReference
 import java.net.URLDecoder
 import java.net.URLEncoder
 
-typealias OnVerifyCallback = (String) -> Unit
-
-data class VerifyResult(
-    val result: Boolean = false,
-    val url: String = "",
-    val text: String = "",
-)
-
-interface VerifyContainer {
-    suspend fun checkDlFile(file: File, task: DLTask): Boolean
-    fun verifySuccess(url: String, text: String)
-    fun cancelVerify()
-}
-
 abstract class BaseParser {
     protected abstract val baseUrl: String
-    protected var onVerifyCallback: OnVerifyCallback? = null
     abstract val source: String
     abstract val supportRating: Int
     open val supportPopular: Int = PopularType.defaultSupport
@@ -49,9 +32,6 @@ abstract class BaseParser {
     protected abstract fun getPoolUrl(option: RequestOption): String
     protected abstract fun getTagUrl(name: String, page: Int, limit: Int): String
     protected abstract fun getUserUrl(userId: Int): String
-
-    fun setOnVerifyCallback(callback: OnVerifyCallback?) = apply { onVerifyCallback = callback }
-    open fun getVerifyContainer(): VerifyContainer? = null
 
     companion object {
         private val parserMap = HashMap<String, SoftReference<BaseParser>>()

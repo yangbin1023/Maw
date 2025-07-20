@@ -15,11 +15,10 @@ import com.magic.maw.util.client
 import com.magic.maw.util.configFlow
 import com.magic.maw.util.hasFlag
 import com.magic.maw.util.json
+import com.magic.maw.util.get
 import com.magic.maw.util.toMonday
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.RequestOption
-import io.ktor.client.call.body
-import io.ktor.client.request.get
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
 
@@ -36,7 +35,7 @@ open class YandeParser : BaseParser() {
             return emptyList()
         val url = getPostUrl(option)
         val list: ArrayList<PostData> = ArrayList()
-        val msg: String = client.get(url).body()
+        val msg: String = client.get(url)
         Logger.d(TAG) { "url: $url, msg: $msg" }
         val ratings = configFlow.value.websiteConfig.rating
         if (option.poolId >= 0) {
@@ -69,7 +68,7 @@ open class YandeParser : BaseParser() {
     }
 
     override suspend fun requestPoolData(option: RequestOption): List<PoolData> {
-        val poolList: ArrayList<YandePool> = client.get(getPoolUrl(option)).body()
+        val poolList: ArrayList<YandePool> = client.get(getPoolUrl(option))
         val list: ArrayList<PoolData> = ArrayList()
         for (item in poolList) {
             val data = item.toPoolData() ?: continue
@@ -99,7 +98,7 @@ open class YandeParser : BaseParser() {
         do {
             try {
                 val url = getTagUrl(name, page, limit)
-                val yandeList: List<YandeTag> = client.get(url).body()
+                val yandeList: List<YandeTag> = client.get(url)
                 var found = false
                 for (yandeTag in yandeList) {
                     val tag = yandeTag.toTagInfo() ?: continue
@@ -129,7 +128,7 @@ open class YandeParser : BaseParser() {
         val tagList = ArrayList<TagInfo>()
         try {
             val url = getTagUrl(name, firstPageIndex, limit)
-            val yandeList: ArrayList<YandeTag> = client.get(url).body()
+            val yandeList: ArrayList<YandeTag> = client.get(url)
             for (yandeTag in yandeList) {
                 val tag = yandeTag.toTagInfo() ?: continue
                 tagMap[tag.name] = tag
@@ -143,7 +142,7 @@ open class YandeParser : BaseParser() {
 
     override suspend fun requestUserInfo(userId: Int): UserInfo? {
         try {
-            val userList: List<YandeUser> = client.get(getUserUrl(userId)).body()
+            val userList: List<YandeUser> = client.get(getUserUrl(userId))
             if (userList.isNotEmpty()) {
                 return userList[0].toUserInfo()
             }

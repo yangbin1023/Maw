@@ -7,12 +7,12 @@ import com.magic.maw.MyApp
 import com.magic.maw.data.BaseData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
+import com.magic.maw.util.VerifyRequester
 import com.magic.maw.util.client
 import com.magic.maw.util.cookie
 import com.magic.maw.util.isTextFile
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
-import com.magic.maw.website.parser.BaseParser
 import io.ktor.client.plugins.onDownload
 import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
@@ -137,10 +137,6 @@ data class DLTask(
         return "source: ${baseData.source}, id: ${baseData.id}, quality: ${baseData.quality}, url: $url"
     }
 
-    private fun defaultCheckFile(file: File): Boolean {
-        return baseData.fileType.isText || !file.isTextFile()
-    }
-
     fun start() = scope.launch {
         if (statusFlow.value is LoadStatus.Success)
             return@launch
@@ -173,8 +169,7 @@ data class DLTask(
             if (baseData.size > 0 && file.length() != baseData.size) {
                 Logger.w(TAG) { "file size error. expected size: ${baseData.size}, actual size: ${file.length()}" }
             }
-            val verifyContainer = BaseParser.get(baseData.source).getVerifyContainer()
-            if (verifyContainer?.checkDlFile(file, this@DLTask) ?: defaultCheckFile(file)) {
+            if (VerifyRequester.checkDlFile(file, this@DLTask)) {
                 Logger.d(TAG) { "download success, $url" }
                 statusFlow.update { LoadStatus.Success(file) }
             } else {

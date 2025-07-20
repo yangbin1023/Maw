@@ -7,6 +7,8 @@ import java.io.FileInputStream
 import java.io.FileReader
 import java.io.IOException
 
+const val FILE_SIZE_1MiB = 1L * 1024 * 1024
+
 fun File.isTextFile(len: Int = 256): Boolean {
     if (!this.exists()) {
         return false
