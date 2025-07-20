@@ -38,6 +38,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -56,6 +57,7 @@ import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.theme.TableLayout
 import com.magic.maw.ui.theme.WaterLayout
 import com.magic.maw.util.UiUtils.getStatusBarHeight
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
@@ -309,6 +311,23 @@ private fun PostBody(
         val columns = max((this.maxWidth / 210.dp).toInt(), 2)
         val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
 
+        // 检测加载进度，实现自动加载更多
+        LaunchedEffect(state) {
+            snapshotFlow {
+                state.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+            }.distinctUntilChanged().collect { lastVisibleIndex ->
+                if (uiState.noMore || uiState.type.isLoading() || lastVisibleIndex == null) {
+                    return@collect
+                }
+                val totalItemsCount = state.layoutInfo.totalItemsCount
+                val remainingItemsCount = totalItemsCount - (lastVisibleIndex + 1)
+                val visibleItemsCount = state.layoutInfo.visibleItemsInfo.size
+                if (remainingItemsCount < visibleItemsCount * 1.5) {
+                    Logger.d(TAG) { "call post on load more" }
+                    onLoadMore()
+                }
+            }
+        }
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(columns),
             state = state,
@@ -328,7 +347,6 @@ private fun PostBody(
                     staggered = staggeredState?.value == true
                 )
             }
-            checkLoadMore(uiState = uiState, state = state, onLoadMore = onLoadMore)
 
             if (uiState.noMore) {
                 item(span = StaggeredGridItemSpan.FullLine) {
@@ -364,24 +382,6 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
         Logger.w(TAG) { "No suitable space found" }
     }
     currentSpace.toDp() / 2
-}
-
-private fun checkLoadMore(
-    uiState: PostUiState.Post,
-    state: LazyStaggeredGridState,
-    onLoadMore: () -> Unit
-) {
-    if (uiState.noMore || uiState.type.isLoading()) {
-        return
-    }
-    val totalItemsCount = state.layoutInfo.totalItemsCount
-    val visibleItemsInfo = state.layoutInfo.visibleItemsInfo
-    if (visibleItemsInfo.isNotEmpty()) {
-        val lastVisibleIndex = visibleItemsInfo.last().index
-        if ((totalItemsCount - lastVisibleIndex) < visibleItemsInfo.size * 1.5) {
-            onLoadMore()
-        }
-    }
 }
 
 object PostDefaults {
