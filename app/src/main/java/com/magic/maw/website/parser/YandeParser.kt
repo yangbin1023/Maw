@@ -1,6 +1,5 @@
 package com.magic.maw.website.parser
 
-import co.touchlab.kermit.Logger
 import com.magic.maw.data.PoolData
 import com.magic.maw.data.PopularType
 import com.magic.maw.data.PostData
@@ -13,16 +12,13 @@ import com.magic.maw.data.yande.YandeTag
 import com.magic.maw.data.yande.YandeUser
 import com.magic.maw.util.client
 import com.magic.maw.util.configFlow
-import com.magic.maw.util.hasFlag
-import com.magic.maw.util.json
 import com.magic.maw.util.get
+import com.magic.maw.util.hasFlag
 import com.magic.maw.util.toMonday
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.RequestOption
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
-
-private const val TAG = YandeParser.SOURCE
 
 open class YandeParser : BaseParser() {
     override val baseUrl: String get() = "https://yande.re"
@@ -35,11 +31,9 @@ open class YandeParser : BaseParser() {
             return emptyList()
         val url = getPostUrl(option)
         val list: ArrayList<PostData> = ArrayList()
-        val msg: String = client.get(url)
-        Logger.d(TAG) { "url: $url, msg: $msg" }
         val ratings = configFlow.value.websiteConfig.rating
         if (option.poolId >= 0) {
-            json.decodeFromString<YandePool>(msg).posts?.let { posts ->
+            client.get<YandePool>(url).posts?.let { posts ->
                 for (item in posts) {
                     val data = item.toPostData() ?: continue
                     if (ratings.hasFlag(data.rating.value)) {
@@ -48,7 +42,7 @@ open class YandeParser : BaseParser() {
                 }
             }
         } else {
-            val yandeList: ArrayList<YandeData> = json.decodeFromString(msg)
+            val yandeList: ArrayList<YandeData> = client.get(url)
             for (item in yandeList) {
                 val data = item.toPostData() ?: continue
                 if (ratings.hasFlag(data.rating.value)) {

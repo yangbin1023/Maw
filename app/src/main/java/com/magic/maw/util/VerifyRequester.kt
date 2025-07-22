@@ -121,25 +121,27 @@ suspend inline fun <reified T> HttpClient.get(urlString: String): T {
     val status = VerifyRequester.getVerifyStatus(url.host)!!
 
     do {
-        val msg: String = get(urlString) {
+        val response = get(urlString) {
             cookie()
             header(HttpHeaders.Referrer, url.host)
-        }.body()
-        if (!msg.isVerifyHtml()) {
-            return json.decodeFromString(msg)
         }
+        val msg: String = response.body()
+        if (!msg.isVerifyHtml()) {
+            return response.body()
+        }
+        val callback = callback ?: let { return response.body() }
         val result = status.mutex.withLock {
-            val msg: String = get(urlString) {
+            val response = get(urlString) {
                 cookie()
                 header(HttpHeaders.Referrer, url.host)
-            }.body()
+            }
+            val msg: String = response.body()
             if (!msg.isVerifyHtml()) {
-                return@withLock VerifyResult.Success(urlString, msg)
+                return response.body()
             }
             status.deferred?.let {
                 return@withLock it.await()
             }
-            val callback = callback ?: return@withLock null
 
             val deferred = CompletableDeferred<VerifyResult>()
             status.deferred = deferred
@@ -158,11 +160,13 @@ suspend inline fun <reified T> HttpClient.get(urlString: String): T {
             is VerifyResult.Failure -> throw VerificationCancelledException()
             is VerifyResult.Success -> {
                 if (result.url == urlString) {
-                    return json.decodeFromString(result.text)
+                    return if (T::class == String::class) {
+                        result.text as T
+                    } else {
+                        json.decodeFromString(result.text)
+                    }
                 }
             }
-
-            null -> throw RuntimeException("Not set OnVerifyCallback")
         }
     } while (true)
 }
