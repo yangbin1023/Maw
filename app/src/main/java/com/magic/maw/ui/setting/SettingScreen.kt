@@ -261,7 +261,7 @@ private fun QualitySetting(websiteConfig: WebsiteConfig) {
         tips = currentQuality.toResString(LocalContext.current)
     ) { onDismiss ->
         SingleChoiceDialog(
-            title = stringResource(id = R.string.rating),
+            title = stringResource(id = R.string.quality),
             options = qualitySettingItems,
             selectedOptionIndex = qualitySelectIndex,
             onDismissRequest = onDismiss,
