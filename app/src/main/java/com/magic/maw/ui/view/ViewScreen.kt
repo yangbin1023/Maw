@@ -149,6 +149,7 @@ object ViewScreenDefaults {
                 navigationIconContentColor = onSurface.copy(alpha = TOP_BAR_COLORS_ALPHA),
                 titleContentColor = onSurface.copy(alpha = TOP_BAR_COLORS_ALPHA),
                 actionIconContentColor = onSurfaceVariant.copy(alpha = TOP_BAR_COLORS_ALPHA),
+                subtitleContentColor = onSurface.copy(alpha = TOP_BAR_COLORS_ALPHA),
             ).also { defaultTopBarColorsCache = it }
         }
 

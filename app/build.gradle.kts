@@ -29,7 +29,7 @@ fun getTagVersion(): String {
 
 android {
     namespace = "com.magic.maw"
-    compileSdk = 35
+    compileSdk = 36
 
     val currentSigning = if (project.hasProperty("STORE_FILE")) {
         signingConfigs.create("release") {
@@ -45,7 +45,7 @@ android {
     defaultConfig {
         applicationId = "com.magic.maw"
         minSdk = 21
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = getTagVersion()
 
@@ -75,8 +75,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
         isCoreLibraryDesugaringEnabled = true
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+        }
     }
     buildFeatures {
         buildConfig = true
@@ -103,7 +105,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.exifinterface)
-    implementation(libs.mmkv)
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.ktor.client.core)

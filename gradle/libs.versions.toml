@@ -1,27 +1,28 @@
 [versions]
-agp = "8.10.0"
-kotlin = "2.0.21"
-coreKtx = "1.16.0"
+agp = "8.11.2"
+kotlin = "2.2.21"
+coreKtx = "1.17.0"
 junit = "4.13.2"
-junitVersion = "1.2.1"
-espressoCore = "3.6.1"
-androidx-lifecycle = "2.8.7"
-activityCompose = "1.10.1"
-composeBom = "2025.04.01"
-ksp = "2.0.21-1.0.28"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+androidx-lifecycle = "2.9.4"
+activityCompose = "1.11.0"
+composeBom = "2025.10.01"
+ksp = "2.2.20-2.0.4"
+# 自2.8.0之后，room支持的最低SDK版本从API 21 升到了API 23
 room = "2.7.1"
-navigationCompose = "2.8.9"
-coroutines = "1.9.0"
-mmkv = "1.3.9"
+navigationCompose = "2.9.5"
+coroutines = "1.10.2"
 coil = "2.7.0"
-ktor = "3.0.0"
-kotlinxSerializationJson = "1.7.3"
+ktor = "3.3.1"
+kotlinxSerializationJson = "1.9.0"
+toaster = "13.6"
 exifinterface = "1.4.1"
-atomicfu = "0.26.1"
+atomicfu = "0.29.0"
 desugar_jdk_libs = "2.1.5"
-kermit = "2.0.5"
-media3 = "1.7.1"
-jsoup = "1.21.1"
+kermit = "2.0.8"
+media3 = "1.8.0"
+jsoup = "1.21.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -58,11 +59,10 @@ ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.r
 ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
-mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
-toaster = { module = "com.github.getActivity:Toaster", version = "12.6" }
+toaster = { group = "com.github.getActivity", name = "Toaster", version.ref = "toaster" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 atomicfu = { group = "org.jetbrains.kotlinx", name = "atomicfu", version.ref = "atomicfu" }
 desugar_jdk_libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar_jdk_libs" }

@@ -78,7 +78,6 @@ data class PostData(
             Quality.Sample -> sampleInfo
             Quality.Large -> largeInfo
             Quality.File -> originalInfo
-            else -> null
         }
     }
 

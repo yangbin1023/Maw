@@ -4,8 +4,8 @@ import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.HandlerThread
 import android.webkit.CookieManager
+import com.magic.maw.MyApp.Companion.app
 import com.magic.maw.ui.verify.VerifyViewDefaults
-import com.tencent.mmkv.MMKV
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.UserAgent
@@ -16,13 +16,13 @@ import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
 import io.ktor.http.ContentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.MainScope
 import kotlinx.serialization.json.Json
+import java.io.File
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
-
-val kv by lazy { MMKV.mmkvWithID("config") }
 
 val json by lazy {
     Json {
@@ -83,3 +83,28 @@ val dbHandler by lazy {
     dbHandlerThread.start()
     Handler(dbHandlerThread.looper)
 }
+
+private fun File.autoMk(): File {
+    if (!exists()) {
+        mkdirs()
+    }
+    return this
+}
+
+val appScope by lazy { MainScope() }
+
+private val filesDir: File by lazy {
+    app.getExternalFilesDir(null) ?: error("failed getExternalFilesDir")
+}
+
+val dbFolder: File
+    get() = filesDir.resolve("db").autoMk()
+val storeFolder: File
+    get() = filesDir.resolve("store").autoMk()
+val subsFolder: File
+    get() = filesDir.resolve("subscription").autoMk()
+val snapshotFolder: File
+    get() = filesDir.resolve("snapshot").autoMk()
+
+val privateStoreFolder: File
+    get() = app.filesDir.resolve("store").autoMk()

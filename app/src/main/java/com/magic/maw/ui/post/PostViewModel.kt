@@ -244,6 +244,7 @@ class PostViewModel(
     }
 
     fun exitView() {
+        Logger.e(TAG) { "call exitView, viewIndex: ${viewModelState.value.viewIndex.value}" }
         if (viewModelState.value.viewIndex.value < 0)
             return
         viewModelState.update { it.copy(viewIndex = atomic(-1)) }

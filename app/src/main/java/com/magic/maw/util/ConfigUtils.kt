@@ -9,32 +9,84 @@ import com.magic.maw.website.parser.DanbooruParser
 import com.magic.maw.website.parser.KonachanParser
 import com.magic.maw.website.parser.YandeParser
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 
-val configFlow = createStorageFlow("config") { Config() }
+val configFlow by lazy {
+    createAnyFlow(
+        key = "config",
+        default = { Config() }
+    )
+}
 
-private inline fun <reified T : Any> createStorageFlow(
+private fun readStoreText(name: String, private: Boolean): String? {
+    return if (private) {
+        privateStoreFolder
+    } else {
+        storeFolder
+    }.resolve(name).run {
+        if (exists()) {
+            readText()
+        } else {
+            null
+        }
+    }
+}
+
+private fun writeStoreText(name: String, text: String, private: Boolean) {
+    if (private) {
+        privateStoreFolder
+    } else {
+        storeFolder
+    }.resolve(name).writeText(text)
+}
+
+private fun <T> createTextFlow(
     key: String,
-    crossinline init: () -> T
+    decode: (String?) -> T,
+    encode: (T) -> String,
+    private: Boolean = false,
 ): MutableStateFlow<T> {
-    val jsonStr = kv.decodeString(key, null)
-    val valueStr = jsonStr?.let { json.decodeFromString<T>(jsonStr) }
-
-    val flow = MutableStateFlow(valueStr ?: init())
-    MainScope().launch {
-        flow.drop(1).collect {
+    val name = if (key.contains('.')) {
+        key
+    } else {
+        "$key.txt"
+    }
+    val initText = readStoreText(name, private)
+    val initValue = decode(initText)
+    val stateFlow = MutableStateFlow(initValue)
+    appScope.launch {
+        stateFlow.drop(1).collect {
             withContext(Dispatchers.IO) {
-                kv.encode(key, json.encodeToString(it))
+                writeStoreText(name, encode(it), private)
             }
         }
     }
-    return flow
+    return stateFlow
+}
+
+private inline fun <reified T : Any> createAnyFlow(
+    key: String,
+    crossinline default: () -> T,
+    crossinline transform: (T) -> T = { it },
+    private: Boolean = false,
+): MutableStateFlow<T> {
+    return createTextFlow(
+        key = "$key.json",
+        decode = {
+            val initValue = it?.let {
+                runCatching { json.decodeFromString<T>(it) }.getOrNull()
+            }
+            transform(initValue ?: default())
+        },
+        encode = {
+            json.encodeToString(it)
+        },
+        private = private,
+    )
 }
 
 fun MutableStateFlow<Config>.updateWebConfig(websiteConfig: WebsiteConfig) {

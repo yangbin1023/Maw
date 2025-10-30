@@ -60,7 +60,7 @@ fun ScaleView(
     boundClip: Boolean = true, scaleState: ScaleState = rememberScaleState(),
     onTap: (Offset) -> Unit = {},
     onDoubleTap: (Offset) -> Unit = {},
-    content:@Composable ()->Unit,
+    content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -86,17 +86,18 @@ fun ScaleView(
         scaleState.updateContainerSize(
             density.run { Size(maxWidth.toPx(), maxHeight.toPx()) }
         )
-        Box(modifier = Modifier
-            .graphicsLayer {
-                transformOrigin = TransformOrigin.Center
-                scaleX = scaleState.scale.value
-                scaleY = scaleState.scale.value
-                translationX = scaleState.offsetX.value
-                translationY = scaleState.offsetY.value
-                rotationZ = scaleState.rotation.value
-            }
-            .width(density.run { scaleState.displayWidth.toDp() })
-            .height(density.run { scaleState.displayHeight.toDp() })
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    transformOrigin = TransformOrigin.Center
+                    scaleX = scaleState.scale.value
+                    scaleY = scaleState.scale.value
+                    translationX = scaleState.offsetX.value
+                    translationY = scaleState.offsetY.value
+                    rotationZ = scaleState.rotation.value
+                }
+                .width(density.run { scaleState.displayWidth.toDp() })
+                .height(density.run { scaleState.displayHeight.toDp() })
         ) {
             content()
         }
@@ -125,7 +126,7 @@ fun rememberScaleState(
 }
 
 class ScaleState(
-    @FloatRange(from = 1.0) val maxScale: Float = ScaleDefaults.MAX_SCALE_RATE,
+    val maxScale: Float = ScaleDefaults.MAX_SCALE_RATE,
     offsetX: Float = ScaleDefaults.DEFAULT_OFFSET_X,
     offsetY: Float = ScaleDefaults.DEFAULT_OFFSET_Y,
     scale: Float = ScaleDefaults.DEFAULT_SCALE,

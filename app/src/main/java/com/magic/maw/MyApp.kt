@@ -6,7 +6,6 @@ import coil.ComponentRegistry
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import com.hjq.toast.Toaster
-import com.tencent.mmkv.MMKV
 
 class MyApp : Application() {
     override fun onCreate() {
@@ -16,7 +15,6 @@ class MyApp : Application() {
 
     private fun init() {
         _app = this
-        MMKV.initialize(this)
         Toaster.init(this)
         Coil.setImageLoader {
             ImageLoader.Builder(this)
