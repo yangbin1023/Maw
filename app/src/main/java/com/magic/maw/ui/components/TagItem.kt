@@ -1,6 +1,5 @@
 package com.magic.maw.ui.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -28,7 +27,6 @@ import androidx.compose.ui.unit.sp
 import com.magic.maw.R
 import com.magic.maw.data.TagType
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TagItem(
     modifier: Modifier = Modifier,

@@ -100,29 +100,36 @@ private const val TAG = "ViewTAG"
 fun ViewDetailBar(
     modifier: Modifier = Modifier,
     postData: PostData,
+    isScrollInProgress: Boolean,
     playerState: VideoPlayerState,
     maxDraggableHeight: Dp,
     onTagClick: (TagInfo, Boolean) -> Unit
 ) {
+    var currentPostData by remember { mutableStateOf(postData) }
+    if (!isScrollInProgress) {
+        if (currentPostData != postData) {
+            currentPostData = postData
+        }
+    }
     val scrollableViewState = rememberScrollableViewState()
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val showSaveDialog = remember { mutableStateOf(false) }
     val qualityList = ArrayList<Quality>()
     val qualityItems = ArrayList<String>()
-    postData.sampleInfo?.let {
+    currentPostData.sampleInfo?.let {
         qualityList.add(Quality.Sample)
         val resolutionStr = "${it.width}x${it.height}"
         val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
         qualityItems.add("$resolutionStr$sizeStr")
     }
-    postData.largeInfo?.let {
+    currentPostData.largeInfo?.let {
         qualityList.add(Quality.Large)
         val resolutionStr = "${it.width}x${it.height}"
         val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
         qualityItems.add("$resolutionStr$sizeStr")
     }
-    postData.originalInfo.let {
+    currentPostData.originalInfo.let {
         qualityList.add(Quality.File)
         val resolutionStr = "${it.width}x${it.height}"
         val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
@@ -149,14 +156,15 @@ fun ViewDetailBar(
         toolbar = {
             var isFavorite by remember { mutableStateOf(false) }
             DetailBar(
-                postData = postData,
+                postData = currentPostData,
                 expand = scrollableViewState.expand,
+                enabled = !isScrollInProgress,
                 isFavorite = isFavorite,
                 onFavorite = { isFavorite = !isFavorite },
                 onSave = {
                     val websiteConfig = configFlow.value.websiteConfig
                     if (!websiteConfig.showSaveDialog) {
-                        onSave(postData, websiteConfig.saveQuality.toQuality())
+                        onSave(currentPostData, websiteConfig.saveQuality.toQuality())
                     } else {
                         showSaveDialog.value = true
                     }
@@ -171,7 +179,7 @@ fun ViewDetailBar(
         content = {
             DetailContent(
                 modifier = Modifier.align(Alignment.TopCenter),
-                postData = postData,
+                postData = currentPostData,
                 playerState = playerState,
                 qualityItems = qualityItems,
                 qualityList = qualityList,
@@ -181,7 +189,7 @@ fun ViewDetailBar(
                 showDialog = showSaveDialog,
                 itemList = qualityItems,
                 qualityList = qualityList,
-                onConfirm = { index -> onSave(postData, qualityList[index]) }
+                onConfirm = { index -> onSave(currentPostData, qualityList[index]) }
             )
         }
     )
@@ -192,6 +200,7 @@ private fun DetailBar(
     modifier: Modifier = Modifier,
     postData: PostData,
     expand: Boolean,
+    enabled: Boolean = true,
     isFavorite: Boolean = false,
     onFavorite: () -> Unit,
     onSave: () -> Unit,
@@ -212,7 +221,8 @@ private fun DetailBar(
         // Like
         IconButton(
             onClick = throttle(func = onFavorite),
-            modifier = Modifier.width(40.dp)
+            modifier = Modifier.width(40.dp),
+            enabled = enabled
         ) {
             Icon(
                 modifier = Modifier
@@ -228,7 +238,8 @@ private fun DetailBar(
         // Save
         IconButton(
             onClick = throttle(func = onSave),
-            modifier = Modifier.width(40.dp)
+            modifier = Modifier.width(40.dp),
+            enabled = enabled
         ) {
             Icon(
                 modifier = Modifier
@@ -247,7 +258,8 @@ private fun DetailBar(
 
         IconButton(
             onClick = throttle(func = onExpand),
-            modifier = Modifier.width(40.dp)
+            modifier = Modifier.width(40.dp),
+            enabled = enabled
         ) {
             Icon(
                 modifier = Modifier
@@ -560,7 +572,7 @@ private fun DetailBarPreview() {
     val postData = PostData(
         source = "yande",
         id = 1210648,
-        uploader = "BattlequeenYume",
+        uploader = "BattleQueen",
         sampleInfo = PostData.Info(width = 927, height = 1500, size = 2889300),
         originalInfo = PostData.Info(width = 1500, height = 2427, size = 22900000),
     )

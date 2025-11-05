@@ -108,6 +108,7 @@ fun ViewScreen(
         ViewDetailBar(
             modifier = Modifier.align(Alignment.BottomCenter),
             postData = postData,
+            isScrollInProgress = pagerState.isScrollInProgress,
             playerState = playerState,
             maxDraggableHeight = draggableHeight,
             onTagClick = onTagClick
