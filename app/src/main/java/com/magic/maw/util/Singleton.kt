@@ -1,9 +1,13 @@
 package com.magic.maw.util
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.webkit.CookieManager
+import coil3.ImageLoader
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
 import com.magic.maw.MyApp.Companion.app
 import com.magic.maw.ui.verify.VerifyViewDefaults
 import io.ktor.client.HttpClient
@@ -101,10 +105,17 @@ val dbFolder: File
     get() = filesDir.resolve("db").autoMk()
 val storeFolder: File
     get() = filesDir.resolve("store").autoMk()
-val subsFolder: File
-    get() = filesDir.resolve("subscription").autoMk()
-val snapshotFolder: File
-    get() = filesDir.resolve("snapshot").autoMk()
-
 val privateStoreFolder: File
     get() = app.filesDir.resolve("store").autoMk()
+
+val imageLoader by lazy {
+    ImageLoader.Builder(app)
+        .components {
+            if (Build.VERSION.SDK_INT >= 28) {
+                add(AnimatedImageDecoder.Factory())
+            } else {
+                add(GifDecoder.Factory())
+            }
+        }
+        .build()
+}

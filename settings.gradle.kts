@@ -1,3 +1,4 @@
+@file:Suppress("UnstableApiUsage")
 pluginManagement {
     repositories {
         google {
@@ -22,4 +23,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "MobileAnimeWallpaper"
 include(":app")
- 

@@ -1,10 +1,6 @@
 package com.magic.maw
 
 import android.app.Application
-import coil.Coil
-import coil.ComponentRegistry
-import coil.ImageLoader
-import coil.decode.GifDecoder
 import com.hjq.toast.Toaster
 
 class MyApp : Application() {
@@ -16,15 +12,6 @@ class MyApp : Application() {
     private fun init() {
         _app = this
         Toaster.init(this)
-        Coil.setImageLoader {
-            ImageLoader.Builder(this)
-                .components(
-                    ComponentRegistry.Builder()
-                        .add(GifDecoder.Factory())
-                        .build()
-                )
-                .build()
-        }
     }
 
     companion object {

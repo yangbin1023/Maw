@@ -35,6 +35,7 @@ import com.magic.maw.ui.components.SourceChangeChecker
 import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.view.ViewScreen
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val viewName = "Post"
@@ -115,6 +116,7 @@ fun PostRoute(
     val lazyState = rememberLazyStaggeredGridState()
     val refreshState = rememberPullToRefreshState()
     val scaffoldState = rememberNestedScaffoldState()
+//    val scope = LocalLifecycleOwner.current.lifecycleScope
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val itemHeights by remember { mutableStateOf(mutableMapOf<Int, Int>()) }
@@ -134,7 +136,6 @@ fun PostRoute(
         is PostUiState.View -> viewState = uiState
     }
     RegisterView(name = viewName)
-
     LaunchedEffect(uiState.type) {
         if (uiState.type == UiStateType.Refresh) {
             resetTopBar()
@@ -177,6 +178,7 @@ fun PostRoute(
             onItemClick = onItemClick
         )
         BackHandler(enabled = state.isSearch, onBack = {
+            Logger.d(viewName) { "post back handler" }
             onClearSearch()
             resetTopBar()
             Toaster.show(R.string.click_again_to_exit)
@@ -190,6 +192,8 @@ fun PostRoute(
         val state = viewState ?: return@AnimatedVisibility
         val pagerState = rememberPagerState(state.initIndex) { uiState.dataList.size }
         val onExit: () -> Unit = {
+            Logger.d(viewName) { "view back handler2. scope.state: ${scope.isActive}" }
+            onExitView()
             scope.launch {
                 if (state.initIndex != pagerState.currentPage) {
                     // 退出View时将最后查看的item移动到视野中央
@@ -199,7 +203,6 @@ fun PostRoute(
                     lazyState.scrollToItem(pagerState.currentPage, offset)
                 }
                 Logger.d(viewName) { "exit id: ${state.initIndex}, current id: ${pagerState.currentPage}" }
-                onExitView()
             }
         }
         ViewScreen(

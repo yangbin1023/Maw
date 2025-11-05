@@ -25,31 +25,24 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.magic.maw.R
 import com.magic.maw.data.PostData
-import com.magic.maw.ui.components.ScaleImageView
-import com.magic.maw.ui.components.loadModel
-import com.magic.maw.ui.components.scale.ScaleDecoder
-import com.magic.maw.ui.components.scale.rememberScaleState
 import com.magic.maw.ui.components.throttle
-import com.magic.maw.util.isTextFile
+import com.magic.maw.util.imageLoader
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.LoadType
 import com.magic.maw.website.loadDLFile
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.io.IOException
+import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
+import me.saket.telephoto.zoomable.rememberZoomableImageState
+import me.saket.telephoto.zoomable.rememberZoomableState
 import java.io.File
 import kotlin.math.abs
 
@@ -96,14 +89,9 @@ private fun ViewScreenItem(
     onTab: () -> Unit = {},
 ) {
     val quality = data.quality
-    val info = data.getInfo(quality) ?: data.originalInfo
-    val defaultSize = Size(info.width.toFloat(), info.height.toFloat())
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val type = remember { mutableStateOf(LoadType.Waiting) }
     val progress = remember { mutableFloatStateOf(0f) }
     val model = remember { mutableStateOf<Any?>(null) }
-    val size = remember { mutableStateOf(defaultSize) }
     var retryCount by remember { mutableIntStateOf(0) }
     LaunchedEffect(data, quality, retryCount) {
         type.value = LoadType.Waiting
@@ -125,36 +113,10 @@ private fun ViewScreenItem(
                 type.value = LoadType.Loading
                 progress.floatValue = it.progress
             } else if (it is LoadStatus.Success) {
-                if (data.fileType.isVideo) {
-                    (model.value as? ScaleDecoder)?.release()
+                if (data.fileType.isVideo || data.fileType.isPicture) {
                     type.value = LoadType.Success
                     model.value = it.result
                     return@collect
-                }
-                withContext(Dispatchers.IO) {
-                    if (it.result.isTextFile()) {
-                        val value = LoadStatus.Error(IOException("file is text file"))
-                        MutableStateFlow<LoadStatus<Pair<Any, Size>>>(value)
-                    } else {
-                        loadModel(context, it.result, defaultSize)
-                    }
-                }.collect { pair ->
-                    if (pair is LoadStatus.Success) {
-                        model.value.apply {
-                            if (this is ScaleDecoder && this != pair.result.first)
-                                release()
-                        }
-                        type.value = LoadType.Success
-                        model.value = pair.result.first
-                        size.value = pair.result.second
-                    } else if (pair is LoadStatus.Loading) {
-                        type.value = LoadType.Loading
-                        progress.floatValue = pair.progress
-                    } else if (pair == LoadStatus.Waiting) {
-                        type.value = LoadType.Waiting
-                    } else {
-                        type.value = LoadType.Error
-                    }
                 }
             }
         }
@@ -180,18 +142,22 @@ private fun ViewScreenItem(
                     onTab = onTab
                 )
             } else if (data.fileType.isPicture) {
-                val state = rememberScaleState(contentSize = size.value)
-                LaunchedEffect(focusOn) { if (!focusOn) state.resetImmediately() }
-                ScaleImageView(
-                    model = model.value,
-                    scaleState = state,
-                    onTap = { onTab() },
-                    onDoubleTap = { scope.launch { (state.toggleScale(it)) } }
+                val zoomableState = rememberZoomableState()
+                val state = rememberZoomableImageState(zoomableState)
+                LaunchedEffect(focusOn) { if (!focusOn) zoomableState.resetZoom() }
+                val file = (model.value as? File) ?: return
+                ZoomableAsyncImage(
+                    model = file.toUri(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    imageLoader = imageLoader,
+                    state = state,
+                    onClick = { onTab() }
                 )
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Text(
-                        text = stringResource(R.string.unknown) + " " + stringResource(R.string.file_type),
+                        text = stringResource(R.string.unknown) + " " + stringResource(R.string.file_type) + " " + data.fileType.name,
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
