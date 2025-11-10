@@ -34,6 +34,7 @@ import androidx.core.net.toUri
 import com.magic.maw.R
 import com.magic.maw.data.PostData
 import com.magic.maw.ui.components.throttle
+import com.magic.maw.util.DisableHapticLocalProvider
 import com.magic.maw.util.imageLoader
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.LoadType
@@ -146,14 +147,16 @@ private fun ViewScreenItem(
                 val state = rememberZoomableImageState(zoomableState)
                 LaunchedEffect(focusOn) { if (!focusOn) zoomableState.resetZoom() }
                 val file = (model.value as? File) ?: return
-                ZoomableAsyncImage(
-                    model = file.toUri(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    imageLoader = imageLoader,
-                    state = state,
-                    onClick = { onTab() }
-                )
+                DisableHapticLocalProvider {
+                    ZoomableAsyncImage(
+                        model = file.toUri(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        imageLoader = imageLoader,
+                        state = state,
+                        onClick = { onTab() }
+                    )
+                }
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Text(
