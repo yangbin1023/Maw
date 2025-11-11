@@ -13,11 +13,16 @@ import com.magic.maw.util.cookie
 import com.magic.maw.util.isTextFile
 import com.magic.maw.website.DLManager.addTask
 import com.magic.maw.website.DLManager.getDLFullPath
+import com.magic.maw.website.LoadStatus.Error
+import com.magic.maw.website.LoadStatus.Loading
+import com.magic.maw.website.LoadStatus.Success
+import com.magic.maw.website.LoadStatus.Waiting
+import io.ktor.client.call.body
 import io.ktor.client.plugins.onDownload
-import io.ktor.client.request.get
+import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsChannel
 import io.ktor.util.cio.writeChannel
+import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.copyAndClose
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -138,47 +143,58 @@ data class DLTask(
     }
 
     fun start() = scope.launch {
-        if (statusFlow.value is LoadStatus.Success)
+        if (statusFlow.value is Success)
             return@launch
         synchronized(this) {
             if (started)
                 return@launch
             started = true
         }
+        val file = File(path)
         try {
-            val channel = client.get(url) {
+            file.parentFile?.apply { if (!exists()) mkdirs() }
+            // 开始网络请求
+            client.prepareGet(url) {
                 cookie()
                 onDownload { currentLen, contentLen ->
                     val progress = contentLen?.let { currentLen.toFloat() / it.toFloat() } ?: 0f
                     val status = statusFlow.value
-                    if (status is LoadStatus.Error) {
-                        cancel()
-                    } else if (status is LoadStatus.Loading) {
-                        statusFlow.update { LoadStatus.Loading(progress) }
-                    } else if (status !is LoadStatus.Success) {
-                        statusFlow.update { LoadStatus.Loading(0f) }
+                    when (status) {
+                        is Error -> cancel()
+                        is Loading -> statusFlow.update { Loading(progress) }
+                        Waiting -> statusFlow.update { Loading(0f) }
+                        is Success<*> -> {}
                     }
                 }
-            }.apply {
-                response = this
-            }.bodyAsChannel()
-            val file = File(path)
-            file.parentFile?.apply { if (!exists()) mkdirs() }
-            channel.copyAndClose(file.writeChannel())
-            delay(100)
-            if (baseData.size > 0 && file.length() != baseData.size) {
-                Logger.w(TAG) { "file size error. expected size: ${baseData.size}, actual size: ${file.length()}" }
-            }
-            if (VerifyRequester.checkDlFile(file, this@DLTask)) {
-                Logger.d(TAG) { "download success, $url" }
-                statusFlow.update { LoadStatus.Success(file) }
-            } else {
-                Logger.e(TAG) { "file type error. ${file.absolutePath}, $url" }
-                statusFlow.update { LoadStatus.Error(RuntimeException("The request result is not the target file")) }
+            }.execute { response ->
+                try {
+                    this@DLTask.response = response;
+                    val channel = response.body<ByteReadChannel>()
+                    val file = File(path)
+                    file.parentFile?.apply { if (!exists()) mkdirs() }
+                    channel.copyAndClose(file.writeChannel())
+                    delay(100)
+                    if (baseData.size > 0 && file.length() != baseData.size) {
+                        Logger.w(TAG) { "file size error. expected size: ${baseData.size}, actual size: ${file.length()}" }
+                    }
+                    if (VerifyRequester.checkDlFile(file, this@DLTask)) {
+                        Logger.d(TAG) { "download success, $url" }
+                        statusFlow.update { Success(file) }
+                    } else {
+                        Logger.e(TAG) { "file type error. ${file.absolutePath}, $url" }
+                        statusFlow.update { Error(RuntimeException("The request result is not the target file")) }
+                    }
+                } catch (e: Exception) {
+                    throw e
+                }
             }
         } catch (e: Exception) {
-            if (statusFlow.value !is LoadStatus.Success) {
-                statusFlow.value = LoadStatus.Error(e)
+            if (statusFlow.value !is Success) {
+                statusFlow.update { Error(e) }
+            }
+            try {
+                if (file.exists()) file.delete()
+            } catch (_: Exception) {
             }
             Logger.e(TAG) { "download failed, $url, ${e.message}" }
         }
