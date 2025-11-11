@@ -2,7 +2,6 @@ package com.magic.maw.ui.view
 
 import android.content.Context
 import android.net.Uri
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -29,9 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -101,9 +100,7 @@ fun VideoPlayerControllerBar(
     val duration = state.duration.longValue
     val hasHour = duration > 3600_000
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(color = Color.Red.copy(0.6f)),
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = throttle(func = state::togglePlayPause)) {
@@ -224,4 +221,8 @@ class VideoPlayerState(
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         this.isPlaying.value = isPlaying
     }
+}
+
+object VideoPlayerViewDefaults {
+    val ControllerBarHeight: Dp = 40.dp
 }

@@ -70,12 +70,12 @@ import com.magic.maw.data.UserInfo
 import com.magic.maw.data.toSizeString
 import com.magic.maw.ui.components.MenuSettingItem
 import com.magic.maw.ui.components.ScrollableView
+import com.magic.maw.ui.components.ScrollableViewDefaults
 import com.magic.maw.ui.components.SettingItem
 import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.components.rememberScrollableViewState
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.PreviewTheme
-import com.magic.maw.ui.theme.ViewDetailBarExpand
 import com.magic.maw.util.ProgressNotification
 import com.magic.maw.util.TimeUtils.toFormatStr
 import com.magic.maw.util.configFlow
@@ -136,11 +136,15 @@ fun ViewDetailBar(
         qualityItems.add("$resolutionStr$sizeStr")
     }
 
-    LaunchedEffect(maxDraggableHeight) {
-        scrollableViewState.updateData(
+    LaunchedEffect(maxDraggableHeight, currentPostData.fileType) {
+        val changed = scrollableViewState.updateData(
             density = density,
+            showVideoControllerBar = currentPostData.fileType.isVideo,
             maxDraggableHeight = maxDraggableHeight
         )
+        if (changed) {
+            scrollableViewState.resetOffset()
+        }
     }
     val onSave = getOnSaveCallback()
     ScrollableView(
@@ -148,18 +152,20 @@ fun ViewDetailBar(
         state = scrollableViewState,
         toolbarModifier = Modifier.let {
             if (!scrollableViewState.hideContent) {
-                it.background(ViewDetailBarExpand)
+                it.background(MaterialTheme.colorScheme.primaryContainer.copy(0.85f))
             } else {
                 it.background(ViewScreenDefaults.detailBarFoldColor)
             }
         },
-        toolbar = {
+        toolbar = { state ->
             var isFavorite by remember { mutableStateOf(false) }
             DetailBar(
+                modifier = Modifier.height(state.toolbarHeightDp.dp),
                 postData = currentPostData,
                 expand = scrollableViewState.expand,
                 enabled = !isScrollInProgress,
                 isFavorite = isFavorite,
+                playerState = playerState,
                 onFavorite = { isFavorite = !isFavorite },
                 onSave = {
                     val websiteConfig = configFlow.value.websiteConfig
@@ -180,7 +186,6 @@ fun ViewDetailBar(
             DetailContent(
                 modifier = Modifier.align(Alignment.TopCenter),
                 postData = currentPostData,
-                playerState = playerState,
                 qualityItems = qualityItems,
                 qualityList = qualityList,
                 onTagClick = onTagClick
@@ -202,74 +207,87 @@ private fun DetailBar(
     expand: Boolean,
     enabled: Boolean = true,
     isFavorite: Boolean = false,
+    playerState: VideoPlayerState,
     onFavorite: () -> Unit,
     onSave: () -> Unit,
     onExpand: () -> Unit,
 ) {
-    Row(
-        modifier = modifier
-            .padding(horizontal = 15.dp)
-            .fillMaxSize(),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = modifier,
     ) {
-        val info = postData.getInfo(postData.quality) ?: postData.originalInfo
-        val text = "${postData.id} (${info.width}x${info.height})"
-        Text(text = text)
-
-        Spacer(modifier = Modifier.weight(1.0f))
-
-        // Like
-        IconButton(
-            onClick = throttle(func = onFavorite),
-            modifier = Modifier.width(40.dp),
-            enabled = enabled
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 15.dp)
+                .height(ScrollableViewDefaults.ToolbarHeight)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                modifier = Modifier
-                    .height(40.dp)
-                    .width(40.dp)
-                    .scale(0.8f),
-                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                tint = if (isFavorite) Color.Red else LocalContentColor.current,
-                contentDescription = null
+            val info = postData.getInfo(postData.quality) ?: postData.originalInfo
+            val text = "${postData.id} (${info.width}x${info.height})"
+            Text(text = text)
+
+            Spacer(modifier = Modifier.weight(1.0f))
+
+            // Like
+            IconButton(
+                onClick = throttle(func = onFavorite),
+                modifier = Modifier.width(40.dp),
+                enabled = enabled
+            ) {
+                Icon(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .width(40.dp)
+                        .scale(0.8f),
+                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    tint = if (isFavorite) Color.Red else LocalContentColor.current,
+                    contentDescription = null
+                )
+            }
+
+            // Save
+            IconButton(
+                onClick = throttle(func = onSave),
+                modifier = Modifier.width(40.dp),
+                enabled = enabled
+            ) {
+                Icon(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .width(40.dp)
+                        .scale(0.8f),
+                    painter = painterResource(R.drawable.ic_save),
+                    contentDescription = null
+                )
+            }
+
+            // Expand
+            val expandIconDegree by animateFloatAsState(
+                targetValue = if (expand) 90f else 270f, label = ""
             )
+
+            IconButton(
+                onClick = throttle(func = onExpand),
+                modifier = Modifier.width(40.dp),
+                enabled = enabled
+            ) {
+                Icon(
+                    modifier = Modifier
+                        .rotate(expandIconDegree)
+                        .height(40.dp)
+                        .width(40.dp),
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null
+                )
+            }
         }
 
-        // Save
-        IconButton(
-            onClick = throttle(func = onSave),
-            modifier = Modifier.width(40.dp),
-            enabled = enabled
-        ) {
-            Icon(
-                modifier = Modifier
-                    .height(40.dp)
-                    .width(40.dp)
-                    .scale(0.8f),
-                painter = painterResource(R.drawable.ic_save),
-                contentDescription = null
-            )
-        }
-
-        // Expand
-        val expandIconDegree by animateFloatAsState(
-            targetValue = if (expand) 90f else 270f, label = ""
+        VideoPlayerControllerBar(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(VideoPlayerViewDefaults.ControllerBarHeight),
+            state = playerState,
         )
-
-        IconButton(
-            onClick = throttle(func = onExpand),
-            modifier = Modifier.width(40.dp),
-            enabled = enabled
-        ) {
-            Icon(
-                modifier = Modifier
-                    .rotate(expandIconDegree)
-                    .height(40.dp)
-                    .width(40.dp),
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null
-            )
-        }
     }
 }
 
@@ -277,7 +295,6 @@ private fun DetailBar(
 private fun DetailContent(
     modifier: Modifier = Modifier,
     postData: PostData,
-    playerState: VideoPlayerState,
     qualityList: List<Quality>,
     qualityItems: List<String>,
     onTagClick: (TagInfo, Boolean) -> Unit
@@ -291,11 +308,6 @@ private fun DetailContent(
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
-
-        VideoPlayerControllerBar(
-            state = playerState,
-        )
-
         ContentHeader(stringResource(R.string.tags))
 
         var tagChanged = false
@@ -577,6 +589,8 @@ private fun DetailBarPreview() {
         originalInfo = PostData.Info(width = 1500, height = 2427, size = 22900000),
     )
     postData.quality = Quality.Sample
+    val context = LocalContext.current
+    val playerState = remember { VideoPlayerState(context = context) }
 
     PreviewTheme {
         Scaffold {
@@ -595,6 +609,7 @@ private fun DetailBarPreview() {
                         postData = postData,
                         expand = false,
                         isFavorite = true,
+                        playerState = playerState,
                         onFavorite = {},
                         onSave = {},
                         onExpand = {}

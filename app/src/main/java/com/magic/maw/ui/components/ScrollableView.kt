@@ -36,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.magic.maw.ui.view.VideoPlayerViewDefaults
 import com.magic.maw.ui.view.ViewScreenDefaults
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -83,20 +84,24 @@ fun ScrollableView(
 
 @Composable
 fun rememberScrollableViewState(
-    toolbarHeight: Dp = ScrollableViewDefaults.ToolbarHeight,
+    showVideoControllerBar: Boolean = false,
+    toolbarHeight: Dp = ScrollableViewDefaults.getDefaultToolbarHeight(showVideoControllerBar),
     maxDraggableHeight: Dp = 500.dp,
     minDraggableHeight: Dp = 0.dp,
     draggableStages: Int = 0
 ): ScrollableViewState {
     val density = LocalDensity.current
     val state = rememberSaveable(saver = ScrollableViewState.Saver) {
-        ScrollableViewState().updateData(
-            density,
-            toolbarHeight,
-            maxDraggableHeight,
-            minDraggableHeight,
-            draggableStages
-        )
+        ScrollableViewState().apply {
+            updateData(
+                density,
+                showVideoControllerBar,
+                toolbarHeight,
+                maxDraggableHeight,
+                minDraggableHeight,
+                draggableStages
+            )
+        }
     }
     return state
 }
@@ -146,6 +151,14 @@ class ScrollableViewState(
         animateTo(if (expand) stages else 0)
     }
 
+    suspend fun resetOffset() {
+        val originOffset = offsetValue
+        if (originOffset != maxPx) {
+            snapTo(originOffset + 1)
+            onDragEnd()
+        }
+    }
+
     suspend fun onDelta(delta: Float) {
         snapTo((offsetValue - delta).coerceIn(minPx, maxPx))
     }
@@ -157,15 +170,17 @@ class ScrollableViewState(
 
     fun updateData(
         density: Density,
-        toolbarHeight: Dp = ScrollableViewDefaults.ToolbarHeight,
+        showVideoControllerBar: Boolean = false,
+        toolbarHeight: Dp = ScrollableViewDefaults.getDefaultToolbarHeight(showVideoControllerBar),
         maxDraggableHeight: Dp = 500.dp,
         minDraggableHeight: Dp = 0.dp,
         draggableStages: Int = 0
-    ) = apply {
+    ): Boolean {
         val maxHeight = maxDraggableHeight - toolbarHeight
         if (maxHeight < minDraggableHeight) {
             throw RuntimeException("max height[$maxHeight] < min height[$minDraggableHeight]")
         }
+        val heightChanged = toolbarHeight.value != toolbarHeightValue
         toolbarHeightValue = toolbarHeight.value
         maxPx = with(density) { maxHeight.toPx() }
         minPx = with(density) { minDraggableHeight.toPx() }
@@ -174,6 +189,7 @@ class ScrollableViewState(
         } else {
             (maxHeight / toolbarHeight / 3).coerceIn(1f, 5f).toInt()
         }
+        return heightChanged
     }
 
     companion object {
@@ -242,5 +258,13 @@ private fun ScrollableViewPreview() {
 }
 
 object ScrollableViewDefaults {
-    val ToolbarHeight: Dp = 64.dp
+    val ToolbarHeight: Dp = 50.dp
+
+    fun getDefaultToolbarHeight(showVideoControllerBar: Boolean): Dp {
+        return if (!showVideoControllerBar) {
+            ToolbarHeight
+        } else {
+            ToolbarHeight + VideoPlayerViewDefaults.ControllerBarHeight
+        }
+    }
 }

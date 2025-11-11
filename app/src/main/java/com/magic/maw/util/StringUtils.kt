@@ -4,7 +4,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 fun String.isHtml(): Boolean {
-    val doc: Document = Jsoup.parse(this) ?: return false
+    val doc: Document = Jsoup.parse(this)
     return doc.body().childrenSize() > 0
 }
 
