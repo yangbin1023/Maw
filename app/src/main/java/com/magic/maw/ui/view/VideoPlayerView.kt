@@ -2,7 +2,9 @@ package com.magic.maw.ui.view
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -35,9 +39,12 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import co.touchlab.kermit.Logger
 import com.magic.maw.ui.components.ThumbSizeSlider
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.PreviewTheme
@@ -47,6 +54,7 @@ import kotlinx.coroutines.delay
 
 private const val TAG = "VideoPlayer"
 
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayerView(
     modifier: Modifier = Modifier,
@@ -81,7 +89,27 @@ fun VideoPlayerView(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.Center)
-                .clickable(onClick = throttle(func = state::togglePlayPause))
+                .background(color = MaterialTheme.colorScheme.surface)
+                .pointerInput(Unit) {
+                    val isLongPress = mutableStateOf(false)
+                    detectTapGestures(
+                        onTap = {
+                            isLongPress.value = false
+                            state.togglePlayPause()
+                        },
+                        onLongPress = {
+                            isLongPress.value = true
+                            state.setPlaySpeed(VideoPlayerViewDefaults.FAST_SPEED)
+                        },
+                        onPress = {
+                            tryAwaitRelease()
+                            if (isLongPress.value) {
+                                isLongPress.value = false
+                                state.setPlaySpeed(VideoPlayerViewDefaults.NORMAL_SPEED)
+                            }
+                        }
+                    )
+                }
         )
     }
 }
@@ -195,6 +223,13 @@ class VideoPlayerState(
         exoPlayer.volume = if (isMuted.value) 0f else 1f
     }
 
+    fun setPlaySpeed(speed: Float) {
+        if (exoPlayer.isPlaying || speed == 1f) {
+            Logger.d(TAG) { "set play speed: $speed" }
+            exoPlayer.playbackParameters = PlaybackParameters(speed)
+        }
+    }
+
     fun seekTo(position: Long) {
         exoPlayer.seekTo(position.coerceIn(0, duration.longValue))
         currentPosition.longValue = position
@@ -225,4 +260,6 @@ class VideoPlayerState(
 
 object VideoPlayerViewDefaults {
     val ControllerBarHeight: Dp = 40.dp
+    const val FAST_SPEED: Float = 3f
+    const val NORMAL_SPEED: Float = 1f
 }
