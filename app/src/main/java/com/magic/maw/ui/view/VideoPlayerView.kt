@@ -2,6 +2,10 @@ package com.magic.maw.ui.view
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -24,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,7 +46,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import co.touchlab.kermit.Logger
@@ -54,7 +58,6 @@ import kotlinx.coroutines.delay
 
 private const val TAG = "VideoPlayer"
 
-@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayerView(
     modifier: Modifier = Modifier,
@@ -65,8 +68,10 @@ fun VideoPlayerView(
     LaunchedEffect(videoUri) {
         state.changeVideoSource(videoUri)
         while (true) {
-            delay(40)
-            state.currentPosition.longValue = state.exoPlayer.currentPosition
+            if (state.isReady.value) {
+                state.currentPosition.longValue = state.exoPlayer.currentPosition
+            }
+            delay(100)
         }
     }
 
@@ -79,38 +84,49 @@ fun VideoPlayerView(
                 onClick = throttle(func = onTab)
             )
     ) {
-        AndroidView(
-            factory = { context ->
-                PlayerView(context).apply {
-                    useController = false
-                    player = state.exoPlayer
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center)
-                .background(color = MaterialTheme.colorScheme.surface)
-                .pointerInput(Unit) {
-                    val isLongPress = mutableStateOf(false)
-                    detectTapGestures(
-                        onTap = {
-                            isLongPress.value = false
-                            state.togglePlayPause()
-                        },
-                        onLongPress = {
-                            isLongPress.value = true
-                            state.setPlaySpeed(VideoPlayerViewDefaults.FAST_SPEED)
-                        },
-                        onPress = {
-                            tryAwaitRelease()
-                            if (isLongPress.value) {
+        val fadeIn = fadeIn(animationSpec = tween(700))
+        val fadeOut = fadeOut(animationSpec = tween(700))
+        AnimatedVisibility(
+            visible = state.isReady.value,
+            modifier = Modifier.align(Alignment.Center),
+            enter = fadeIn,
+            exit = fadeOut
+        ) {
+            val config by configFlow.collectAsState()
+            val fastSpeed = config.videoSpeedup
+            AndroidView(
+                factory = { context ->
+                    PlayerView(context).apply {
+                        useController = false
+                        player = state.exoPlayer
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center)
+                    .background(color = MaterialTheme.colorScheme.surface)
+                    .pointerInput(Unit) {
+                        val isLongPress = mutableStateOf(false)
+                        detectTapGestures(
+                            onTap = {
                                 isLongPress.value = false
-                                state.setPlaySpeed(VideoPlayerViewDefaults.NORMAL_SPEED)
+                                state.togglePlayPause()
+                            },
+                            onLongPress = {
+                                isLongPress.value = true
+                                state.setPlaySpeed(fastSpeed)
+                            },
+                            onPress = {
+                                tryAwaitRelease()
+                                if (isLongPress.value) {
+                                    isLongPress.value = false
+                                    state.setPlaySpeed(VideoPlayerViewDefaults.NORMAL_SPEED)
+                                }
                             }
-                        }
-                    )
-                }
-        )
+                        )
+                    }
+            )
+        }
     }
 }
 
@@ -123,8 +139,9 @@ fun VideoPlayerControllerBar(
     if (!state.isEnable.value) {
         return
     }
-    var tempPosition by remember { mutableLongStateOf(-1) }
-    val currentPosition = if (tempPosition >= 0) tempPosition else state.currentPosition.longValue
+    var tempPosition by remember { mutableStateOf<Long?>(null) }
+    var tempPlayState by remember { mutableStateOf<Boolean?>(null) }
+    val currentPosition = tempPosition ?: state.currentPosition.longValue
     val duration = state.duration.longValue
     val hasHour = duration > 3600_000
     Row(
@@ -141,12 +158,25 @@ fun VideoPlayerControllerBar(
         Text(text = currentPosition.formatTimeStr(hasHour))
 
         ThumbSizeSlider(
-            value = currentPosition.toFloat(),
-            valueRange = 0f..duration.toFloat(),
-            onValueChange = { tempPosition = it.toLong().coerceIn(0, duration) },
+            value = (currentPosition / 1000).toFloat(),
+            enabled = state.isReady.value,
+            valueRange = 0f..(duration / 1000).toFloat(),
+            onValueChange = { newValue ->
+                val newPosition: Long = (newValue * 1000).toLong().coerceIn(0, duration)
+                if (tempPosition == null) {
+                    tempPlayState = state.isPlaying.value
+                    if (state.isPlaying.value) {
+                        state.togglePlayPause()
+                    }
+                }
+                tempPosition = newPosition
+                Logger.d(TAG) { "seek to $newValue" }
+                state.seekTo(newPosition)
+            },
             onValueChangeFinished = {
-                state.seekTo(tempPosition)
-                tempPosition = -1
+                if (tempPlayState == true) state.togglePlayPause()
+                tempPlayState = null
+                tempPosition = null
             },
             thumbSize = DpSize(4.dp, 22.dp),
             modifier = Modifier
@@ -203,6 +233,7 @@ class VideoPlayerState(
     val isEnable = mutableStateOf(false)
     val isPlaying = mutableStateOf(isPlaying)
     val isMuted = mutableStateOf(isMuted)
+    val isReady = mutableStateOf(false)
     val currentPosition = mutableLongStateOf(0)
     val duration = mutableLongStateOf(0)
 
@@ -241,6 +272,7 @@ class VideoPlayerState(
         if (!exoPlayer.isPlaying && configFlow.value.autoplay) {
             exoPlayer.play()
         }
+        isReady.value = false
         currentPosition.longValue = 0
     }
 
@@ -249,8 +281,12 @@ class VideoPlayerState(
     }
 
     override fun onPlaybackStateChanged(playbackState: Int) {
-        if (playbackState == Player.STATE_READY) duration.longValue = exoPlayer.duration
-        else if (playbackState == Player.STATE_ENDED) isPlaying.value = false
+        if (playbackState == Player.STATE_READY) {
+            duration.longValue = exoPlayer.duration
+            isReady.value = true
+        } else if (playbackState == Player.STATE_ENDED) {
+            isPlaying.value = false
+        }
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -260,6 +296,5 @@ class VideoPlayerState(
 
 object VideoPlayerViewDefaults {
     val ControllerBarHeight: Dp = 40.dp
-    const val FAST_SPEED: Float = 3f
     const val NORMAL_SPEED: Float = 1f
 }

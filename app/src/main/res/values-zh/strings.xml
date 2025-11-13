@@ -60,4 +60,5 @@
     <string name="video">视频</string>
     <string name="autoplay">自动播放</string>
     <string name="mute">静音</string>
+    <string name="video_speedup">视频加速倍率</string>
 </resources>

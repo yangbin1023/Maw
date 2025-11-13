@@ -59,4 +59,5 @@
     <string name="video">Video</string>
     <string name="autoplay">Autoplay</string>
     <string name="mute">mute</string>
+    <string name="video_speedup">Video speedup</string>
 </resources>

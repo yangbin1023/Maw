@@ -112,6 +112,7 @@ data class Config(
     val danbooruConfig: WebsiteConfig = WebsiteConfig(rating = Rating.General.value),
     val autoplay: Boolean = true,
     val mute: Boolean = true,
+    val videoSpeedup: Float = 3f,
     val darkMode: Int = 0,
     val dynamicColor: Boolean = supportDynamicColor
 ) {
@@ -141,8 +142,14 @@ data class WebsiteConfig(
 )
 
 fun Int.hasFlag(flag: Int): Boolean = (this and flag) == flag
+
+@Suppress("unused")
 fun Int.addFlags(flags: Int): Int = this or flags
+
+@Suppress("unused")
 fun Int.removeFlags(flags: Int): Int = this and flags.inv()
+
+@Suppress("unused")
 fun Int.toFlags(): IntArray {
     val list = ArrayList<Int>()
     for (i in 0 until Int.SIZE_BITS) {

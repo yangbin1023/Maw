@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -135,6 +136,8 @@ private fun SettingBody(
         AutoPlaySetting(autoplay = config.autoplay)
         // 静音
         MuteSetting(mute = config.mute)
+        // 视频加速倍率
+        VideoSpeedupSetting(speedup = config.videoSpeedup)
 
         /** 主题 */
         SettingGroupTitle(text = stringResource(R.string.theme), modifier = titleModifier)
@@ -169,7 +172,7 @@ private fun WebsiteSetting(
     source: String,
     changeSetting: MutableState<Boolean>,
 ) {
-    val options = LocalContext.current.resources.getStringArray(R.array.website).toList()
+    val options = LocalResources.current.getStringArray(R.array.website).toList()
     val initValue = BaseParser.getIndex(source)
     var selectIndex by remember { mutableIntStateOf(initValue) }
     DialogSettingItem(
@@ -316,6 +319,27 @@ private fun MuteSetting(mute: Boolean) {
         checked = mute,
         onCheckedChange = {
             configFlow.update { s -> s.copy(mute = it) }
+        }
+    )
+}
+
+/**
+ * 视频加速倍率
+ */
+@Composable
+private fun VideoSpeedupSetting(speedup: Float) {
+    val speedupMap = mapOf("2x" to 2f, "3x" to 3f, "5x" to 5f)
+    val items = speedupMap.keys.toList().sorted()
+    val key = speedupMap.entries.find { it.value == speedup }?.key
+    val index = key?.let { items.indexOf(it).coerceAtLeast(0) } ?: 0
+    MenuSettingItem(
+        title = stringResource(R.string.video_speedup),
+        items = items,
+        checkItem = index,
+        onItemChanged = { index ->
+            speedupMap[items[index]]?.let {
+                configFlow.update { s -> s.copy(videoSpeedup = it) }
+            }
         }
     )
 }

@@ -68,7 +68,7 @@ object DLManager {
             if (file.isTextFile() && !baseData.fileType.isText) {
                 file.delete()
             } else {
-                return MutableStateFlow(LoadStatus.Success(file))
+                return MutableStateFlow(Success(file))
             }
         }
         val task = addTask(baseData, url, path)
@@ -125,7 +125,7 @@ data class DLTask(
     val baseData: BaseData,
     val url: String,
     val path: String = "",
-    val statusFlow: MutableStateFlow<LoadStatus<File>> = MutableStateFlow(LoadStatus.Waiting),
+    val statusFlow: MutableStateFlow<LoadStatus<File>> = MutableStateFlow(Waiting),
 ) {
     private var started: Boolean = false
     private var response: HttpResponse? = null
@@ -167,25 +167,21 @@ data class DLTask(
                     }
                 }
             }.execute { response ->
-                try {
-                    this@DLTask.response = response;
-                    val channel = response.body<ByteReadChannel>()
-                    val file = File(path)
-                    file.parentFile?.apply { if (!exists()) mkdirs() }
-                    channel.copyAndClose(file.writeChannel())
-                    delay(100)
-                    if (baseData.size > 0 && file.length() != baseData.size) {
-                        Logger.w(TAG) { "file size error. expected size: ${baseData.size}, actual size: ${file.length()}" }
-                    }
-                    if (VerifyRequester.checkDlFile(file, this@DLTask)) {
-                        Logger.d(TAG) { "download success, $url" }
-                        statusFlow.update { Success(file) }
-                    } else {
-                        Logger.e(TAG) { "file type error. ${file.absolutePath}, $url" }
-                        statusFlow.update { Error(RuntimeException("The request result is not the target file")) }
-                    }
-                } catch (e: Exception) {
-                    throw e
+                this@DLTask.response = response
+                val channel = response.body<ByteReadChannel>()
+                val file = File(path)
+                file.parentFile?.apply { if (!exists()) mkdirs() }
+                channel.copyAndClose(file.writeChannel())
+                delay(100)
+                if (baseData.size > 0 && file.length() != baseData.size) {
+                    Logger.w(TAG) { "file size error. expected size: ${baseData.size}, actual size: ${file.length()}" }
+                }
+                if (VerifyRequester.checkDlFile(file, this@DLTask)) {
+                    Logger.d(TAG) { "download success, $url" }
+                    statusFlow.update { Success(file) }
+                } else {
+                    Logger.e(TAG) { "file type error. ${file.absolutePath}, $url" }
+                    statusFlow.update { Error(RuntimeException("The request result is not the target file")) }
                 }
             }
         } catch (e: Exception) {
@@ -212,6 +208,7 @@ fun loadDLFile(
     return DLManager.addTaskAndStart(baseData, info.url, scope)
 }
 
+@Suppress("unused")
 fun loadDLFileWithTask(
     postData: PostData,
     quality: Quality = postData.quality
@@ -229,7 +226,7 @@ fun loadDLFileWithTask(
             baseData,
             info.url,
             path,
-            MutableStateFlow(LoadStatus.Success(file))
+            MutableStateFlow(Success(file))
         )
     return addTask(baseData, info.url, path)
 }
