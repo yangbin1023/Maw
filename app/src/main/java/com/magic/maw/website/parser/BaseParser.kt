@@ -3,8 +3,10 @@ package com.magic.maw.website.parser
 import com.magic.maw.data.PoolData
 import com.magic.maw.data.PopularType
 import com.magic.maw.data.PostData
+import com.magic.maw.data.Rating
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.UserInfo
+import com.magic.maw.data.WebsiteOption
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.UserManager
@@ -14,8 +16,10 @@ import java.net.URLEncoder
 
 abstract class BaseParser {
     protected abstract val baseUrl: String
+    abstract val website: WebsiteOption
     abstract val source: String
     abstract val supportRating: Int
+    abstract val supportRatings: List<Rating>
     open val supportPopular: Int = PopularType.defaultSupport
     open val tagManager: TagManager by lazy { TagManager.get(source) }
     open val userManager: UserManager by lazy { UserManager.get(source) }
@@ -47,6 +51,14 @@ abstract class BaseParser {
                 }
                 parserMap[source] = SoftReference(parser)
                 return parser
+            }
+        }
+
+        fun get(website: WebsiteOption): BaseParser {
+            return when(website) {
+                WebsiteOption.Yande -> YandeParser()
+                WebsiteOption.Konachan -> KonachanParser()
+                WebsiteOption.Danbooru -> DanbooruParser()
             }
         }
 

@@ -7,6 +7,7 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.UserInfo
+import com.magic.maw.data.WebsiteOption
 import com.magic.maw.data.danbooru.DanbooruData
 import com.magic.maw.data.danbooru.DanbooruPool
 import com.magic.maw.data.danbooru.DanbooruTag
@@ -28,8 +29,10 @@ private const val TAG = DanbooruParser.SOURCE
 
 class DanbooruParser : BaseParser() {
     override val baseUrl: String get() = "https://danbooru.donmai.us"
+    override val website: WebsiteOption = WebsiteOption.Danbooru
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.General.value or Rating.Sensitive.value or Rating.Questionable.value or Rating.Explicit.value
+    override val supportRatings: List<Rating> = listOf(Rating.General, Rating.Sensitive, Rating.Questionable, Rating.Explicit)
     override val supportPopular: Int get() = PopularType.defaultSupport or PopularType.Year.value
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {

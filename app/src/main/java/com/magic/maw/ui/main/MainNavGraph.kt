@@ -29,6 +29,7 @@ import com.magic.maw.ui.post.PostRoute
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.search.SearchScreen
 import com.magic.maw.ui.setting.SettingScreen
+import com.magic.maw.ui.setting.SettingScreen2
 import com.magic.maw.ui.verify.VerifyScreen
 import com.magic.maw.util.UiUtils.checkTopRoute
 import com.magic.maw.util.VerifyRequester
@@ -59,6 +60,7 @@ fun MainNavGraph(
     }
 
     SourceChangeChecker {
+        Logger.d(TAG) { "source changed clear data" }
         postViewModel.clearData()
         poolViewModel.clearData()
         popularViewModel.clearData()
@@ -89,16 +91,17 @@ fun MainNavGraph(
             )
         }
         composable(route = MainRoutes.POPULAR) {
+            Logger.d(TAG) { "popular route recompose" }
             PopularRoute(
                 popularViewModel = popularViewModel,
                 openDrawer = openDrawer
             )
         }
         composable(route = MainRoutes.SETTING) {
-            SettingScreen(
-                isExpandedScreen = isExpandedScreen,
-                onFinish = { navController.popBackStack() }
-            )
+//            SettingScreen(
+//                onFinish = { navController.popBackStack() }
+//            )
+            SettingScreen2(navController = navController)
         }
         composable(
             route = MainRoutes.SEARCH,

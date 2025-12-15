@@ -2,7 +2,9 @@ package com.magic.maw.data
 
 import android.content.Context
 import com.magic.maw.R
+import kotlinx.serialization.Serializable
 
+@Serializable
 enum class Quality(val value: Int) {
     Preview(1 shl 0),
     Sample(1 shl 1),
@@ -21,6 +23,14 @@ enum class Quality(val value: Int) {
             else -> resources.getString(R.string.quality_sample)
         }
     }
+
+    val resId: Int?
+        get() = when (this) {
+            Large -> R.string.quality_large
+            File -> R.string.quality_origin
+            Sample -> R.string.quality_sample
+            else -> null
+        }
 
     companion object {
         val SaveList: List<Quality> = listOf(Sample, Large, File)

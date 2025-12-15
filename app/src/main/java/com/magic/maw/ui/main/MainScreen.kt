@@ -68,9 +68,6 @@ fun MainScreen() {
                     }
                 }
             }) {
-                if (isExpandedScreen) {
-                    MainNavRail(navController = navController)
-                }
                 MainNavGraph(
                     inSubView = inSubView,
                     isExpandedScreen = isExpandedScreen,

@@ -6,6 +6,7 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.UserInfo
+import com.magic.maw.data.WebsiteOption
 import com.magic.maw.data.yande.YandeData
 import com.magic.maw.data.yande.YandePool
 import com.magic.maw.data.yande.YandeTag
@@ -22,8 +23,10 @@ import io.ktor.http.path
 
 open class YandeParser : BaseParser() {
     override val baseUrl: String get() = "https://yande.re"
+    override val website: WebsiteOption = WebsiteOption.Yande
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
+    override val supportRatings: List<Rating> = listOf(Rating.Safe, Rating.Questionable, Rating.Explicit)
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         // pool.post 和 popular 没有第二页

@@ -49,6 +49,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import co.touchlab.kermit.Logger
+import com.magic.maw.data.SettingsService
 import com.magic.maw.ui.components.ThumbSizeSlider
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.PreviewTheme
@@ -92,8 +93,6 @@ fun VideoPlayerView(
             enter = fadeIn,
             exit = fadeOut
         ) {
-            val config by configFlow.collectAsState()
-            val fastSpeed = config.videoSpeedup
             AndroidView(
                 factory = { context ->
                     PlayerView(context).apply {
@@ -114,7 +113,9 @@ fun VideoPlayerView(
                             },
                             onLongPress = {
                                 isLongPress.value = true
-                                state.setPlaySpeed(fastSpeed)
+                                val videoSettings =
+                                    SettingsService.settingsState.value.videoSettings
+                                state.setPlaySpeed(videoSettings.playbackSpeedMultiplier)
                             },
                             onPress = {
                                 tryAwaitRelease()
@@ -220,8 +221,8 @@ fun VideoPlayerControllerBarPreview() {
 }
 
 class VideoPlayerState(
-    isPlaying: Boolean = configFlow.value.autoplay,
-    isMuted: Boolean = configFlow.value.mute,
+    isPlaying: Boolean = SettingsService.settingsState.value.videoSettings.autoplay,
+    isMuted: Boolean = SettingsService.settingsState.value.videoSettings.mute,
     context: Context
 ) : Player.Listener {
     val exoPlayer = ExoPlayer.Builder(context).build().apply {
@@ -269,7 +270,7 @@ class VideoPlayerState(
     fun changeVideoSource(uri: Uri) {
         exoPlayer.setMediaItem(MediaItem.fromUri(uri))
         exoPlayer.prepare()
-        if (!exoPlayer.isPlaying && configFlow.value.autoplay) {
+        if (!exoPlayer.isPlaying && SettingsService.settingsState.value.videoSettings.autoplay) {
             exoPlayer.play()
         }
         isReady.value = false

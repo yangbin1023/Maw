@@ -1,6 +1,8 @@
 package com.magic.maw.ui.setting
 
+import android.content.Intent
 import android.webkit.CookieManager
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -38,6 +40,7 @@ import com.magic.maw.data.Quality
 import com.magic.maw.data.Quality.Companion.toQuality
 import com.magic.maw.data.Rating.Companion.getRatings
 import com.magic.maw.data.Rating.Companion.hasRating
+import com.magic.maw.test.TestActivity
 import com.magic.maw.ui.components.DialogSettingItem
 import com.magic.maw.ui.components.MenuSettingItem
 import com.magic.maw.ui.components.MultipleChoiceDialog
@@ -63,7 +66,6 @@ private var clickVersionItemCount = 0
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingScreen(
-    isExpandedScreen: Boolean,
     onFinish: (() -> Unit)? = null,
 ) {
     val changeSetting = remember { mutableStateOf(false) }
@@ -77,7 +79,6 @@ fun SettingScreen(
         SettingBody(
             modifier = Modifier.padding(innerPadding),
             changeSetting = changeSetting,
-            isExpandedScreen = isExpandedScreen,
         )
     }
 }
@@ -108,7 +109,6 @@ private fun SettingTopBar(
 @Composable
 private fun SettingBody(
     modifier: Modifier = Modifier,
-    isExpandedScreen: Boolean,
     changeSetting: MutableState<Boolean>,
 ) {
     val config by configFlow.collectAsState()
@@ -122,7 +122,7 @@ private fun SettingBody(
         /** 网站设置 */
         SettingGroupTitle(text = stringResource(R.string.website))
         // 网站设置
-        WebsiteSetting(source = config.source, changeSetting = changeSetting)
+        WebsiteSettingItem(source = config.source, changeSetting = changeSetting)
         // 分级
         RatingSetting(config = config, changeSetting = changeSetting)
         // 质量
@@ -141,8 +141,8 @@ private fun SettingBody(
 
         /** 主题 */
         SettingGroupTitle(text = stringResource(R.string.theme), modifier = titleModifier)
-        // 深色模式
-        DarkModeSetting(darkMode = config.darkMode)
+        // 主题模式
+        DarkModeSetting(darkMode = config.themeMode)
         // 动态颜色
         DynamicColorSetting(checked = config.dynamicColor)
 
@@ -150,6 +150,8 @@ private fun SettingBody(
         SettingGroupTitle(text = stringResource(R.string.other), modifier = titleModifier)
         // 版本
         VersionSetting()
+        // 测试
+        TestEntranceSetting()
     }
 }
 
@@ -168,7 +170,7 @@ private fun SettingGroupTitle(text: String, modifier: Modifier = Modifier) {
  * 网站设置
  */
 @Composable
-private fun WebsiteSetting(
+private fun WebsiteSettingItem(
     source: String,
     changeSetting: MutableState<Boolean>,
 ) {
@@ -350,14 +352,14 @@ private fun VideoSpeedupSetting(speedup: Float) {
 @Composable
 private fun DarkModeSetting(darkMode: Int) {
     MenuSettingItem(
-        title = stringResource(R.string.dark_mode),
+        title = stringResource(R.string.theme_mode),
         items = listOf(
             stringResource(R.string.follow_system),
-            stringResource(R.string.always_enable),
-            stringResource(R.string.always_disable)
+            stringResource(R.string.always_dark),
+            stringResource(R.string.always_light)
         ),
         checkItem = darkMode,
-        onItemChanged = { configFlow.update { s -> s.copy(darkMode = it) } }
+        onItemChanged = { configFlow.update { s -> s.copy(themeMode = it) } }
     )
 }
 
@@ -404,5 +406,19 @@ private fun VersionSetting() {
             CookieManager.getInstance().removeAllCookies(null)
             Toaster.show(R.string.all_cookies_cleared)
         }
+    }
+}
+
+/**
+ * 测试Activity入口
+ */
+@Composable
+private fun TestEntranceSetting() {
+    val context = LocalContext.current
+    val activity = LocalActivity.current
+    SettingItem(
+        title = "测试",
+    ) {
+        activity?.startActivity(Intent(context, TestActivity::class.java))
     }
 }

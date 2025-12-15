@@ -16,9 +16,9 @@
     <string name="ok">好的</string>
     <string name="cancel">取消</string>
     <string name="confirm">确认</string>
-    <string name="dark_mode">深色模式</string>
-    <string name="always_enable">总是开启</string>
-    <string name="always_disable">总是关闭</string>
+    <string name="theme_mode">主题模式</string>
+    <string name="always_dark">始终深色</string>
+    <string name="always_light">始终浅色</string>
     <string name="dynamic_color">动态配色</string>
     <string name="dynamic_color_desc">配色跟随系统主题</string>
     <string name="rating">分级</string>
@@ -61,4 +61,5 @@
     <string name="autoplay">自动播放</string>
     <string name="mute">静音</string>
     <string name="video_speedup">视频加速倍率</string>
+    <string name="favorite">收藏</string>
 </resources>

@@ -7,7 +7,9 @@ import com.magic.maw.ui.theme.rating_none
 import com.magic.maw.ui.theme.rating_questionable
 import com.magic.maw.ui.theme.rating_safe
 import com.magic.maw.ui.theme.rating_sensitive
+import kotlinx.serialization.Serializable
 
+@Serializable
 enum class Rating(val value: Int) {
     None(0),
     Safe(1 shl 0),

@@ -1,6 +1,8 @@
 package com.magic.maw.util
 
 import co.touchlab.kermit.Logger
+import com.hjq.toast.Toaster
+import com.magic.maw.MyApp
 import com.magic.maw.util.VerifyRequester.callback
 import com.magic.maw.website.DLTask
 import io.ktor.client.HttpClient
@@ -12,10 +14,13 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.takeFrom
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileWriter
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.max
 
@@ -127,6 +132,20 @@ suspend inline fun <reified T> HttpClient.get(urlString: String): T {
         }
         val msg: String = response.body()
         if (!msg.isVerifyHtml()) {
+            if (msg.isHtml()) {
+                try {
+                    val logDir = MyApp.app.getExternalFilesDir("log")
+                    val fileName = TimeUtils.getCurrentTimeStr(TimeUtils.FORMAT_3) + ".log"
+                    withContext(Dispatchers.IO) {
+                        val fWriter = FileWriter(File(logDir, fileName))
+                        fWriter.write(msg)
+                        fWriter.close()
+                    }
+                    Toaster.show("写入日志：$fileName")
+                } catch (e: Exception) {
+                    Toaster.show("""write log failed: ${e.message}""")
+                }
+            }
             return response.body()
         }
         val callback = callback ?: let { return response.body() }

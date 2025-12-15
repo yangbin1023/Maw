@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import com.magic.maw.data.Quality
 import com.magic.maw.data.Rating
+import com.magic.maw.util.WebsiteConfig
 import com.magic.maw.ui.theme.supportDynamicColor
 import com.magic.maw.website.parser.DanbooruParser
 import com.magic.maw.website.parser.KonachanParser
@@ -113,7 +114,7 @@ data class Config(
     val autoplay: Boolean = true,
     val mute: Boolean = true,
     val videoSpeedup: Float = 3f,
-    val darkMode: Int = 0,
+    val themeMode: Int = 0,
     val dynamicColor: Boolean = supportDynamicColor
 ) {
     val websiteConfig: WebsiteConfig
@@ -121,7 +122,7 @@ data class Config(
 
     val darkTheme: Boolean
         @Composable
-        get() = if (darkMode == 0) isSystemInDarkTheme() else darkMode == 1
+        get() = if (themeMode == 0) isSystemInDarkTheme() else themeMode == 1
 
     fun getWebsiteConfig(source: String): WebsiteConfig {
         return when (source) {

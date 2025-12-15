@@ -1,6 +1,5 @@
 package com.magic.maw.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -11,11 +10,16 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.magic.maw.util.configFlow
+import co.touchlab.kermit.Logger
+import com.magic.maw.data.SettingsService
+import com.magic.maw.data.ThemeMode
+import com.magic.maw.util.UiUtils.findActivity
 
 private val DarkColorScheme = darkColorScheme()
 private val LightColorScheme = lightColorScheme()
@@ -23,9 +27,16 @@ val supportDynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
 @Composable
 fun MawTheme(content: @Composable () -> Unit) {
-    val config by configFlow.collectAsState()
-    val darkTheme = config.darkTheme
-    val dynamicColor = config.dynamicColor
+    val settingState by SettingsService.settingsState.collectAsState()
+    val themeMode by remember { derivedStateOf { settingState.themeSettings.themeMode } }
+    val dynamicColor by remember { derivedStateOf { settingState.themeSettings.dynamicColor } }
+
+    val darkTheme = when (themeMode) {
+        ThemeMode.System -> isSystemInDarkTheme()
+        ThemeMode.Dark -> true
+        ThemeMode.Light -> false
+    }
+
     val colorScheme = when {
         dynamicColor && supportDynamicColor -> {
             val context = LocalContext.current
@@ -35,17 +46,20 @@ fun MawTheme(content: @Composable () -> Unit) {
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
-        val window = (view.context as Activity).window
-        SideEffect {
-            WindowCompat.getInsetsController(window, window.decorView).apply {
-                isAppearanceLightStatusBars = !darkTheme
-                isAppearanceLightNavigationBars = false
+        view.context.findActivity()?.window?.let { window ->
+            SideEffect {
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !darkTheme
+                    isAppearanceLightNavigationBars = false
+                }
             }
         }
     }
 
+    Logger.d("MawTAG") { "MawTheme compose1" }
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,

@@ -5,6 +5,7 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.UserInfo
+import com.magic.maw.data.WebsiteOption
 import com.magic.maw.data.konachan.KonachanData
 import com.magic.maw.data.konachan.KonachanPool
 import com.magic.maw.data.konachan.KonachanTag
@@ -22,6 +23,7 @@ private const val TAG = KonachanParser.SOURCE
  */
 class KonachanParser : YandeParser() {
     override val baseUrl: String get() = "https://konachan.net"
+    override val website: WebsiteOption = WebsiteOption.Konachan
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
 

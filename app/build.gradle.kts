@@ -118,6 +118,8 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.jsoup)
+    implementation(libs.androidx.datastore)
+    implementation(libs.androidx.adaptive)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)
@@ -136,7 +138,6 @@ dependencies {
     implementation(composeBom)
     implementation(libs.compose.activity)
     implementation(libs.compose.ui)
-    implementation(libs.compose.material)
     implementation(libs.compose.material3)
     implementation(libs.compose.material3.window)
     implementation(libs.compose.icons)

@@ -1,36 +1,17 @@
 package com.magic.maw.ui.post
 
-import androidx.compose.animation.animateColor
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -42,7 +23,6 @@ import coil3.request.ImageRequest
 import com.magic.maw.R
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
-import com.magic.maw.ui.components.CountSingleton
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.loadDLFile
 import java.io.File
@@ -117,19 +97,6 @@ private fun getPostRatio(staggered: Boolean, width: Int, height: Int): Float {
         2f
     } else {
         width.toFloat() / height
-    }
-}
-
-private val waitAnimate by lazy {
-    CountSingleton(Color.Transparent) {
-        val infiniteTransition = rememberInfiniteTransition(label = "postItem")
-        val targetColor = MaterialTheme.colorScheme.onSurface.copy(0.15f)
-        infiniteTransition.animateColor(
-            initialValue = targetColor,
-            targetValue = targetColor.copy(0.05f),
-            animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse),
-            label = "postItemColor"
-        )
     }
 }
 

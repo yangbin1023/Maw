@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -199,6 +198,72 @@ fun MenuSettingItem(
                             expanded = false
                             if (index != checkItem) {
                                 onItemChanged(index)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun <T> MenuSettingItem(
+    modifier: Modifier = Modifier,
+    title: String,
+    subTitle: String? = null,
+    enable: Boolean = true,
+    options: List<T>,
+    optionToString: @Composable (T) -> String = { it.toString() },
+    selectOption: T? = null,
+    selectOptionIndex: Int = 0,
+    onOptionSelected: (T) -> Unit,
+) {
+    if (options.isEmpty()) {
+        throw IllegalArgumentException("items cannot be empty")
+    }
+    if (selectOption != null && !options.contains(selectOption)) {
+        throw IllegalArgumentException("checkItem is not in items")
+    }
+    if (selectOptionIndex >= options.size) {
+        throw ArrayIndexOutOfBoundsException("checkItem cannot be larger than the size of items")
+    }
+    val checkIndex = if (selectOption != null) options.indexOf(selectOption) else selectOptionIndex
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .clickable(enabled = enable) { expanded = true }
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = SettingItemDefaults.defaultMinHeight)
+            .let { if (modifier == Modifier) it.itemPadding() else it.then(modifier) },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            if (subTitle != null) {
+                Text(
+                    text = subTitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = optionToString(options[checkIndex]),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Icon(imageVector = Icons.Default.UnfoldMore, contentDescription = null)
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                for ((index, item) in options.withIndex()) {
+                    DropdownMenuItem(
+                        text = { Text(text = optionToString(item)) },
+                        onClick = {
+                            expanded = false
+                            if (index != checkIndex) {
+                                onOptionSelected(item)
                             }
                         }
                     )
