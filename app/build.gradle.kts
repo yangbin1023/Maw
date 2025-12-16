@@ -119,7 +119,6 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.jsoup)
     implementation(libs.androidx.datastore)
-    implementation(libs.androidx.adaptive)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)

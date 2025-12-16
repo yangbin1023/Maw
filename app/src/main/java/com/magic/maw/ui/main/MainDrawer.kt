@@ -9,17 +9,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.ui.components.DrawerItem
 import com.magic.maw.util.UiUtils.getStatusBarHeight
+
+private const val TAG = "MainDrawer"
 
 @Composable
 fun MainDrawer(
@@ -78,12 +79,14 @@ fun AppDrawer(
     navController: NavController,
     closeDrawer: () -> Unit
 ) {
-    val currentRoute by remember { derivedStateOf { navController.currentAppRoute } }
+    val currentRoute = navController.topRoute
+    Logger.d(TAG) { "AppDrawer recompose" }
     ModalDrawerSheet(
         modifier = modifier.resetDrawerWidth(),
         drawerShape = RoundedCornerShape(topEnd = 5.dp, bottomEnd = 5.dp),
         windowInsets = WindowInsets(top = LocalContext.current.getStatusBarHeight()),
     ) {
+        Logger.d(TAG) { "AppDrawer item recompose" }
         Spacer(modifier = Modifier.height(16.dp))
 
         DrawerItem(
@@ -113,15 +116,15 @@ fun AppDrawer(
         DrawerItem(
             labelRes = R.string.setting,
             iconRes = R.drawable.ic_setting,
-            selected = currentRoute == AppRoute.Setting,
-            onClick = { navController.navigate(route = AppRoute.Setting); closeDrawer() }
+            selected = currentRoute == AppRoute.Settings,
+            onClick = { navController.navigate(route = AppRoute.Settings); closeDrawer() }
         )
     }
 }
 
 @Composable
 private fun Modifier.resetDrawerWidth(): Modifier {
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val screenWidth = LocalWindowInfo.current.containerSize.width.dp
     val targetWidth = screenWidth * 0.85f
     return if (targetWidth < 360.dp) {
         sizeIn(

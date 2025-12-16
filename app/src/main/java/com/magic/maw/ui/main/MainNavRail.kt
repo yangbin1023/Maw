@@ -7,23 +7,22 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationRail
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import androidx.navigation.toRoute
+import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.ui.components.RailItem
-import com.magic.maw.util.UiUtils.currentRoute
+
+private const val TAG = "MainNavRail"
 
 @Composable
 fun MainNavRail(
     modifier: Modifier = Modifier,
     navController: NavController,
 ) {
-    val currentRoute by remember { derivedStateOf { navController.currentAppRoute.rootRoute } }
+    val currentRoute = navController.topRoute //by remember { derivedStateOf { navController.currentAppRoute2 } }
+
+    Logger.d(TAG) { "MainNavRail recompose" }
     NavigationRail(
         modifier = modifier,
         header = {
@@ -33,8 +32,9 @@ fun MainNavRail(
             )
         }
     ) {
-        Spacer(Modifier.weight(1f))
+//        Spacer(Modifier.weight(1f))
 
+        Logger.d(TAG) { "MainNavRail item recompose" }
         RailItem(
             labelRes = R.string.post,
             iconRes = R.drawable.ic_image,
@@ -62,8 +62,8 @@ fun MainNavRail(
         RailItem(
             labelRes = R.string.setting,
             iconRes = R.drawable.ic_setting,
-            selected = currentRoute == AppRoute.Setting,
-            onClick = { navController.navigate(route = AppRoute.Setting) }
+            selected = currentRoute == AppRoute.Settings,
+            onClick = { navController.navigate(route = AppRoute.Settings) }
         )
         Spacer(Modifier.weight(1.2f))
     }

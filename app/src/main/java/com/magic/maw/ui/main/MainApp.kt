@@ -3,10 +3,9 @@ package com.magic.maw.ui.main
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.adaptive.WindowAdaptiveInfo
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -14,13 +13,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.window.core.layout.WindowSizeClass
+import co.touchlab.kermit.Logger
 import com.magic.maw.ui.theme.MawTheme
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-private val WindowAdaptiveInfo.useNavRail: Boolean
-    get() = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+private const val TAG = "MainApp"
 
 @Composable
 fun MainApp() {
@@ -28,15 +30,16 @@ fun MainApp() {
         val scope = rememberCoroutineScope()
         val navController = rememberNavController()
 
-        if (currentWindowAdaptiveInfo().useNavRail) {
+        Logger.d(TAG) { "MainApp recompose" }
+        if (useNavRail()) {
             Row(modifier = Modifier.fillMaxSize()) {
                 MainNavRail(navController = navController)
                 MainNavHost(navController = navController)
             }
         } else {
-            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed) { newValue ->
-                !(newValue == DrawerValue.Open && !navController.currentAppRoute.isRootRoute)
-            }
+            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+            val gesturesEnabled = isDrawerGesturesEnabled(navController)
+            Logger.d(TAG) { "MainApp ModalNavigationDrawer recompose: $gesturesEnabled" }
             ModalNavigationDrawer(
                 drawerState = drawerState,
                 drawerContent = {
@@ -44,16 +47,47 @@ fun MainApp() {
                         navController = navController,
                         closeDrawer = { scope.launch { drawerState.close() } }
                     )
-                }
+                },
+                gesturesEnabled = gesturesEnabled
             ) {
-                MainNavHost(navController = navController)
+                Logger.d(TAG) { "MainApp ModalNavigationDrawer content recompose" }
 
-                // 如果Drawer打开，则拦截返回事件，关闭Drawer
-                val isOpen by remember { derivedStateOf { drawerState.isOpen } }
-                BackHandler(enabled = isOpen) {
-                    scope.launch { drawerState.close() }
-                }
+                MainNavHost(
+                    navController = navController,
+                    onOpenDrawer = { scope.launch { drawerState.open() } }
+                )
+
+                DrawerOpenBackHandler(drawerState = drawerState, scope = scope)
             }
         }
     }
+}
+
+@Composable
+private fun DrawerOpenBackHandler(
+    drawerState: DrawerState,
+    scope: CoroutineScope = rememberCoroutineScope()
+) {
+    Logger.d(TAG) { "MainApp ModalNavigationDrawer DrawerOpenBackHandler recompose" }
+    // 如果Drawer打开，则拦截返回事件，关闭Drawer
+    val isOpen by remember { derivedStateOf { drawerState.isOpen } }
+    BackHandler(enabled = isOpen) {
+        scope.launch { drawerState.close() }
+    }
+}
+
+@Composable
+fun useNavRail(): Boolean {
+    return LocalWindowInfo.current.containerSize.width > 600
+}
+
+@Composable
+fun isDrawerGesturesEnabled(navController: NavController): Boolean {
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val enabled by remember {
+        derivedStateOf {
+            (backStackEntry?.currentRoute ?: AppRoute.Post).isRootRoute
+        }
+    }
+    return enabled
 }
