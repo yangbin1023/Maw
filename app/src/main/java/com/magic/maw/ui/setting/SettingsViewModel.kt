@@ -8,14 +8,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.magic.maw.data.AppSettings
-import com.magic.maw.data.AppSettingsSerializer
 import com.magic.maw.data.SettingsRepository
 import com.magic.maw.data.ThemeSettings
 import com.magic.maw.data.VideoSettings
 import com.magic.maw.data.WebsiteOption
 import com.magic.maw.data.WebsiteSettings
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -29,7 +26,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     /**
      * 设置状态流
      */
-    val settingsState = repository.appSettingsFlow
+    val settingsState = repository.appSettingsStateFlow
 
     /**
      * 更新 AppSettings 对象

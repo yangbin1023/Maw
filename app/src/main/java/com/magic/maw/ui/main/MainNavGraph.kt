@@ -26,9 +26,8 @@ import com.magic.maw.ui.pool.PoolViewModel
 import com.magic.maw.ui.popular.PopularRoute
 import com.magic.maw.ui.popular.PopularViewModel
 import com.magic.maw.ui.post.PostRoute
-import com.magic.maw.ui.post.PostViewModel
+import com.magic.maw.ui.post.PostViewModel2
 import com.magic.maw.ui.search.SearchScreen
-import com.magic.maw.ui.setting.SettingScreen
 import com.magic.maw.ui.setting.SettingScreen2
 import com.magic.maw.ui.verify.VerifyScreen
 import com.magic.maw.util.UiUtils.checkTopRoute
@@ -47,7 +46,7 @@ fun MainNavGraph(
     startDestination: String = MainRoutes.POST,
     openDrawer: () -> Unit
 ) {
-    val postViewModel: PostViewModel = viewModel(factory = PostViewModel.providerFactory())
+    val postViewModel2: PostViewModel2 = viewModel(factory = PostViewModel2.providerFactory())
     val poolViewModel: PoolViewModel = viewModel()
     val popularViewModel: PopularViewModel = viewModel()
     val scope = rememberCoroutineScope()
@@ -61,7 +60,7 @@ fun MainNavGraph(
 
     SourceChangeChecker {
         Logger.d(TAG) { "source changed clear data" }
-        postViewModel.clearData()
+        postViewModel2.clearData()
         poolViewModel.clearData()
         popularViewModel.clearData()
     }
@@ -77,7 +76,7 @@ fun MainNavGraph(
     ) {
         composable(route = MainRoutes.POST) {
             PostRoute(
-                postViewModel = postViewModel,
+                postViewModel2 = postViewModel2,
                 onNegative = openDrawer,
                 onSearch = { text, _ -> navController.navigate(MainRoutes.search(text)) },
                 onOpenSubView = { inSubView.value = it }
@@ -112,7 +111,7 @@ fun MainNavGraph(
                 initText = initText,
                 onFinish = { navController.popBackStack() },
                 onSearch = {
-                    postViewModel.search(it)
+                    postViewModel2.search(it)
                     navController.popBackStack()
                 }
             )

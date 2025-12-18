@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -16,6 +17,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -51,6 +53,7 @@ fun MainNavHost(
                 TestScaffold(
                     title = "Pool",
                     navigationIconOnClick = onOpenDrawer ?: {},
+                    navigationIconImageVector = Icons.Default.Menu,
                     testText = "查看图册",
                     testBtnOnClick = { navController.navigate(route = AppRoute.PoolPost(poolId = 1)) },
                 )
@@ -94,6 +97,7 @@ fun MainNavHost(
             TestScaffold(
                 title = "Popular",
                 navigationIconOnClick = onOpenDrawer ?: {},
+                navigationIconImageVector = Icons.Default.Menu,
                 testText = "Popular",
                 testBtnOnClick = { }
             )
@@ -104,6 +108,7 @@ fun MainNavHost(
             TestScaffold(
                 title = "Favorite",
                 navigationIconOnClick = onOpenDrawer ?: {},
+                navigationIconImageVector = Icons.Default.Menu,
                 testText = "Favorite",
                 testBtnOnClick = { }
             )
@@ -134,6 +139,7 @@ fun NavGraphBuilder.postGraph(navController: NavController, onOpenDrawer: (() ->
             TestScaffold(
                 title = "Post",
                 navigationIconOnClick = onOpenDrawer ?: {},
+                navigationIconImageVector = Icons.Default.Menu,
                 testText = "查看大图",
                 testBtnOnClick = { navController.navigate(route = AppRoute.PostView(postId = 1)) },
                 test2Text = "搜索",
@@ -153,20 +159,15 @@ fun NavGraphBuilder.postGraph(navController: NavController, onOpenDrawer: (() ->
             )
         }
         composable<AppRoute.PostSearch> { backStackEntry ->
-//                Button(onClick = {
-//                    navController.navigate(route = AppRoute.PostList) {
-//                        popUpTo(route = AppRoute.PostList) {
-//                            inclusive = true
-//                        }
-//                    }
-//                }) { }
             Logger.d(TAG) { "PostSearch recompose" }
             val route: AppRoute.PostSearch = backStackEntry.toRoute()
             TestScaffold(
                 title = "PostSearch",
                 navigationIconOnClick = { navController.popBackStack() },
                 testText = "搜索",
-                testBtnOnClick = { navController.navigate(route = AppRoute.PostSearch(content = "test")) },
+                testBtnOnClick = {
+                    navController.navigate(route = AppRoute.PostList) { popUpTo(route = AppRoute.PostList) }
+                },
                 test2Text = route.content ?: "(empty)",
                 test2BtnOnClick = { }
             )
@@ -180,6 +181,7 @@ fun TestScaffold(
     modifier: Modifier = Modifier,
     title: String = "",
     navigationIconOnClick: () -> Unit = {},
+    navigationIconImageVector: ImageVector = Icons.AutoMirrored.Default.ArrowBack,
     testText: String = "测试",
     testBtnOnClick: () -> Unit = {},
     test2Text: String = "测试2",
@@ -193,7 +195,7 @@ fun TestScaffold(
                 navigationIcon = {
                     IconButton(onClick = navigationIconOnClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                            imageVector = navigationIconImageVector,
                             contentDescription = ""
                         )
                     }

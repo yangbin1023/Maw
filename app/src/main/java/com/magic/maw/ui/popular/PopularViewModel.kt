@@ -3,7 +3,7 @@ package com.magic.maw.ui.popular
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.magic.maw.data.PopularType
-import com.magic.maw.ui.post.PostViewModel
+import com.magic.maw.ui.post.PostViewModel2
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.PopularOption
 import com.magic.maw.website.RequestOption
@@ -17,12 +17,12 @@ class PopularViewModel : ViewModel() {
     private val viewModelState = MutableStateFlow(
         PopularOption(date = LocalDate.now().minusDays(1))
     )
-    val postViewModel: PostViewModel by lazy {
+    val postViewModel2: PostViewModel2 by lazy {
         val requestOption = RequestOption(
             ratings = configFlow.value.websiteConfig.rating,
             popularOption = viewModelState.value
         )
-        PostViewModel(requestOption)
+        PostViewModel2(requestOption)
     }
 
     val uiState = viewModelState.stateIn(
@@ -40,6 +40,6 @@ class PopularViewModel : ViewModel() {
     }
 
     fun clearData() {
-        postViewModel.clearData()
+        postViewModel2.clearData()
     }
 }

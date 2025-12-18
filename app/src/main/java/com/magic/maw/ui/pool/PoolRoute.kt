@@ -28,7 +28,7 @@ import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.post.PostRoute
-import com.magic.maw.ui.post.PostViewModel
+import com.magic.maw.ui.post.PostViewModel2
 import com.magic.maw.ui.post.UiStateType
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.RequestOption
@@ -125,14 +125,14 @@ private fun PoolRoute(
         exit = slideOut + fadeOut
     ) {
         val (poolData, factory) = getPoolPostInfo(uiState)
-        val postViewModel: PostViewModel = viewModel(factory = factory)
+        val postViewModel2: PostViewModel2 = viewModel(factory = factory)
         val title = remember { mutableStateOf("") }
         poolData?.let {
-            postViewModel.update(it.posts)
+            postViewModel2.update(it.posts)
             title.value = "#${it.id}"
         }
         PostRoute(
-            postViewModel = postViewModel,
+            postViewModel2 = postViewModel2,
             searchEnable = false,
             negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
             titleText = title.value,
@@ -144,10 +144,10 @@ private fun PoolRoute(
 
 private fun getPoolPostInfo(uiState: PoolUiState): Pair<PoolData?, ViewModelProvider.Factory> {
     if (uiState.isPoolView || uiState.viewIndex >= uiState.dataList.size)
-        return Pair(null, PostViewModel.providerFactory())
+        return Pair(null, PostViewModel2.providerFactory())
     val parser = BaseParser.get(configFlow.value.source)
     val poolData = uiState.dataList[uiState.viewIndex]
     val option = RequestOption(page = parser.firstPageIndex, poolId = poolData.id)
-    val factory = PostViewModel.providerFactory(option, poolData.posts)
+    val factory = PostViewModel2.providerFactory(option, poolData.posts)
     return Pair(poolData, factory)
 }

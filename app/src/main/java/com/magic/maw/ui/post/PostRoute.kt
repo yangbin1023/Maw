@@ -42,7 +42,7 @@ private const val viewName = "Post"
 
 @Composable
 fun PostRoute(
-    postViewModel: PostViewModel,
+    postViewModel2: PostViewModel2,
     titleText: String = stringResource(R.string.post),
     viewName: String = com.magic.maw.ui.post.viewName,
     staggeredEnable: Boolean = true,
@@ -54,7 +54,7 @@ fun PostRoute(
     onSearch: (String, Boolean) -> Unit = { t, b -> },
     onOpenSubView: (Boolean) -> Unit = {},
 ) {
-    val uiState by postViewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by postViewModel2.uiState.collectAsStateWithLifecycle()
     onOpenSubView(uiState is PostUiState.View)
 
     PostRoute(
@@ -69,20 +69,20 @@ fun PostRoute(
         onNegative = onNegative,
         onSearch = { text, just ->
             if (just) {
-                postViewModel.search(text)
-                postViewModel.exitView()
+                postViewModel2.search(text)
+                postViewModel2.exitView()
             } else {
                 onSearch(text, false)
             }
         },
-        onRefresh = { postViewModel.refresh() },
-        onForceRefresh = { postViewModel.refresh(true) },
-        onLoadMore = { postViewModel.loadMore() },
-        onItemClick = { postViewModel.setViewIndex(it) },
-        onExitView = { postViewModel.exitView() },
+        onRefresh = { postViewModel2.refresh() },
+        onForceRefresh = { postViewModel2.refresh(true) },
+        onLoadMore = { postViewModel2.loadMore() },
+        onItemClick = { postViewModel2.setViewIndex(it) },
+        onExitView = { postViewModel2.exitView() },
         onClearSearch = {
-            postViewModel.clearTags()
-            postViewModel.refresh(true)
+            postViewModel2.clearTags()
+            postViewModel2.refresh(true)
         },
     )
 }

@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -93,7 +94,10 @@ fun AppDrawer(
             labelRes = R.string.post,
             iconRes = R.drawable.ic_image,
             selected = currentRoute == AppRoute.Post,
-            onClick = { navController.navigate(route = AppRoute.Post); closeDrawer() }
+            onClick = {
+                navController.navigate(route = AppRoute.Post) { popUpTo(route = AppRoute.Post) }
+                closeDrawer()
+            }
         )
         DrawerItem(
             labelRes = R.string.pool,
@@ -124,7 +128,9 @@ fun AppDrawer(
 
 @Composable
 private fun Modifier.resetDrawerWidth(): Modifier {
-    val screenWidth = LocalWindowInfo.current.containerSize.width.dp
+    val screenWidth = with(LocalDensity.current) {
+        LocalWindowInfo.current.containerSize.width.toDp()
+    }
     val targetWidth = screenWidth * 0.85f
     return if (targetWidth < 360.dp) {
         sizeIn(

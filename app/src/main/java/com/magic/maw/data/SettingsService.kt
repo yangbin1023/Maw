@@ -83,6 +83,11 @@ class SettingsRepository(context: Context) {
                 throw exception
             }
         }
+
+    /**
+     * 获取 AppSettings 对象的状态流
+     */
+    val appSettingsStateFlow = appSettingsFlow
         .stateIn(
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             started = SharingStarted.Eagerly,
@@ -218,6 +223,6 @@ object SettingsService {
         if (::repository.isInitialized) return
         repository = SettingsRepository(context.applicationContext)
         this.appScope = appScope
-        _settingsState = repository.appSettingsFlow
+        _settingsState = repository.appSettingsStateFlow
     }
 }

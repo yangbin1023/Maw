@@ -46,13 +46,13 @@ fun PopularRoute(
     val datePickerEnable = remember { mutableStateOf(true) }
 
     LaunchedEffect(popularOption) {
-        popularViewModel.postViewModel.update(emptyList<PostData>())
-        popularViewModel.postViewModel.update(popularOption)
+        popularViewModel.postViewModel2.update(emptyList<PostData>())
+        popularViewModel.postViewModel2.update(popularOption)
     }
 
     Box(modifier = modifier.fillMaxSize()) {
         PostRoute(
-            postViewModel = popularViewModel.postViewModel,
+            postViewModel2 = popularViewModel.postViewModel2,
             titleText = stringResource(R.string.popular),
             viewName = "Popular",
             shadowEnable = false,

@@ -113,7 +113,7 @@ private data class PostViewModelState(
     }
 }
 
-class PostViewModel(
+class PostViewModel2(
     requestOption: RequestOption = RequestOption(),
     dataList: List<PostData> = emptyList(),
 ) : ViewModel() {
@@ -265,7 +265,7 @@ class PostViewModel(
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return PostViewModel(requestOption, dataList) as T
+                return PostViewModel2(requestOption, dataList) as T
             }
         }
     }

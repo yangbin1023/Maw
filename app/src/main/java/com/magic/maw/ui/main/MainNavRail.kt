@@ -20,7 +20,7 @@ fun MainNavRail(
     modifier: Modifier = Modifier,
     navController: NavController,
 ) {
-    val currentRoute = navController.topRoute //by remember { derivedStateOf { navController.currentAppRoute2 } }
+    val currentRoute = navController.topRoute
 
     Logger.d(TAG) { "MainNavRail recompose" }
     NavigationRail(
@@ -32,14 +32,12 @@ fun MainNavRail(
             )
         }
     ) {
-//        Spacer(Modifier.weight(1f))
-
         Logger.d(TAG) { "MainNavRail item recompose" }
         RailItem(
             labelRes = R.string.post,
             iconRes = R.drawable.ic_image,
             selected = currentRoute == AppRoute.Post,
-            onClick = { navController.navigate(route = AppRoute.Post) }
+            onClick = { navController.navigate(route = AppRoute.Post) { popUpTo(route = AppRoute.Post) } }
         )
         RailItem(
             labelRes = R.string.pool,
