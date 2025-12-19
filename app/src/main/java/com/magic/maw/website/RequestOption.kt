@@ -14,6 +14,7 @@ data class RequestOption(
     var poolId: Int = -1,
     var ratings: Int = Rating.None.value,
     var popularOption: PopularOption? = null,
+    val ratingSet: List<Rating> = emptyList(),
     internal val tags: HashSet<String> = HashSet(),
 ) {
     fun addTag(tag: String) = apply { if (tag.isNotEmpty()) tags.add(tag) }

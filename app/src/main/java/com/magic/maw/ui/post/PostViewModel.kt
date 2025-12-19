@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
 import com.magic.maw.data.PostData
+import com.magic.maw.data.loader.PostDataLoader
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.PopularOption
 import com.magic.maw.website.RequestOption
@@ -268,5 +269,17 @@ class PostViewModel2(
                 return PostViewModel2(requestOption, dataList) as T
             }
         }
+    }
+}
+
+class PostViewModel : ViewModel() {
+    val loader = PostDataLoader(scope = viewModelScope)
+
+    fun refresh(force: Boolean = false) {
+        loader.refresh(force)
+    }
+
+    fun loadMore() {
+        loader.loadMore()
     }
 }

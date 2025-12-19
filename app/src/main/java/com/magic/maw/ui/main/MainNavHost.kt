@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -26,6 +27,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.toRoute
 import co.touchlab.kermit.Logger
+import com.magic.maw.ui.post.PostScreen
+import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.setting.SettingScreen2
 
 private const val TAG = "MainNavHost"
@@ -38,6 +41,7 @@ fun MainNavHost(
     onOpenDrawer: (() -> Unit)? = null
 ) {
     Logger.d(TAG) { "MainNavHost recompose" }
+    val postViewModel: PostViewModel = viewModel()
     NavHost(
         modifier = modifier,
         navController = navController,
@@ -45,7 +49,11 @@ fun MainNavHost(
     ) {
         Logger.d(TAG) { "MainNavHost item recompose" }
 
-        postGraph(navController = navController, onOpenDrawer = onOpenDrawer)
+        postGraph(
+            postViewModel = postViewModel,
+            navController = navController,
+            onOpenDrawer = onOpenDrawer
+        )
 
         navigation<AppRoute.Pool>(startDestination = AppRoute.PoolList) {
             composable<AppRoute.PoolList> {
@@ -131,19 +139,28 @@ fun MainNavHost(
     }
 }
 
-fun NavGraphBuilder.postGraph(navController: NavController, onOpenDrawer: (() -> Unit)? = null) {
+fun NavGraphBuilder.postGraph(
+    postViewModel: PostViewModel,
+    navController: NavController,
+    onOpenDrawer: (() -> Unit)? = null
+) {
     navigation<AppRoute.Post>(startDestination = AppRoute.PostList) {
         Logger.d(TAG) { "postGraph content recompose" }
         composable<AppRoute.PostList> {
             Logger.d(TAG) { "PostList recompose" }
-            TestScaffold(
-                title = "Post",
-                navigationIconOnClick = onOpenDrawer ?: {},
-                navigationIconImageVector = Icons.Default.Menu,
-                testText = "查看大图",
-                testBtnOnClick = { navController.navigate(route = AppRoute.PostView(postId = 1)) },
-                test2Text = "搜索",
-                test2BtnOnClick = { navController.navigate(route = AppRoute.PostSearch()) }
+//            TestScaffold(
+//                title = "Post",
+//                navigationIconOnClick = onOpenDrawer ?: {},
+//                navigationIconImageVector = Icons.Default.Menu,
+//                testText = "查看大图",
+//                testBtnOnClick = { navController.navigate(route = AppRoute.PostView(postId = 1)) },
+//                test2Text = "搜索",
+//                test2BtnOnClick = { navController.navigate(route = AppRoute.PostSearch()) }
+//            )
+            PostScreen(
+                viewModel = postViewModel,
+                navController = navController,
+                onNegative = onOpenDrawer ?: {}
             )
         }
         composable<AppRoute.PostView> { backStackEntry ->

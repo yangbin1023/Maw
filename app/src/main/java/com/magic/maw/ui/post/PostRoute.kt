@@ -158,7 +158,7 @@ fun PostRoute(
         exit = fadeOut
     ) {
         val state = postState ?: return@AnimatedVisibility
-        PostScreen(
+        PostScreen2(
             uiState = state,
             lazyState = lazyState,
             refreshState = refreshState,

@@ -1,9 +1,12 @@
 package com.magic.maw.website.parser
 
+import co.touchlab.kermit.Logger
 import com.magic.maw.data.PoolData
 import com.magic.maw.data.PopularType
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
+import com.magic.maw.data.Rating.Companion.join
+import com.magic.maw.data.SettingsService
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.UserInfo
 import com.magic.maw.data.WebsiteOption
@@ -12,9 +15,7 @@ import com.magic.maw.data.yande.YandePool
 import com.magic.maw.data.yande.YandeTag
 import com.magic.maw.data.yande.YandeUser
 import com.magic.maw.util.client
-import com.magic.maw.util.configFlow
 import com.magic.maw.util.get
-import com.magic.maw.util.hasFlag
 import com.magic.maw.util.toMonday
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.RequestOption
@@ -26,7 +27,8 @@ open class YandeParser : BaseParser() {
     override val website: WebsiteOption = WebsiteOption.Yande
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
-    override val supportRatings: List<Rating> = listOf(Rating.Safe, Rating.Questionable, Rating.Explicit)
+    override val supportRatings: List<Rating> =
+        listOf(Rating.Safe, Rating.Questionable, Rating.Explicit)
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         // pool.post 和 popular 没有第二页
@@ -34,12 +36,12 @@ open class YandeParser : BaseParser() {
             return emptyList()
         val url = getPostUrl(option)
         val list: ArrayList<PostData> = ArrayList()
-        val ratings = configFlow.value.websiteConfig.rating
+        val ratings = SettingsService.settingsState.value.websiteSettings.ratings
         if (option.poolId >= 0) {
             client.get<YandePool>(url).posts?.let { posts ->
                 for (item in posts) {
                     val data = item.toPostData() ?: continue
-                    if (ratings.hasFlag(data.rating.value)) {
+                    if (ratings.contains(data.rating)) {
                         list.add(data)
                     }
                 }
@@ -48,7 +50,7 @@ open class YandeParser : BaseParser() {
             val yandeList: ArrayList<YandeData> = client.get(url)
             for (item in yandeList) {
                 val data = item.toPostData() ?: continue
-                if (ratings.hasFlag(data.rating.value)) {
+                if (ratings.contains(data.rating)) {
                     list.add(data)
                 }
             }
@@ -210,12 +212,14 @@ open class YandeParser : BaseParser() {
             builder.path("post.json")
         }
         val tags = HashSet<String>().apply { addAll(option.tags) }
-        getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it) }
+        getRatingTag(option.ratingSet).let { if (it.isNotEmpty()) tags.add(it) }
         val tagStr = tags.joinToString("+")
         builder.encodedParameters.append("page", option.page.toString())
         builder.encodedParameters.append("limit", "40")
         builder.encodedParameters.append("tags", tagStr)
-        return builder.build().toString()
+        return builder.build().toString().apply {
+            Logger.d("PostDataLoader") { "url: $this" }
+        }
     }
 
     override fun getPoolUrl(option: RequestOption): String {
@@ -235,6 +239,22 @@ open class YandeParser : BaseParser() {
         if ((ratings and supportRating) == supportRating)
             return ""
         val currentRating = (ratings and supportRating)
+        println("ratings: $ratings, support rating: $supportRating, current rating: $currentRating")
+        return when (currentRating) {
+            Rating.Safe.value -> "rating:s"
+            Rating.Questionable.value -> "rating:q"
+            Rating.Explicit.value -> "rating:e"
+            Rating.Safe.value or Rating.Questionable.value -> "-rating:e"
+            Rating.Safe.value or Rating.Explicit.value -> "-rating:q"
+            Rating.Questionable.value or Rating.Explicit.value -> "-rating:s"
+            else -> ""
+        }
+    }
+
+    private fun getRatingTag(ratings: List<Rating>): String {
+        if (ratings.toSet() == supportRatings.toSet())
+            return ""
+        val currentRating = ratings.join()
         println("ratings: $ratings, support rating: $supportRating, current rating: $currentRating")
         return when (currentRating) {
             Rating.Safe.value -> "rating:s"

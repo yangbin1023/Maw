@@ -75,7 +75,7 @@ fun MainDrawer(
 }
 
 @Composable
-fun AppDrawer(
+fun MainModalDrawerSheet(
     modifier: Modifier = Modifier,
     navController: NavController,
     closeDrawer: () -> Unit

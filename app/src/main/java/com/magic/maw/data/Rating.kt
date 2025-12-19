@@ -58,5 +58,13 @@ enum class Rating(val value: Int) {
         fun Int.hasRating(rating: Rating): Boolean {
             return (this and rating.value) == rating.value
         }
+
+        fun List<Rating>.join(): Int {
+            var value = 0
+            for (rating in this) {
+                value += rating.value
+            }
+            return value
+        }
     }
 }

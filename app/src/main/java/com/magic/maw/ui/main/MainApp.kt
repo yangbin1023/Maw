@@ -45,7 +45,7 @@ fun MainApp() {
             ModalNavigationDrawer(
                 drawerState = drawerState,
                 drawerContent = {
-                    AppDrawer(
+                    MainModalDrawerSheet(
                         navController = navController,
                         closeDrawer = { scope.launch { drawerState.close() } }
                     )

@@ -3,6 +3,7 @@ package com.magic.maw.website.parser
 import com.magic.maw.data.PoolData
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
+import com.magic.maw.data.SettingsService
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.UserInfo
 import com.magic.maw.data.WebsiteOption
@@ -11,8 +12,6 @@ import com.magic.maw.data.konachan.KonachanPool
 import com.magic.maw.data.konachan.KonachanTag
 import com.magic.maw.data.konachan.KonachanUser
 import com.magic.maw.util.client
-import com.magic.maw.util.configFlow
-import com.magic.maw.util.hasFlag
 import com.magic.maw.util.get
 import com.magic.maw.website.RequestOption
 
@@ -33,13 +32,13 @@ class KonachanParser : YandeParser() {
             return emptyList()
         val url = getPostUrl(option)
         val list = ArrayList<PostData>()
-        val ratings = configFlow.value.websiteConfig.rating
+        val ratings = SettingsService.settingsState.value.websiteSettings.ratings
         if (option.poolId >= 0) {
             val konachanPool: KonachanPool = client.get(url)
             konachanPool.posts?.let { posts ->
                 for (item in posts) {
                     val data = item.toPostData() ?: continue
-                    if (ratings.hasFlag(data.rating.value)) {
+                    if (ratings.contains(data.rating)) {
                         list.add(data)
                     }
                 }
@@ -48,7 +47,7 @@ class KonachanParser : YandeParser() {
             val konachanList: List<KonachanData> = client.get(url)
             for (item in konachanList) {
                 val data = item.toPostData() ?: continue
-                if (ratings.hasFlag(data.rating.value)) {
+                if (ratings.contains(data.rating)) {
                     list.add(data)
                 }
             }

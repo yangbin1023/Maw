@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -36,8 +35,6 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,34 +50,24 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
-import com.magic.maw.data.PostData
-import com.magic.maw.data.loader.LoadState
-import com.magic.maw.data.loader.PostDataUiState
 import com.magic.maw.ui.components.NestedScaffold
 import com.magic.maw.ui.components.NestedScaffoldState
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.util.UiUtils.getStatusBarHeight
-import kotlinx.collections.immutable.PersistentList
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-private const val TAG = "PostScreen"
+private const val TAG = "PostScreen2"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PostScreen(
-    modifier: Modifier = Modifier,
-    viewModel: PostViewModel = viewModel(),
-    navController: NavController = rememberNavController(),
+fun PostScreen2(
+    uiState: PostUiState.Post,
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
     scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
@@ -89,51 +76,41 @@ fun PostScreen(
     shadowEnable: Boolean = true,
     searchEnable: Boolean = true,
     negativeIcon: ImageVector = Icons.Default.Menu,
+    enhancedBar: (@Composable (Modifier) -> Unit)? = null,
     onNegative: () -> Unit = {},
     onSearch: () -> Unit = {},
+    onRefresh: () -> Unit,
+    onLoadMore: () -> Unit,
+    onShowSystemBar: (Boolean) -> Unit,
+    onGloballyPositioned: (Int, Int) -> Unit,
+    onItemClick: (Int) -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
-    val dataState by viewModel.loader.uiState.collectAsStateWithLifecycle()
     val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
-    val scrollToTop: () -> Unit = { scope.launch { lazyState.scrollToItem(0, 0) } }
-
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            PostTopBar(
-                titleText = titleText,
-                negativeIcon = negativeIcon,
-                shadowEnable = shadowEnable,
-                searchEnable = searchEnable,
-                staggeredState = staggeredState,
-                scrollToTop = scrollToTop,
-                onNegative = onNegative,
-                onSearch = onSearch
-            )
-        },
-    ) { innerPadding ->
-        PostRefreshBody(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            uiState = dataState,
-            refreshState = refreshState,
-            lazyState = lazyState,
-            staggeredState = staggeredState,
-            onRefresh = { viewModel.refresh() },
-            onLoadMore = { viewModel.loadMore() },
-            onGloballyPositioned = { _, _ -> },
-            onItemClick = {
-                Logger.d(TAG) { "onItemClick $it" }
-            }
-        )
-    }
+    NestedScaffoldBody(
+        uiState = uiState,
+        lazyState = lazyState,
+        refreshState = refreshState,
+        titleText = titleText,
+        shadowEnable = shadowEnable,
+        searchEnable = searchEnable,
+        negativeIcon = negativeIcon,
+        staggeredState = staggeredState,
+        scaffoldState = scaffoldState,
+        enhancedBar = enhancedBar,
+        onNegative = onNegative,
+        onSearch = onSearch,
+        onRefresh = onRefresh,
+        onLoadMore = onLoadMore,
+        onShowSystemBar = onShowSystemBar,
+        onGloballyPositioned = onGloballyPositioned,
+        onItemClick = onItemClick
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NestedScaffoldBody(
-    uiState: PostDataUiState,
+    uiState: PostUiState.Post,
     lazyState: LazyStaggeredGridState,
     refreshState: PullToRefreshState,
     scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
@@ -160,9 +137,6 @@ private fun NestedScaffoldBody(
             onShowSystemBar(true)
         }
     }
-    val canScroll by remember(refreshState.distanceFraction, uiState.items) {
-        derivedStateOf { refreshState.distanceFraction <= 0 && uiState.items.isNotEmpty() }
-    }
     NestedScaffold(
         topBar = {
             PostTopBar(
@@ -178,7 +152,9 @@ private fun NestedScaffoldBody(
         },
         enhancedBar = enhancedBar,
         state = scaffoldState,
-        canScroll = { canScroll },
+        canScroll = {
+            refreshState.distanceFraction <= 0 && uiState.dataList.isNotEmpty()
+        },
         onScrollToTop = { onShowSystemBar(false) },
         onScrollToBottom = { onShowSystemBar(true) },
     ) { innerPadding ->
@@ -258,7 +234,7 @@ private fun PostTopBar(
 @Composable
 private fun PostRefreshBody(
     modifier: Modifier = Modifier,
-    uiState: PostDataUiState,
+    uiState: PostUiState.Post,
     refreshState: PullToRefreshState,
     lazyState: LazyStaggeredGridState,
     staggeredState: MutableState<Boolean>? = null,
@@ -267,39 +243,27 @@ private fun PostRefreshBody(
     onGloballyPositioned: (Int, Int) -> Unit,
     onItemClick: (Int) -> Unit,
 ) {
-    val isRefreshing by remember(uiState.loadState) {
-        derivedStateOf { uiState.loadState == LoadState.Refreshing }
-    }
     PullToRefreshBox(
         modifier = modifier,
-        isRefreshing = isRefreshing,
+        isRefreshing = uiState.type == UiStateType.Refresh,
         onRefresh = onRefresh,
         state = refreshState
     ) {
-        val isEmpty by remember(uiState.items) {
-            derivedStateOf { uiState.items.isEmpty() }
-        }
-        if (isEmpty) {
+        if (uiState.dataList.isEmpty()) {
             PostEmptyView(
                 modifier = Modifier.fillMaxSize(),
-                loadState = uiState.loadState,
+                uiState = uiState,
                 onRefresh = onRefresh
             )
         } else {
-            LoadMoreChecker(
-                uiState = uiState,
-                state = lazyState,
-                onLoadMore = onLoadMore
-            )
             PostBody(
                 modifier = Modifier.fillMaxSize(),
-                items = uiState.items,
-                canClick = !isRefreshing,
-                hasNoMore = uiState.hasNoMore,
+                uiState = uiState,
                 state = lazyState,
                 staggeredState = staggeredState,
                 onGloballyPositioned = onGloballyPositioned,
                 onItemClick = onItemClick,
+                onLoadMore = onLoadMore,
             )
         }
     }
@@ -308,7 +272,7 @@ private fun PostRefreshBody(
 @Composable
 private fun PostEmptyView(
     modifier: Modifier = Modifier,
-    loadState: LoadState,
+    uiState: PostUiState.Post,
     onRefresh: () -> Unit
 ) {
     Column(
@@ -316,9 +280,9 @@ private fun PostEmptyView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        val text = if (loadState.isLoading) {
+        val text = if (uiState.type.isLoading()) {
             stringResource(R.string.loading)
-        } else if (loadState is LoadState.Error) {
+        } else if (uiState.type == UiStateType.LoadFailed) {
             stringResource(R.string.loading_failed)
         } else {
             stringResource(R.string.no_data)
@@ -339,39 +303,55 @@ private fun PostEmptyView(
 @Composable
 private fun PostBody(
     modifier: Modifier = Modifier,
-    items: PersistentList<PostData>,
-    hasNoMore: Boolean,
-    canClick: Boolean,
+    uiState: PostUiState.Post,
     state: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     staggeredState: MutableState<Boolean>? = null,
     onGloballyPositioned: (Int, Int) -> Unit,
     onItemClick: (Int) -> Unit,
+    onLoadMore: () -> Unit,
 ) {
     BoxWithConstraints(modifier = modifier) {
         val columns = max((this.maxWidth / 210.dp).toInt(), 2)
         val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
 
+        // 检测加载进度，实现自动加载更多
+        LaunchedEffect(uiState, state) {
+            snapshotFlow {
+                state.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+            }.distinctUntilChanged().collect { lastVisibleIndex ->
+                if (uiState.noMore || uiState.type.isLoading() || lastVisibleIndex == null) {
+                    return@collect
+                }
+                val totalItemsCount = state.layoutInfo.totalItemsCount
+                val remainingItemsCount = totalItemsCount - (lastVisibleIndex + 1)
+                val visibleItemsCount = state.layoutInfo.visibleItemsInfo.size
+                if (remainingItemsCount < visibleItemsCount * 2) {
+                    Logger.d(TAG) { "call post on load more" }
+                    onLoadMore()
+                }
+            }
+        }
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(columns),
             state = state,
             contentPadding = PaddingValues(contentPadding)
         ) {
-            itemsIndexed(
-                items = items,
-                key = { _, item -> item.id }
-            ) { index, item ->
+            itemsIndexed(uiState.dataList) { index, item ->
                 PostItem(
                     modifier = Modifier
                         .padding(contentPadding)
                         .onGloballyPositioned { onGloballyPositioned(index, it.size.height) },
-                    canClick = canClick,
-                    onClick = { onItemClick(index) },
+                    onClick = {
+                        if (uiState.type != UiStateType.Refresh) {
+                            onItemClick(index)
+                        }
+                    },
                     postData = item,
                     staggered = staggeredState?.value == true
                 )
             }
 
-            if (hasNoMore) {
+            if (uiState.noMore) {
                 item(span = StaggeredGridItemSpan.FullLine) {
                     Text(
                         text = stringResource(R.string.no_more_data),
@@ -407,27 +387,8 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
     currentSpace.toDp() / 2
 }
 
-@Composable
-private fun LoadMoreChecker(
-    uiState: PostDataUiState,
-    state: LazyStaggeredGridState,
-    onLoadMore: () -> Unit,
-) {
-    // 检测加载进度，实现自动加载更多
-    LaunchedEffect(uiState, state) {
-        snapshotFlow {
-            state.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-        }.distinctUntilChanged().collect { lastVisibleIndex ->
-            if (uiState.hasNoMore || uiState.isLoading || lastVisibleIndex == null) {
-                return@collect
-            }
-            val totalItemsCount = state.layoutInfo.totalItemsCount
-            val remainingItemsCount = totalItemsCount - (lastVisibleIndex + 1)
-            val visibleItemsCount = state.layoutInfo.visibleItemsInfo.size
-            if (remainingItemsCount < visibleItemsCount * 2) {
-                Logger.d(TAG) { "call post on load more" }
-                onLoadMore()
-            }
-        }
-    }
+object PostDefaults {
+    val ContentPadding: Dp = 3.5.dp
+    val ActionsIconWidth: Dp = 40.dp
+    val NoMoreItemHeight: Dp = 36.dp
 }
