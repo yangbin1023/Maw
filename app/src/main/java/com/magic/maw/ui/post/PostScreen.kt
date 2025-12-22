@@ -29,10 +29,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -46,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -65,6 +68,7 @@ import com.magic.maw.data.loader.PostDataUiState
 import com.magic.maw.ui.components.NestedScaffold
 import com.magic.maw.ui.components.NestedScaffoldState
 import com.magic.maw.ui.components.rememberNestedScaffoldState
+import com.magic.maw.ui.main.AppRoute
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -95,7 +99,14 @@ fun PostScreen(
     val scope = rememberCoroutineScope()
     val dataState by viewModel.loader.uiState.collectAsStateWithLifecycle()
     val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
-    val scrollToTop: () -> Unit = { scope.launch { lazyState.scrollToItem(0, 0) } }
+    val scrollToTop: () -> Unit = {
+        Logger.d(TAG) { "scrollToTop() called" }
+        scope.launch { lazyState.scrollToItem(0, 0) }
+    }
+    val topAppBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
+
+    RefreshScrollToTopChecker(items = dataState.items, scrollToTop = scrollToTop)
 
     Scaffold(
         modifier = modifier,
@@ -108,14 +119,16 @@ fun PostScreen(
                 staggeredState = staggeredState,
                 scrollToTop = scrollToTop,
                 onNegative = onNegative,
-                onSearch = onSearch
+                onSearch = onSearch,
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { innerPadding ->
         PostRefreshBody(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(innerPadding)
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
             uiState = dataState,
             refreshState = refreshState,
             lazyState = lazyState,
@@ -125,6 +138,7 @@ fun PostScreen(
             onGloballyPositioned = { _, _ -> },
             onItemClick = {
                 Logger.d(TAG) { "onItemClick $it" }
+                navController.navigate(route = AppRoute.PostView(postId = it))
             }
         )
     }
@@ -405,6 +419,26 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
         Logger.w(TAG) { "No suitable space found" }
     }
     currentSpace.toDp() / 2
+}
+
+@Composable
+private fun RefreshScrollToTopChecker(
+    items: PersistentList<PostData>,
+    scrollToTop: () -> Unit
+) {
+    val topItemId = remember(items) {
+        derivedStateOf {
+            if (items.isEmpty()) {
+                Int.MIN_VALUE
+            } else {
+                items.first().id
+            }
+        }
+    }
+
+    LaunchedEffect(topItemId) {
+        scrollToTop()
+    }
 }
 
 @Composable

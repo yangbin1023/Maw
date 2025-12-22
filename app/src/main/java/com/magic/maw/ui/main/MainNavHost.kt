@@ -15,6 +15,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -30,6 +31,11 @@ import co.touchlab.kermit.Logger
 import com.magic.maw.ui.post.PostScreen
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.setting.SettingScreen2
+import com.magic.maw.ui.verify.VerifyScreen
+import com.magic.maw.util.UiUtils.checkTopRoute
+import com.magic.maw.util.VerifyRequester
+import com.magic.maw.util.VerifyResult
+import kotlinx.coroutines.launch
 
 private const val TAG = "MainNavHost"
 
@@ -41,7 +47,16 @@ fun MainNavHost(
     onOpenDrawer: (() -> Unit)? = null
 ) {
     Logger.d(TAG) { "MainNavHost recompose" }
+    val scope = rememberCoroutineScope()
     val postViewModel: PostViewModel = viewModel()
+
+    VerifyRequester.callback = { url ->
+        scope.launch {
+            Logger.d(TAG) { "call on verify url: $url" }
+            navController.navigate(AppRoute.Verify(url = url))
+        }
+    }
+
     NavHost(
         modifier = modifier,
         navController = navController,
@@ -127,13 +142,28 @@ fun MainNavHost(
             SettingScreen2(navController = navController)
         }
 
-        composable<AppRoute.Verify> {
+        composable<AppRoute.Verify> { backStackEntry ->
+            val route = backStackEntry.toRoute<AppRoute.Verify>()
             Logger.d(TAG) { "Verify recompose" }
-            TestScaffold(
-                title = "Verify",
-                navigationIconOnClick = onOpenDrawer ?: {},
-                testText = "Verify",
-                testBtnOnClick = { }
+
+            VerifyScreen(
+                url = route.url,
+                onSuccess = { text ->
+                    VerifyRequester.onVerifyResult(VerifyResult.Success(route.url, text))
+                    scope.launch {
+                        if (navController.currentBackStackEntry?.currentRoute is AppRoute.Verify) {
+                            navController.popBackStack()
+                        }
+                    }
+                },
+                onCancel = {
+                    VerifyRequester.onVerifyResult(VerifyResult.Failure(route.url))
+                    scope.launch {
+                        if (navController.currentBackStackEntry?.currentRoute is AppRoute.Verify) {
+                            navController.popBackStack()
+                        }
+                    }
+                }
             )
         }
     }
@@ -148,15 +178,6 @@ fun NavGraphBuilder.postGraph(
         Logger.d(TAG) { "postGraph content recompose" }
         composable<AppRoute.PostList> {
             Logger.d(TAG) { "PostList recompose" }
-//            TestScaffold(
-//                title = "Post",
-//                navigationIconOnClick = onOpenDrawer ?: {},
-//                navigationIconImageVector = Icons.Default.Menu,
-//                testText = "查看大图",
-//                testBtnOnClick = { navController.navigate(route = AppRoute.PostView(postId = 1)) },
-//                test2Text = "搜索",
-//                test2BtnOnClick = { navController.navigate(route = AppRoute.PostSearch()) }
-//            )
             PostScreen(
                 viewModel = postViewModel,
                 navController = navController,

@@ -14,8 +14,6 @@ import com.magic.maw.data.danbooru.DanbooruTag
 import com.magic.maw.data.danbooru.DanbooruUser
 import com.magic.maw.util.TimeUtils
 import com.magic.maw.util.client
-import com.magic.maw.util.configFlow
-import com.magic.maw.util.hasFlag
 import com.magic.maw.util.get
 import com.magic.maw.website.RequestOption
 import io.ktor.http.URLBuilder
@@ -32,19 +30,20 @@ class DanbooruParser : BaseParser() {
     override val website: WebsiteOption = WebsiteOption.Danbooru
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.General.value or Rating.Sensitive.value or Rating.Questionable.value or Rating.Explicit.value
-    override val supportRatings: List<Rating> = listOf(Rating.General, Rating.Sensitive, Rating.Questionable, Rating.Explicit)
+    override val supportRatings: List<Rating> =
+        listOf(Rating.General, Rating.Sensitive, Rating.Questionable, Rating.Explicit)
     override val supportPopular: Int get() = PopularType.defaultSupport or PopularType.Year.value
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         val url = getPostUrl(option)
         val danbooruList: List<DanbooruData> = client.get(url)
         val list = ArrayList<PostData>()
-        val ratings = configFlow.value.websiteConfig.rating
+//        val ratings = SettingsService.settingsState.value.
         for (item in danbooruList) {
             val data = item.toPostData() ?: continue
-            if (!ratings.hasFlag(data.rating.value)) {
-                continue
-            }
+//            if (!ratings.hasFlag(data.rating.value)) {
+//                continue
+//            }
             data.createId?.let { createId ->
                 userManager.get(createId)?.let {
                     data.uploader = it.name
@@ -59,6 +58,7 @@ class DanbooruParser : BaseParser() {
             list.add(data)
         }
         if (list.isEmpty() && danbooruList.isNotEmpty()) {
+            Logger.e(TAG) { "Warning: list is empty, but danbooruList is not empty!" }
             return requestPostData(option.apply { page++ })
         }
         return list
@@ -178,7 +178,7 @@ class DanbooruParser : BaseParser() {
                 continue
             tags.add(item.encode())
         }
-        getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it.encode()) }
+        getRatingTag(option.ratingSet).let { if (it.isNotEmpty()) tags.add(it.encode()) }
         if (option.poolId >= 0) {
             tags.add("pool:${option.poolId}".encode())
         }
@@ -213,23 +213,22 @@ class DanbooruParser : BaseParser() {
         return "$baseUrl/users.json?${"search[id]=$userId".encode()}"
     }
 
-    private fun getRatingTag(ratings: Int): String {
-        val tempRating = ratings and supportRating
-        if (tempRating != supportRating) {
-            val ratingList: MutableList<String> = ArrayList<String>()
-            if (tempRating.hasFlag(Rating.General.value))
-                ratingList.add("g")
-            if (tempRating.hasFlag(Rating.Sensitive.value))
-                ratingList.add("s")
-            if (tempRating.hasFlag(Rating.Questionable.value))
-                ratingList.add("q")
-            if (tempRating.hasFlag(Rating.Explicit.value))
-                ratingList.add("e")
-            if (ratingList.isEmpty())
-                ratingList.add("g")
-            return "rating:" + ratingList.joinToString(",")
+    private fun getRatingTag(ratings: List<Rating>): String {
+        if (ratings.toSet() == supportRatings.toSet()) {
+            return ""
         }
-        return ""
+        val ratingList: MutableList<String> = ArrayList<String>()
+        if (ratings.contains(Rating.General))
+            ratingList.add("g")
+        if (ratings.contains(Rating.Sensitive))
+            ratingList.add("s")
+        if (ratings.contains(Rating.Questionable))
+            ratingList.add("q")
+        if (ratings.contains(Rating.Explicit))
+            ratingList.add("e")
+        if (ratingList.isEmpty())
+            ratingList.add("g")
+        return "rating:" + ratingList.joinToString(",")
     }
 
     companion object {

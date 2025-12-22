@@ -11,12 +11,15 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 
 private const val TAG = "PostDataLoader"
 
@@ -165,10 +168,14 @@ class PostDataLoader(
         }
     }
 
-    private fun launch(block: suspend CoroutineScope.() -> Unit) {
+    private fun launch(
+        context: CoroutineContext = Dispatchers.IO,
+        start: CoroutineStart = CoroutineStart.DEFAULT,
+        block: suspend CoroutineScope.() -> Unit
+    ) {
         synchronized(this) {
             scopeJob?.let { if (it.isActive) it.cancel() }
-            scopeJob = scope.launch(block = block)
+            scopeJob = scope.launch(context = context, start = start, block = block)
         }
     }
 }

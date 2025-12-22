@@ -49,7 +49,7 @@ sealed class AppRoute {
     object Settings : AppRoute()
 
     @Serializable
-    object Verify : AppRoute()
+    data class Verify(val url: String) : AppRoute()
 }
 
 val AppRoute.rootRoute: AppRoute
@@ -59,7 +59,7 @@ val AppRoute.rootRoute: AppRoute
         AppRoute.Popular -> AppRoute.Popular
         AppRoute.Favorite -> AppRoute.Favorite
         AppRoute.Settings -> AppRoute.Settings
-        AppRoute.Verify -> AppRoute.Verify
+        is AppRoute.Verify -> this
     }
 
 val AppRoute.isRootRoute: Boolean

@@ -63,7 +63,6 @@ fun VerifyScreen(
     val defaultTitle = stringResource(R.string.verification)
     val title = remember { mutableStateOf(defaultTitle) }
     RegisterView(name = viewName)
-    SourceChangeChecker(onChanged = onCancel)
     Scaffold(
         modifier = modifier,
         topBar = {

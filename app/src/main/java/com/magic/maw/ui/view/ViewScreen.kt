@@ -31,11 +31,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.magic.maw.data.PostData
 import com.magic.maw.data.TagInfo
 import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.post.PostUiState
+import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.theme.ViewDetailBarFold
 import com.magic.maw.ui.theme.ViewDetailBarHalfFold
 import com.magic.maw.util.UiUtils
@@ -114,6 +118,55 @@ fun ViewScreen(
             onTagClick = onTagClick
         )
     }
+}
+
+
+@Composable
+fun ViewScreen(
+    modifier: Modifier = Modifier,
+    viewModel: PostViewModel = viewModel(),
+    navController: NavController = rememberNavController(),
+) {
+
+//    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+//        val postData = try {
+//            uiState.dataList[pagerState.currentPage]
+//        } catch (_: Throwable) {
+//            onExit()
+//            return@BoxWithConstraints
+//        }
+//        val draggableHeight = this.maxHeight - offsetValue
+//
+//        ViewContent(
+//            pagerState = pagerState,
+//            dataList = uiState.dataList,
+//            playerState = playerState,
+//            onLoadMore = onLoadMore,
+//            onExit = onExit,
+//            onTab = onTap
+//        )
+//
+//        ViewTopBar(
+//            modifier = Modifier
+//                .align(Alignment.TopCenter)
+//                .fillMaxWidth()
+//                .offset {
+//                    val y = topAppBarOffset.toPx()
+//                    IntOffset(0, y.toInt())
+//                },
+//            postData = postData,
+//            onExit = onExit
+//        )
+//
+//        ViewDetailBar(
+//            modifier = Modifier.align(Alignment.BottomCenter),
+//            postData = postData,
+//            isScrollInProgress = pagerState.isScrollInProgress,
+//            playerState = playerState,
+//            maxDraggableHeight = draggableHeight,
+//            onTagClick = onTagClick
+//        )
+//    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
