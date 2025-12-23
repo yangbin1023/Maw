@@ -30,9 +30,10 @@ import androidx.navigation.toRoute
 import co.touchlab.kermit.Logger
 import com.magic.maw.ui.post.PostScreen
 import com.magic.maw.ui.post.PostViewModel
-import com.magic.maw.ui.setting.SettingScreen2
+import com.magic.maw.ui.search.SearchScreen
+import com.magic.maw.ui.setting.SettingScreen
 import com.magic.maw.ui.verify.VerifyScreen
-import com.magic.maw.util.UiUtils.checkTopRoute
+import com.magic.maw.ui.view.ViewScreen
 import com.magic.maw.util.VerifyRequester
 import com.magic.maw.util.VerifyResult
 import kotlinx.coroutines.launch
@@ -139,7 +140,7 @@ fun MainNavHost(
 
         composable<AppRoute.Settings> {
             Logger.d(TAG) { "Setting recompose" }
-            SettingScreen2(navController = navController)
+            SettingScreen(navController = navController)
         }
 
         composable<AppRoute.Verify> { backStackEntry ->
@@ -176,38 +177,38 @@ fun NavGraphBuilder.postGraph(
 ) {
     navigation<AppRoute.Post>(startDestination = AppRoute.PostList) {
         Logger.d(TAG) { "postGraph content recompose" }
-        composable<AppRoute.PostList> {
-            Logger.d(TAG) { "PostList recompose" }
+        composable<AppRoute.PostList> { backStackEntry ->
+            val postIndex = backStackEntry.savedStateHandle.getLiveData<Int>(POST_INDEX).value
+            if (postIndex != null) {
+                backStackEntry.savedStateHandle.remove<String>(POST_INDEX)
+            }
+            Logger.d(TAG) { "PostList recompose $postIndex" }
             PostScreen(
                 viewModel = postViewModel,
                 navController = navController,
-                onNegative = onOpenDrawer ?: {}
+                onNegative = onOpenDrawer ?: {},
+                postIndex = postIndex
             )
         }
         composable<AppRoute.PostView> { backStackEntry ->
             Logger.d(TAG) { "PostView recompose" }
             val route: AppRoute.PostView = backStackEntry.toRoute()
-            TestScaffold(
-                title = "PostView",
-                navigationIconOnClick = { navController.popBackStack() },
-                testText = "搜索",
-                testBtnOnClick = { navController.navigate(route = AppRoute.PostSearch(content = "test")) },
-                test2Text = route.postId.toString(),
-                test2BtnOnClick = { }
+            ViewScreen(
+                viewModel = postViewModel,
+                navController = navController,
+                postIndex = route.postId
             )
         }
         composable<AppRoute.PostSearch> { backStackEntry ->
             Logger.d(TAG) { "PostSearch recompose" }
             val route: AppRoute.PostSearch = backStackEntry.toRoute()
-            TestScaffold(
-                title = "PostSearch",
-                navigationIconOnClick = { navController.popBackStack() },
-                testText = "搜索",
-                testBtnOnClick = {
-                    navController.navigate(route = AppRoute.PostList) { popUpTo(route = AppRoute.PostList) }
-                },
-                test2Text = route.content ?: "(empty)",
-                test2BtnOnClick = { }
+            SearchScreen(
+                initText = route.text,
+                onFinish = { navController.popBackStack() },
+                onSearch = {
+                    postViewModel.search(text = it)
+                    navController.navigate(route = AppRoute.Post) { popUpTo(route = AppRoute.Post) }
+                }
             )
         }
     }

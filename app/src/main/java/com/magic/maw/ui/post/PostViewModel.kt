@@ -15,6 +15,7 @@ import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -273,6 +274,17 @@ class PostViewModel2(
 }
 
 class PostViewModel : ViewModel() {
+    private val _viewIndex = MutableStateFlow<Int?>(null)
+    val viewIndex = _viewIndex.asStateFlow()
+
+    fun setViewIndex(viewIndex: Int) {
+        _viewIndex.update { viewIndex }
+    }
+
+    fun resetViewIndex() {
+        _viewIndex.update { null }
+    }
+
     val loader = PostDataLoader(scope = viewModelScope)
 
     fun refresh(force: Boolean = false) {
@@ -281,5 +293,9 @@ class PostViewModel : ViewModel() {
 
     fun loadMore() {
         loader.loadMore()
+    }
+
+    fun search(text: String = "") {
+        loader.search(text)
     }
 }

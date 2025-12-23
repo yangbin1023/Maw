@@ -1,5 +1,6 @@
 package com.magic.maw.ui.view
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -31,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -38,6 +41,8 @@ import com.magic.maw.data.PostData
 import com.magic.maw.data.TagInfo
 import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.changeSystemBarStatus
+import com.magic.maw.ui.main.AppRoute
+import com.magic.maw.ui.main.POST_INDEX
 import com.magic.maw.ui.post.PostUiState
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.theme.ViewDetailBarFold
@@ -120,53 +125,72 @@ fun ViewScreen(
     }
 }
 
-
 @Composable
 fun ViewScreen(
     modifier: Modifier = Modifier,
     viewModel: PostViewModel = viewModel(),
     navController: NavController = rememberNavController(),
+    postIndex: Int = 0,
 ) {
+    val uiState by viewModel.loader.uiState.collectAsStateWithLifecycle()
+    val pagerState = rememberPagerState(initialPage = postIndex) { uiState.items.size }
+    val context = LocalContext.current
+    val playerState = remember { VideoPlayerState(context = context) }
+    val onExit: () -> Unit = {
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.set(POST_INDEX, pagerState.currentPage)
+        navController.popBackStack()
+    }
+    val onLoadMore: () -> Unit = {
+        viewModel.loadMore()
+    }
 
-//    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-//        val postData = try {
-//            uiState.dataList[pagerState.currentPage]
-//        } catch (_: Throwable) {
-//            onExit()
-//            return@BoxWithConstraints
-//        }
-//        val draggableHeight = this.maxHeight - offsetValue
-//
-//        ViewContent(
-//            pagerState = pagerState,
-//            dataList = uiState.dataList,
-//            playerState = playerState,
-//            onLoadMore = onLoadMore,
-//            onExit = onExit,
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val postData = try {
+            uiState.items[pagerState.currentPage]
+        } catch (_: Throwable) {
+            onExit()
+            return@BoxWithConstraints
+        }
+        val draggableHeight = this.maxHeight
+
+        ViewContent(
+            pagerState = pagerState,
+            dataList = uiState.items,
+            playerState = playerState,
+            onLoadMore = onLoadMore,
+            onExit = onExit,
 //            onTab = onTap
-//        )
-//
-//        ViewTopBar(
-//            modifier = Modifier
-//                .align(Alignment.TopCenter)
-//                .fillMaxWidth()
-//                .offset {
-//                    val y = topAppBarOffset.toPx()
-//                    IntOffset(0, y.toInt())
-//                },
-//            postData = postData,
-//            onExit = onExit
-//        )
-//
-//        ViewDetailBar(
-//            modifier = Modifier.align(Alignment.BottomCenter),
-//            postData = postData,
-//            isScrollInProgress = pagerState.isScrollInProgress,
-//            playerState = playerState,
-//            maxDraggableHeight = draggableHeight,
-//            onTagClick = onTagClick
-//        )
-//    }
+        )
+
+        ViewTopBar(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+            /*.offset {
+                val y = topAppBarOffset.toPx()
+                IntOffset(0, y.toInt())
+            }*/,
+            postData = postData,
+            onExit = onExit
+        )
+
+        ViewDetailBar(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            postData = postData,
+            isScrollInProgress = pagerState.isScrollInProgress,
+            playerState = playerState,
+            maxDraggableHeight = draggableHeight,
+            onTagClick = { navController.navigate(route = AppRoute.PostSearch(text = it.name)) },
+            onSearchTag = {
+                viewModel.search(text = it.name)
+                navController.navigate(route = AppRoute.Post) { popUpTo(route = AppRoute.Post) }
+            }
+        )
+    }
+
+    BackHandler(onBack = onExit)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

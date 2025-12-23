@@ -29,4 +29,5 @@ interface DataLoader<T> {
     fun refresh(force: Boolean = false): Any
     fun loadMore(): Any
     fun clearData(): Any
+    fun search(text: String = ""): Any = {}
 }

@@ -13,6 +13,9 @@ import androidx.navigation.toRoute
 import co.touchlab.kermit.Logger
 import kotlinx.serialization.Serializable
 
+const val POST_INDEX = "postIndex"
+const val POOL_INDEX = "postIndex"
+
 @Serializable
 sealed class AppRoute {
     @Serializable
@@ -25,7 +28,7 @@ sealed class AppRoute {
     data class PostView(val postId: Int) : AppRoute()
 
     @Serializable
-    data class PostSearch(val content: String? = null) : AppRoute()
+    data class PostSearch(val text: String = "") : AppRoute()
 
     @Serializable
     object Pool : AppRoute()

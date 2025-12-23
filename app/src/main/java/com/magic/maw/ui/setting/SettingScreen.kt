@@ -1,84 +1,79 @@
 package com.magic.maw.ui.setting
 
-import android.content.Intent
-import android.webkit.CookieManager
-import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import co.touchlab.kermit.Logger
-import com.hjq.toast.Toaster
 import com.magic.maw.R
 import com.magic.maw.data.Quality
-import com.magic.maw.data.Quality.Companion.toQuality
-import com.magic.maw.data.Rating.Companion.getRatings
-import com.magic.maw.data.Rating.Companion.hasRating
-import com.magic.maw.test.TestActivity
+import com.magic.maw.data.ThemeMode
+import com.magic.maw.data.WebsiteOption
 import com.magic.maw.ui.components.DialogSettingItem
 import com.magic.maw.ui.components.MenuSettingItem
 import com.magic.maw.ui.components.MultipleChoiceDialog
-import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.SettingItem
 import com.magic.maw.ui.components.SingleChoiceDialog
 import com.magic.maw.ui.components.SwitchSettingItem
-import com.magic.maw.ui.components.throttle
-import com.magic.maw.ui.theme.supportDynamicColor
-import com.magic.maw.ui.view.SaveDialog
-import com.magic.maw.util.Config
-import com.magic.maw.util.WebsiteConfig
-import com.magic.maw.util.configFlow
-import com.magic.maw.util.updateWebConfig
 import com.magic.maw.website.parser.BaseParser
-import kotlinx.coroutines.flow.update
 
-private const val viewName = "Setting"
+private const val TAG = "SettingScreen"
 
-private var lastClickVersionItemTime = 0L
-private var clickVersionItemCount = 0
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingScreen(
-    onFinish: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    navController: NavController,
+    viewModel: SettingsViewModel = settingsViewModel()
 ) {
-    val changeSetting = remember { mutableStateOf(false) }
-    RegisterView(name = viewName)
-    Scaffold(topBar = {
-        SettingTopBar(
-            shadowEnable = false,
-            onFinish = onFinish ?: {},
-        )
-    }) { innerPadding ->
-        SettingBody(
-            modifier = Modifier.padding(innerPadding),
-            changeSetting = changeSetting,
+    val scrollState = rememberScrollState()
+    val showTopBarShadow by remember {
+        derivedStateOf {
+            scrollState.value > 0
+        }
+    }
+    Logger.d(TAG) { "SettingScreen compose" }
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            SettingTopBar(
+                modifier = Modifier.shadow(
+                    elevation = if (showTopBarShadow) 4.dp else 0.dp
+                ),
+                onExit = { navController.popBackStack() }
+            )
+        }
+    ) { innerPadding ->
+        SettingsScreenContent(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            scrollState = scrollState,
+            viewModel = viewModel
         )
     }
 }
@@ -87,338 +82,283 @@ fun SettingScreen(
 @Composable
 private fun SettingTopBar(
     modifier: Modifier = Modifier,
-    shadowEnable: Boolean = true,
-    onFinish: () -> Unit = {},
-    scrollBehavior: TopAppBarScrollBehavior? = null,
+    onExit: () -> Unit
 ) {
-    CenterAlignedTopAppBar(
-        modifier = modifier.let { if (shadowEnable) it.shadow(3.dp) else it },
-        title = { Text(stringResource(R.string.setting)) },
+    TopAppBar(
+        modifier = modifier,
+        title = { Text(text = stringResource(R.string.setting)) },
         navigationIcon = {
-            IconButton(onClick = onFinish) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "",
-                )
+            IconButton(onClick = onExit) {
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "")
             }
-        },
-        scrollBehavior = scrollBehavior
+        }
     )
 }
 
 @Composable
-private fun SettingBody(
+private fun SettingsScreenContent(
     modifier: Modifier = Modifier,
-    changeSetting: MutableState<Boolean>,
+    scrollState: ScrollState = rememberScrollState(),
+    viewModel: SettingsViewModel = settingsViewModel()
 ) {
-    val config by configFlow.collectAsState()
-    val websiteConfig = config.websiteConfig
-    val titleModifier = Modifier.padding(top = 7.dp)
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-    ) {
-        /** 网站设置 */
-        SettingGroupTitle(text = stringResource(R.string.website))
-        // 网站设置
-        WebsiteSettingItem(source = config.source, changeSetting = changeSetting)
-        // 分级
-        RatingSetting(config = config, changeSetting = changeSetting)
-        // 质量
-        QualitySetting(websiteConfig = websiteConfig)
-        // 保存文件
-        SaveSetting(websiteConfig = websiteConfig)
+    Box(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .width(600.dp)
+                .align(Alignment.TopCenter)
+                .verticalScroll(state = scrollState)
+        ) {
+            SettingsGroupTitle(text = stringResource(R.string.website))
+            WebsiteSettingItem(viewModel = viewModel)
+            RatingsSettingItem(viewModel = viewModel)
+            ShowQualitySettingItem(viewModel = viewModel)
+            SaveQualitySettingItem(viewModel = viewModel)
 
-        /** 视频设置 */
-        SettingGroupTitle(text = stringResource(R.string.video), modifier = titleModifier)
-        // 自动播放
-        AutoPlaySetting(autoplay = config.autoplay)
-        // 静音
-        MuteSetting(mute = config.mute)
-        // 视频加速倍率
-        VideoSpeedupSetting(speedup = config.videoSpeedup)
+            SettingsGroupTitle(text = stringResource(R.string.video))
+            VideoAutoPlaySettingItem(viewModel = viewModel)
+            VideoMuteSettingItem(viewModel = viewModel)
+            VideoSpeedMultiplierSettingItem(viewModel = viewModel)
 
-        /** 主题 */
-        SettingGroupTitle(text = stringResource(R.string.theme), modifier = titleModifier)
-        // 主题模式
-        DarkModeSetting(darkMode = config.themeMode)
-        // 动态颜色
-        DynamicColorSetting(checked = config.dynamicColor)
+            SettingsGroupTitle(text = stringResource(R.string.theme))
+            ThemeModeSettingItem(viewModel = viewModel)
+            DynamicColorSettingItem(viewModel = viewModel)
 
-        /** 其他 */
-        SettingGroupTitle(text = stringResource(R.string.other), modifier = titleModifier)
-        // 版本
-        VersionSetting()
-        // 测试
-        TestEntranceSetting()
+            SettingsGroupTitle(text = stringResource(R.string.others))
+            VersionInfoItem()
+        }
     }
 }
 
 @Composable
-private fun SettingGroupTitle(text: String, modifier: Modifier = Modifier) {
+private fun SettingsGroupTitle(
+    modifier: Modifier = Modifier,
+    text: String
+) {
     Text(
-        text = text,
         modifier = modifier.padding(horizontal = 15.dp, vertical = 3.dp),
-        textAlign = TextAlign.Center,
+        text = text,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary
     )
 }
 
-/**
- * 网站设置
- */
 @Composable
 private fun WebsiteSettingItem(
-    source: String,
-    changeSetting: MutableState<Boolean>,
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = settingsViewModel()
 ) {
-    val options = LocalResources.current.getStringArray(R.array.website).toList()
-    val initValue = BaseParser.getIndex(source)
-    var selectIndex by remember { mutableIntStateOf(initValue) }
+    val options = WebsiteOption.entries.toList()
+    val settingsState by viewModel.settingsState.collectAsState()
+    val option by remember { derivedStateOf { settingsState.website } }
+    Logger.d(TAG) { "WebsiteSettingItem compose website: $option" }
     DialogSettingItem(
+        modifier = modifier,
         title = stringResource(id = R.string.website),
-        tips = options[selectIndex]
+        tips = option.toString()
     ) { onDismiss ->
         SingleChoiceDialog(
             title = stringResource(R.string.website),
             options = options,
-            selectedOptionIndex = selectIndex,
-            onDismissRequest = onDismiss,
-            onOptionSelected = { index ->
-                selectIndex = index
-                val sourceTag = BaseParser.getTag(options[selectIndex])
-                if (sourceTag.isNotEmpty() && sourceTag != source) {
-                    changeSetting.value = true
-                    configFlow.update { it.copy(source = sourceTag) }
-                }
-                onDismiss()
+            selectedOption = option,
+            onDismiss = onDismiss,
+            onOptionSelected = { option ->
+                viewModel.updateWebsite(option)
             }
         )
     }
 }
 
-/**
- * 分级设置
- */
 @Composable
-private fun RatingSetting(
-    config: Config,
-    changeSetting: MutableState<Boolean>,
+private fun RatingsSettingItem(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = settingsViewModel()
 ) {
-    val parser = BaseParser.get(config.source)
-    val websiteConfig = config.websiteConfig
-    val supportRatings = parser.supportRating.getRatings()
-    val selectedRatings = websiteConfig.rating.getRatings()
-    val ratingNames = ArrayList<String>()
-    val selectedRatingList = ArrayList<Int>()
-    for ((index, rating) in supportRatings.withIndex()) {
-        ratingNames.add(rating.name)
-        if (websiteConfig.rating.hasRating(rating))
-            selectedRatingList.add(index)
+    val settingsState by viewModel.settingsState.collectAsState()
+    val website by remember { derivedStateOf { settingsState.website } }
+    val ratings by remember { derivedStateOf { settingsState.websiteSettings.ratings } }
+    val supportRatings = BaseParser.get(website).supportRatings
+    val tips = if (ratings.toSet() == supportRatings.toSet()) {
+        stringResource(R.string.all)
+    } else {
+        ratings.joinToString(", ")
     }
+    Logger.d(TAG) { "RatingsSettingItem compose website: $website, ratings: $ratings, supportRatings: $supportRatings" }
     DialogSettingItem(
+        modifier = modifier,
         title = stringResource(id = R.string.rating),
-        tips = if (websiteConfig.rating == parser.supportRating)
-            stringResource(R.string.all)
-        else
-            selectedRatings.joinToString(", ")
+        tips = tips
     ) { onDismiss ->
         MultipleChoiceDialog(
-            title = stringResource(id = R.string.rating),
-            options = ratingNames,
-            selectedOptions = selectedRatingList,
+            title = stringResource(R.string.rating),
+            options = supportRatings,
+            selectedOptions = ratings,
             onDismiss = onDismiss,
-            onConfirm = throttle(func = { indexes: List<Int> ->
-                var newRating = 0
-                for (index in indexes) {
-                    newRating += supportRatings[index].value
-                }
-                if (websiteConfig.rating != newRating) {
-                    changeSetting.value = true
-                    configFlow.updateWebConfig(websiteConfig.copy(rating = newRating))
-                }
-                onDismiss()
-            })
+            onConfirm = { ratings ->
+                viewModel.updateWebSettings { copy(ratings = ratings) }
+            }
         )
     }
 }
 
-/**
- * 质量设置
- */
 @Composable
-private fun QualitySetting(websiteConfig: WebsiteConfig) {
-    val currentQuality = websiteConfig.quality.toQuality()
-    val qualitySettingItems = listOf(
-        stringResource(R.string.quality_sample),
-        stringResource(R.string.quality_large),
-        stringResource(R.string.quality_origin)
-    )
-    val qualitySelectIndex = when (currentQuality) {
-        Quality.Large -> 1
-        Quality.File -> 2
-        else -> 0
-    }
+private fun ShowQualitySettingItem(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = settingsViewModel()
+) {
+    val settingsState by viewModel.settingsState.collectAsState()
+    val showQuality by remember { derivedStateOf { settingsState.websiteSettings.showQuality } }
+    val options = Quality.SaveList
+    Logger.d(TAG) { "ShowQualitySettingItem compose showQuality: $showQuality" }
     DialogSettingItem(
+        modifier = modifier,
         title = stringResource(id = R.string.quality),
-        tips = currentQuality.toResString(LocalContext.current)
+        tips = showQuality.resId?.let { stringResource(it) } ?: ""
     ) { onDismiss ->
         SingleChoiceDialog(
-            title = stringResource(id = R.string.quality),
-            options = qualitySettingItems,
-            selectedOptionIndex = qualitySelectIndex,
-            onDismissRequest = onDismiss,
-            onOptionSelected = throttle(func = { index: Int ->
-                val quality = when (index) {
-                    1 -> Quality.Large
-                    2 -> Quality.File
-                    else -> Quality.Sample
-                }
-                configFlow.updateWebConfig(websiteConfig.copy(quality = quality.value))
-                onDismiss()
-            })
+            title = stringResource(R.string.quality),
+            options = options,
+            optionsToString = { quality -> quality.resId?.let { stringResource(it) } ?: "" },
+            selectedOption = showQuality,
+            onDismiss = onDismiss,
+            onOptionSelected = { option ->
+                viewModel.updateWebSettings { copy(showQuality = option) }
+            }
         )
     }
 }
 
-/**
- * 保存设置
- */
 @Composable
-private fun SaveSetting(websiteConfig: WebsiteConfig) {
-    val saveQuality = websiteConfig.saveQuality.toQuality()
+private fun SaveQualitySettingItem(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = settingsViewModel()
+) {
+    val settingsState by viewModel.settingsState.collectAsState()
+    val saveQuality by remember { derivedStateOf { settingsState.websiteSettings.saveQuality } }
+    val options = Quality.SaveList
+    Logger.d(TAG) { "ShowQualitySettingItem compose showQuality: $saveQuality" }
     DialogSettingItem(
+        modifier = modifier,
         title = stringResource(id = R.string.save),
-        tips = saveQuality.toResString(LocalContext.current)
+        tips = saveQuality.resId?.let { stringResource(it) } ?: ""
     ) { onDismiss ->
-        SaveDialog(onDismiss = onDismiss)
+        SingleChoiceDialog(
+            title = stringResource(R.string.save),
+            options = options,
+            optionsToString = { quality -> quality.resId?.let { stringResource(it) } ?: "" },
+            selectedOption = saveQuality,
+            onDismiss = onDismiss,
+            onOptionSelected = { option ->
+                viewModel.updateWebSettings { copy(showQuality = option) }
+            }
+        )
     }
 }
 
-/**
- * 自动播放
- */
 @Composable
-private fun AutoPlaySetting(autoplay: Boolean) {
+private fun VideoAutoPlaySettingItem(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = settingsViewModel()
+) {
+    val settingsState by viewModel.settingsState.collectAsState()
+    val autoplay by remember { derivedStateOf { settingsState.videoSettings.autoplay } }
+    Logger.d(TAG) { "VideoAutoPlaySettingItem compose autoplay: $autoplay" }
     SwitchSettingItem(
+        modifier = modifier,
         title = stringResource(R.string.autoplay),
         checked = autoplay,
         onCheckedChange = {
-            configFlow.update { s -> s.copy(autoplay = it) }
+            viewModel.updateVideoSettings { copy(autoplay = it) }
         }
     )
 }
 
-/**
- * 静音
- */
 @Composable
-private fun MuteSetting(mute: Boolean) {
+private fun VideoMuteSettingItem(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = settingsViewModel()
+) {
+    val settingsState by viewModel.settingsState.collectAsState()
+    val mute by remember { derivedStateOf { settingsState.videoSettings.mute } }
+    Logger.d(TAG) { "VideoMuteSettingItem compose mute: $mute" }
     SwitchSettingItem(
+        modifier = modifier,
         title = stringResource(R.string.mute),
         checked = mute,
         onCheckedChange = {
-            configFlow.update { s -> s.copy(mute = it) }
+            viewModel.updateVideoSettings { copy(mute = it) }
         }
     )
 }
 
-/**
- * 视频加速倍率
- */
 @Composable
-private fun VideoSpeedupSetting(speedup: Float) {
-    val speedupMap = mapOf("2x" to 2f, "3x" to 3f, "5x" to 5f)
-    val items = speedupMap.keys.toList().sorted()
-    val key = speedupMap.entries.find { it.value == speedup }?.key
+private fun VideoSpeedMultiplierSettingItem(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = settingsViewModel()
+) {
+    val settingsState by viewModel.settingsState.collectAsState()
+    val multiplier by remember { derivedStateOf { settingsState.videoSettings.playbackSpeedMultiplier } }
+    val multiplierMap = mapOf("2x" to 2f, "3x" to 3f, "5x" to 5f)
+    val items = multiplierMap.keys.toList().sorted()
+    val key = multiplierMap.entries.find { it.value == multiplier }?.key
     val index = key?.let { items.indexOf(it).coerceAtLeast(0) } ?: 0
+    Logger.d(TAG) { "VideoSpeedMultiplierSettingItem compose items: $items, index: $index, multiplier: $multiplier" }
     MenuSettingItem(
+        modifier = modifier,
         title = stringResource(R.string.video_speedup),
         items = items,
         checkItem = index,
         onItemChanged = { index ->
-            speedupMap[items[index]]?.let {
-                configFlow.update { s -> s.copy(videoSpeedup = it) }
+            multiplierMap[items[index]]?.let {
+                viewModel.updateVideoSettings { copy(playbackSpeedMultiplier = it) }
             }
         }
     )
 }
 
-/**
- * 深色模式
- */
 @Composable
-private fun DarkModeSetting(darkMode: Int) {
+private fun ThemeModeSettingItem(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = settingsViewModel()
+) {
+    val settingsState by viewModel.settingsState.collectAsState()
+    val themeMode by remember { derivedStateOf { settingsState.themeSettings.themeMode } }
+    Logger.d(TAG) { "ThemeModeSettingItem compose themeMode: $themeMode" }
     MenuSettingItem(
+        modifier = modifier,
         title = stringResource(R.string.theme_mode),
-        items = listOf(
-            stringResource(R.string.follow_system),
-            stringResource(R.string.always_dark),
-            stringResource(R.string.always_light)
-        ),
-        checkItem = darkMode,
-        onItemChanged = { configFlow.update { s -> s.copy(themeMode = it) } }
+        options = ThemeMode.entries,
+        optionToString = { stringResource(it.resId) },
+        selectOption = themeMode,
+        onOptionSelected = { viewModel.updateThemeSettings { copy(themeMode = it) } }
     )
 }
 
-/**
- * 动态颜色
- */
 @Composable
-private fun DynamicColorSetting(checked: Boolean) {
-    if (!supportDynamicColor) {
-        return
-    }
+private fun DynamicColorSettingItem(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = settingsViewModel()
+) {
+    val settingsState by viewModel.settingsState.collectAsState()
+    val dynamicColor by remember { derivedStateOf { settingsState.themeSettings.dynamicColor } }
+    Logger.d(TAG) { "DynamicColorSettingItem compose dynamicColor: $dynamicColor" }
     SwitchSettingItem(
-        title = stringResource(id = R.string.dynamic_color),
-        subTitle = stringResource(id = R.string.dynamic_color_desc),
-        checked = checked,
+        modifier = modifier,
+        title = stringResource(R.string.dynamic_color),
+        subTitle = stringResource(R.string.dynamic_color_desc),
+        checked = dynamicColor,
         onCheckedChange = {
-            configFlow.update { s -> s.copy(dynamicColor = it) }
+            viewModel.updateThemeSettings { copy(dynamicColor = it) }
         }
     )
 }
 
-/**
- * 版本
- */
 @Composable
-private fun VersionSetting() {
+private fun VersionInfoItem(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val appInfo = context.packageManager.getPackageInfo(context.packageName, 0)
     SettingItem(
+        modifier = modifier,
         title = stringResource(id = R.string.version),
         tips = appInfo.versionName,
-        onClickWidthThrottle = false
-    ) {
-        val now = System.currentTimeMillis()
-        if (now - lastClickVersionItemTime < 1000) {
-            clickVersionItemCount++
-        } else {
-            clickVersionItemCount = 1
-        }
-        lastClickVersionItemTime = now
-        Logger.v { "click version item count: $clickVersionItemCount" }
-        if (clickVersionItemCount >= 5) {
-            clickVersionItemCount = 0
-            CookieManager.getInstance().removeAllCookies(null)
-            Toaster.show(R.string.all_cookies_cleared)
-        }
-    }
-}
-
-/**
- * 测试Activity入口
- */
-@Composable
-private fun TestEntranceSetting() {
-    val context = LocalContext.current
-    val activity = LocalActivity.current
-    SettingItem(
-        title = "测试",
-    ) {
-        activity?.startActivity(Intent(context, TestActivity::class.java))
-    }
+    )
 }

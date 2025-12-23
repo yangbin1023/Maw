@@ -201,6 +201,117 @@ fun ViewDetailBar(
 }
 
 @Composable
+fun ViewDetailBar(
+    modifier: Modifier = Modifier,
+    postData: PostData,
+    isScrollInProgress: Boolean,
+    playerState: VideoPlayerState,
+    maxDraggableHeight: Dp,
+    onTagClick: (TagInfo) -> Unit = {},
+    onSearchTag: (TagInfo) -> Unit = {}
+) {
+    var currentPostData by remember { mutableStateOf(postData) }
+    if (!isScrollInProgress) {
+        if (currentPostData != postData) {
+            currentPostData = postData
+        }
+    }
+    val scrollableViewState = rememberScrollableViewState()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val showSaveDialog = remember { mutableStateOf(false) }
+    val qualityList = ArrayList<Quality>()
+    val qualityItems = ArrayList<String>()
+    currentPostData.sampleInfo?.let {
+        qualityList.add(Quality.Sample)
+        val resolutionStr = "${it.width}x${it.height}"
+        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
+        qualityItems.add("$resolutionStr$sizeStr")
+    }
+    currentPostData.largeInfo?.let {
+        qualityList.add(Quality.Large)
+        val resolutionStr = "${it.width}x${it.height}"
+        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
+        qualityItems.add("$resolutionStr$sizeStr")
+    }
+    currentPostData.originalInfo.let {
+        qualityList.add(Quality.File)
+        val resolutionStr = "${it.width}x${it.height}"
+        val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
+        qualityItems.add("$resolutionStr$sizeStr")
+    }
+
+    LaunchedEffect(maxDraggableHeight, currentPostData.fileType) {
+        val changed = scrollableViewState.updateData(
+            density = density,
+            showVideoControllerBar = currentPostData.fileType.isVideo,
+            maxDraggableHeight = maxDraggableHeight
+        )
+        if (changed) {
+            scrollableViewState.resetOffset()
+        }
+    }
+    val onSave = getOnSaveCallback()
+    ScrollableView(
+        modifier = modifier.fillMaxWidth(),
+        state = scrollableViewState,
+        toolbarModifier = Modifier.let {
+            if (!scrollableViewState.hideContent) {
+                it.background(MaterialTheme.colorScheme.primaryContainer.copy(0.85f))
+            } else {
+                it.background(ViewScreenDefaults.detailBarFoldColor)
+            }
+        },
+        toolbar = { state ->
+            var isFavorite by remember { mutableStateOf(false) }
+            DetailBar(
+                modifier = Modifier.height(state.toolbarHeightDp.dp),
+                postData = currentPostData,
+                expand = scrollableViewState.expand,
+                enabled = !isScrollInProgress,
+                isFavorite = isFavorite,
+                playerState = playerState,
+                onFavorite = { isFavorite = !isFavorite },
+                onSave = {
+                    val websiteConfig = configFlow.value.websiteConfig
+                    if (!websiteConfig.showSaveDialog) {
+                        onSave(currentPostData, websiteConfig.saveQuality.toQuality())
+                    } else {
+                        showSaveDialog.value = true
+                    }
+                },
+                onExpand = {
+                    scrollableViewState.expand = !scrollableViewState.expand
+                    scope.launch { scrollableViewState.animateToExpand() }
+                }
+            )
+        },
+        contentModifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(0.7f)),
+        content = {
+            DetailContent(
+                modifier = Modifier.align(Alignment.TopCenter),
+                postData = currentPostData,
+                qualityItems = qualityItems,
+                qualityList = qualityList,
+                onTagClick = { tagInfo, directSearch ->
+                    if (directSearch) {
+                        onSearchTag(tagInfo)
+                    } else {
+                        onTagClick(tagInfo)
+                    }
+                }
+            )
+            SaveDialog(
+                showDialog = showSaveDialog,
+                itemList = qualityItems,
+                qualityList = qualityList,
+                onConfirm = { index -> onSave(currentPostData, qualityList[index]) }
+            )
+        }
+    )
+}
+
+@Composable
 private fun DetailBar(
     modifier: Modifier = Modifier,
     postData: PostData,

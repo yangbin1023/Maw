@@ -125,6 +125,16 @@ class PostDataLoader(
         _uiState.update { it.copy(items = persistentListOf(), loadState = LoadState.Idle) }
     }
 
+    override fun search(text: String): Any = with(parser) {
+        val list = requestOption.parseSearchText(text)
+        if (list.isNotEmpty() && list != requestOption.tags.toList()) {
+            requestOption.clearTags()
+            requestOption.addTags(list)
+            tagManager.dealSearchTags(list)
+            refresh(true)
+        }
+    }
+
     private fun replaceAllData(list: List<PostData>) {
         _uiState.update { currentState ->
             dataIdSet.clear()

@@ -28,7 +28,7 @@ import com.magic.maw.ui.popular.PopularViewModel
 import com.magic.maw.ui.post.PostRoute
 import com.magic.maw.ui.post.PostViewModel2
 import com.magic.maw.ui.search.SearchScreen
-import com.magic.maw.ui.setting.SettingScreen2
+import com.magic.maw.ui.setting.SettingScreen
 import com.magic.maw.ui.verify.VerifyScreen
 import com.magic.maw.util.UiUtils.checkTopRoute
 import com.magic.maw.util.VerifyRequester
@@ -97,10 +97,7 @@ fun MainNavGraph(
             )
         }
         composable(route = MainRoutes.SETTING) {
-//            SettingScreen(
-//                onFinish = { navController.popBackStack() }
-//            )
-            SettingScreen2(navController = navController)
+            SettingScreen(navController = navController)
         }
         composable(
             route = MainRoutes.SEARCH,

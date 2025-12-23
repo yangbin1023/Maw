@@ -1,5 +1,7 @@
 package com.magic.maw.ui.post
 
+import androidx.collection.MutableIntIntMap
+import androidx.collection.mutableIntIntMapOf
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,12 +92,12 @@ fun PostScreen(
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
     scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
     titleText: String = stringResource(R.string.post),
+    postIndex: Int? = null,
     staggeredEnable: Boolean = true,
     shadowEnable: Boolean = true,
     searchEnable: Boolean = true,
     negativeIcon: ImageVector = Icons.Default.Menu,
     onNegative: () -> Unit = {},
-    onSearch: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     val dataState by viewModel.loader.uiState.collectAsStateWithLifecycle()
@@ -105,6 +108,14 @@ fun PostScreen(
     }
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
+    val itemHeights = remember { mutableIntIntMapOf() }
+
+    ReturnedIndexChecker(
+        viewModel = viewModel,
+        lazyState = lazyState,
+        itemHeights = itemHeights,
+        postIndex = postIndex
+    )
 
     RefreshScrollToTopChecker(items = dataState.items, scrollToTop = scrollToTop)
 
@@ -119,7 +130,7 @@ fun PostScreen(
                 staggeredState = staggeredState,
                 scrollToTop = scrollToTop,
                 onNegative = onNegative,
-                onSearch = onSearch,
+                onSearch = { navController.navigate(route = AppRoute.PostSearch()) },
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -135,9 +146,10 @@ fun PostScreen(
             staggeredState = staggeredState,
             onRefresh = { viewModel.refresh() },
             onLoadMore = { viewModel.loadMore() },
-            onGloballyPositioned = { _, _ -> },
+            onGloballyPositioned = { index, height -> itemHeights[index] = height },
             onItemClick = {
                 Logger.d(TAG) { "onItemClick $it" }
+                viewModel.setViewIndex(it)
                 navController.navigate(route = AppRoute.PostView(postId = it))
             }
         )
@@ -421,26 +433,57 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
     currentSpace.toDp() / 2
 }
 
+/**
+ * 用于刷新时，若为增量刷新，则滚动到顶部
+ */
 @Composable
 private fun RefreshScrollToTopChecker(
     items: PersistentList<PostData>,
     scrollToTop: () -> Unit
 ) {
-    val topItemId = remember(items) {
-        derivedStateOf {
-            if (items.isEmpty()) {
-                Int.MIN_VALUE
-            } else {
-                items.first().id
-            }
-        }
+    val topItemId by remember(items) {
+        derivedStateOf { items.firstOrNull()?.id }
     }
+    var isFirstTime by remember { mutableStateOf(true) }
 
     LaunchedEffect(topItemId) {
-        scrollToTop()
+        if (isFirstTime) {
+            isFirstTime = false
+        } else if (topItemId != null) {
+            Logger.w(TAG) { "RefreshScrollToTopChecker. $topItemId" }
+            scrollToTop()
+        }
     }
 }
 
+/**
+ * 用于从View界面返回Post界面时，若查看项的索引发生变化时，将对应索引滚动到中央
+ */
+@Composable
+private fun ReturnedIndexChecker(
+    viewModel: PostViewModel,
+    lazyState: LazyStaggeredGridState,
+    itemHeights: MutableIntIntMap,
+    postIndex: Int? = null
+) {
+    val viewIndex by viewModel.viewIndex.collectAsStateWithLifecycle()
+    LaunchedEffect(postIndex, viewIndex) {
+        if (viewIndex == null || postIndex == viewIndex || postIndex == null) {
+            return@LaunchedEffect
+        }
+        val index: Int = postIndex
+        val itemHeight = itemHeights.getOrDefault(index, 0)
+        val viewportHeight = lazyState.layoutInfo.viewportSize.height
+        val offset = -(viewportHeight - itemHeight) / 2
+        viewModel.resetViewIndex()
+        lazyState.scrollToItem(index, offset)
+        Logger.d(TAG) { "scroll to postIndex: $index" }
+    }
+}
+
+/**
+ * 用于检测是否需要加载更多
+ */
 @Composable
 private fun LoadMoreChecker(
     uiState: PostDataUiState,
