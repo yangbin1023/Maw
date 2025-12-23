@@ -1,12 +1,11 @@
 package com.magic.maw.data.loader
 
 import co.touchlab.kermit.Logger
-import com.magic.maw.data.PostData
+import com.magic.maw.data.PoolData
 import com.magic.maw.data.SettingsService
 import com.magic.maw.data.WebsiteOption
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
-import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CancellationException
@@ -21,18 +20,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
-private const val TAG = "PostDataLoader"
+private const val TAG = "PoolDataLoader"
 
-typealias PostDataUiState = ListUiState<PostData>
+typealias PoolDataUiState = ListUiState<PoolData>
 
-class PostDataLoader(
-    initialList: PersistentList<PostData> = persistentListOf(),
-    hasNoMore: Boolean = false,
-    val poolId: Int = -1,
-    val scope: CoroutineScope,
-) : DataLoader<PostData> {
+class PoolDataLoader(val scope: CoroutineScope) : DataLoader<PoolData> {
     private var _website: WebsiteOption = SettingsService.settingsState.value.website
-    private val _viewIndex = MutableStateFlow<Int?>(null)
     private var parser = BaseParser.get(_website)
     private var scopeJob: Job? = null
     private var requestOption: RequestOption
@@ -40,29 +33,16 @@ class PostDataLoader(
 
     val website get() = _website
 
-    private val _uiState = MutableStateFlow(
-        ListUiState(
-            items = initialList,
-            hasNoMore = hasNoMore
-        )
-    )
+    private val _uiState = MutableStateFlow(PoolDataUiState())
 
-    override val uiState: StateFlow<PostDataUiState> = _uiState.asStateFlow()
-
-    val viewIndex = _viewIndex.asStateFlow()
+    override val uiState: StateFlow<PoolDataUiState> = _uiState.asStateFlow()
 
     init {
         requestOption = RequestOption(
             page = parser.firstPageIndex,
-            poolId = poolId,
             ratingSet = SettingsService.settingsState.value.websiteSettings.ratings
         )
-        for (item in initialList) {
-            dataIdSet.add(item.id)
-        }
-        if (initialList.isEmpty() && !hasNoMore) {
-            refresh()
-        }
+        refresh()
         scope.launch {
             SettingsService.settingsState.collect { settingsState ->
                 if (settingsState.website != _website) {
@@ -89,7 +69,7 @@ class PostDataLoader(
             try {
                 val newOption = requestOption.copy(page = parser.firstPageIndex)
                 Logger.d(TAG) { "ratings: ${newOption.ratingSet}" }
-                val list = parser.requestPostData(newOption)
+                val list = parser.requestPoolData(newOption)
                 if (force) {
                     replaceAllData(list)
                 } else {
@@ -99,7 +79,7 @@ class PostDataLoader(
             } catch (_: CancellationException) {
                 Logger.d(TAG) { "refresh canceled." }
             } catch (e: Exception) {
-                Logger.d(TAG) { "post loader refresh failed. ${e.message}" }
+                Logger.d(TAG) { "pool loader refresh failed. ${e.message}" }
                 _uiState.update { it.copy(loadState = LoadState.Error(message = e.message)) }
             }
         }
@@ -112,13 +92,13 @@ class PostDataLoader(
         launch {
             try {
                 val newOption = requestOption.copy(page = requestOption.page + 1)
-                val list = parser.requestPostData(newOption)
+                val list = parser.requestPoolData(newOption)
                 if (uiState.value.loadState == LoadState.LoadingMore) {
                     appendData(list)
                     requestOption = newOption
                 }
             } catch (e: Exception) {
-                Logger.d(TAG) { "post loader load more failed. ${e.message}" }
+                Logger.d(TAG) { "pool loader load more failed. ${e.message}" }
                 _uiState.update { it.copy(loadState = LoadState.Error(message = e.message)) }
             }
         }
@@ -128,25 +108,7 @@ class PostDataLoader(
         _uiState.update { it.copy(items = persistentListOf(), loadState = LoadState.Idle) }
     }
 
-    override fun search(text: String): Any = with(parser) {
-        val list = requestOption.parseSearchText(text)
-        if (list.isNotEmpty() && list != requestOption.tags.toList()) {
-            requestOption.clearTags()
-            requestOption.addTags(list)
-            tagManager.dealSearchTags(list)
-            refresh(true)
-        }
-    }
-
-    fun setViewIndex(viewIndex: Int) {
-        _viewIndex.update { viewIndex }
-    }
-
-    fun resetViewIndex() {
-        _viewIndex.update { null }
-    }
-
-    private fun replaceAllData(list: List<PostData>) {
+    private fun replaceAllData(list: List<PoolData>) {
         _uiState.update { currentState ->
             dataIdSet.clear()
             for (item in list) {
@@ -159,9 +121,9 @@ class PostDataLoader(
         }
     }
 
-    private fun appendData(list: List<PostData>, appendEnd: Boolean = true) {
+    private fun appendData(list: List<PoolData>, appendEnd: Boolean = true) {
         _uiState.update { currentState ->
-            val toInsert = mutableListOf<PostData>()
+            val toInsert = mutableListOf<PoolData>()
             var updatedList = currentState.items
 
             list.forEach { newData ->

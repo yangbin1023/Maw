@@ -39,6 +39,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.magic.maw.data.PostData
 import com.magic.maw.data.TagInfo
+import com.magic.maw.data.loader.PostDataLoader
 import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.changeSystemBarStatus
 import com.magic.maw.ui.main.AppRoute
@@ -128,11 +129,11 @@ fun ViewScreen(
 @Composable
 fun ViewScreen(
     modifier: Modifier = Modifier,
-    viewModel: PostViewModel = viewModel(),
+    loader: PostDataLoader = viewModel<PostViewModel>().loader,
     navController: NavController = rememberNavController(),
     postIndex: Int = 0,
 ) {
-    val uiState by viewModel.loader.uiState.collectAsStateWithLifecycle()
+    val uiState by loader.uiState.collectAsStateWithLifecycle()
     val pagerState = rememberPagerState(initialPage = postIndex) { uiState.items.size }
     val context = LocalContext.current
     val playerState = remember { VideoPlayerState(context = context) }
@@ -141,9 +142,6 @@ fun ViewScreen(
             ?.savedStateHandle
             ?.set(POST_INDEX, pagerState.currentPage)
         navController.popBackStack()
-    }
-    val onLoadMore: () -> Unit = {
-        viewModel.loadMore()
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -159,7 +157,7 @@ fun ViewScreen(
             pagerState = pagerState,
             dataList = uiState.items,
             playerState = playerState,
-            onLoadMore = onLoadMore,
+            onLoadMore = { loader.loadMore() },
             onExit = onExit,
 //            onTab = onTap
         )
@@ -184,7 +182,7 @@ fun ViewScreen(
             maxDraggableHeight = draggableHeight,
             onTagClick = { navController.navigate(route = AppRoute.PostSearch(text = it.name)) },
             onSearchTag = {
-                viewModel.search(text = it.name)
+                loader.search(text = it.name)
                 navController.navigate(route = AppRoute.Post) { popUpTo(route = AppRoute.Post) }
             }
         )

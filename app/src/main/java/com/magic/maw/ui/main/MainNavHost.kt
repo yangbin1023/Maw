@@ -15,10 +15,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -28,6 +31,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.toRoute
 import co.touchlab.kermit.Logger
+import com.magic.maw.data.loader.PostDataLoader
+import com.magic.maw.ui.pool.PoolScreen
+import com.magic.maw.ui.pool.PoolViewModel2
 import com.magic.maw.ui.post.PostScreen
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.search.SearchScreen
@@ -50,6 +56,7 @@ fun MainNavHost(
     Logger.d(TAG) { "MainNavHost recompose" }
     val scope = rememberCoroutineScope()
     val postViewModel: PostViewModel = viewModel()
+    val poolViewModel: PoolViewModel2 = viewModel()
 
     VerifyRequester.callback = { url ->
         scope.launch {
@@ -71,50 +78,11 @@ fun MainNavHost(
             onOpenDrawer = onOpenDrawer
         )
 
-        navigation<AppRoute.Pool>(startDestination = AppRoute.PoolList) {
-            composable<AppRoute.PoolList> {
-                Logger.d(TAG) { "PoolList recompose" }
-                TestScaffold(
-                    title = "Pool",
-                    navigationIconOnClick = onOpenDrawer ?: {},
-                    navigationIconImageVector = Icons.Default.Menu,
-                    testText = "查看图册",
-                    testBtnOnClick = { navController.navigate(route = AppRoute.PoolPost(poolId = 1)) },
-                )
-            }
-            composable<AppRoute.PoolPost> { backStackEntry ->
-                Logger.d(TAG) { "PoolPost recompose" }
-                val route = backStackEntry.toRoute<AppRoute.PoolPost>()
-                TestScaffold(
-                    title = "PoolPost",
-                    navigationIconOnClick = { navController.navigate(route = AppRoute.PoolList) },
-                    testText = "查看大图",
-                    testBtnOnClick = {
-                        navController.navigate(
-                            route = AppRoute.PoolView(poolId = route.poolId, postId = 1)
-                        )
-                    },
-                    test2Text = route.poolId.toString(),
-                    test2BtnOnClick = { }
-                )
-            }
-            composable<AppRoute.PoolView> { backStackEntry ->
-                Logger.d(TAG) { "PoolView recompose" }
-                val route = backStackEntry.toRoute<AppRoute.PoolView>()
-                TestScaffold(
-                    title = "PoolPostView",
-                    navigationIconOnClick = {
-                        navController.navigate(
-                            route = AppRoute.PoolPost(
-                                poolId = route.poolId
-                            )
-                        )
-                    },
-                    testText = route.postId.toString(),
-                    testBtnOnClick = { }
-                )
-            }
-        }
+        poolGraph(
+            poolViewModel = poolViewModel,
+            navController = navController,
+            onOpenDrawer = onOpenDrawer
+        )
 
         composable<AppRoute.Popular> {
             Logger.d(TAG) { "Popular recompose" }
@@ -184,7 +152,7 @@ fun NavGraphBuilder.postGraph(
             }
             Logger.d(TAG) { "PostList recompose $postIndex" }
             PostScreen(
-                viewModel = postViewModel,
+                loader = postViewModel.loader,
                 navController = navController,
                 onNegative = onOpenDrawer ?: {},
                 postIndex = postIndex
@@ -194,7 +162,7 @@ fun NavGraphBuilder.postGraph(
             Logger.d(TAG) { "PostView recompose" }
             val route: AppRoute.PostView = backStackEntry.toRoute()
             ViewScreen(
-                viewModel = postViewModel,
+                loader = postViewModel.loader,
                 navController = navController,
                 postIndex = route.postId
             )
@@ -206,9 +174,60 @@ fun NavGraphBuilder.postGraph(
                 initText = route.text,
                 onFinish = { navController.popBackStack() },
                 onSearch = {
-                    postViewModel.search(text = it)
+                    postViewModel.loader.search(text = it)
                     navController.navigate(route = AppRoute.Post) { popUpTo(route = AppRoute.Post) }
                 }
+            )
+        }
+    }
+}
+
+fun NavGraphBuilder.poolGraph(
+    poolViewModel: PoolViewModel2,
+    navController: NavController,
+    onOpenDrawer: (() -> Unit)? = null
+) {
+    navigation<AppRoute.Pool>(startDestination = AppRoute.PoolList) {
+        composable<AppRoute.PoolList> {
+            Logger.d(TAG) { "PoolList recompose" }
+            PoolScreen(
+                viewModel = poolViewModel,
+                navController = navController,
+                onNegative = onOpenDrawer ?: {}
+            )
+        }
+        composable<AppRoute.PoolPost> { backStackEntry ->
+            Logger.d(TAG) { "PoolPost recompose" }
+            val route = backStackEntry.toRoute<AppRoute.PoolPost>()
+            val postIndex = backStackEntry.savedStateHandle.getLiveData<Int>(POST_INDEX).value
+            if (postIndex != null) {
+                backStackEntry.savedStateHandle.remove<String>(POST_INDEX)
+            }
+            val loader by poolViewModel.postLoader.collectAsStateWithLifecycle()
+            val postLoader = loader ?: PostDataLoader(
+                poolId = route.poolId,
+                scope = poolViewModel.viewModelScope
+            )
+            PostScreen(
+                loader = postLoader,
+                navController = navController,
+                onNegative = { navController.popBackStack() },
+                negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                postIndex = postIndex,
+            )
+        }
+        composable<AppRoute.PoolView> { backStackEntry ->
+            Logger.d(TAG) { "PoolView recompose" }
+            val route = backStackEntry.toRoute<AppRoute.PoolView>()
+            val loader by poolViewModel.postLoader.collectAsStateWithLifecycle()
+            val postLoader = loader ?: PostDataLoader(
+                poolId = route.poolId,
+                scope = poolViewModel.viewModelScope
+            )
+            ViewScreen(
+                loader = postLoader,
+                navController = navController,
+                postIndex = route.postId
             )
         }
     }

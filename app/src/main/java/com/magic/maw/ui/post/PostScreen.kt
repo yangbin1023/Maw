@@ -2,11 +2,7 @@ package com.magic.maw.ui.post
 
 import androidx.collection.MutableIntIntMap
 import androidx.collection.mutableIntIntMapOf
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,8 +16,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
@@ -46,7 +40,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -67,14 +60,16 @@ import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.data.PostData
 import com.magic.maw.data.loader.LoadState
+import com.magic.maw.data.loader.PostDataLoader
 import com.magic.maw.data.loader.PostDataUiState
+import com.magic.maw.ui.components.EmptyView
+import com.magic.maw.ui.components.LoadMoreChecker
 import com.magic.maw.ui.components.NestedScaffold
 import com.magic.maw.ui.components.NestedScaffoldState
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.main.AppRoute
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import kotlinx.collections.immutable.PersistentList
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
@@ -86,7 +81,7 @@ private const val TAG = "PostScreen"
 @Composable
 fun PostScreen(
     modifier: Modifier = Modifier,
-    viewModel: PostViewModel = viewModel(),
+    loader: PostDataLoader = viewModel<PostViewModel>().loader,
     navController: NavController = rememberNavController(),
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
@@ -100,7 +95,7 @@ fun PostScreen(
     onNegative: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
-    val dataState by viewModel.loader.uiState.collectAsStateWithLifecycle()
+    val dataState by loader.uiState.collectAsStateWithLifecycle()
     val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
     val scrollToTop: () -> Unit = {
         Logger.d(TAG) { "scrollToTop() called" }
@@ -111,7 +106,7 @@ fun PostScreen(
     val itemHeights = remember { mutableIntIntMapOf() }
 
     ReturnedIndexChecker(
-        viewModel = viewModel,
+        loader = loader,
         lazyState = lazyState,
         itemHeights = itemHeights,
         postIndex = postIndex
@@ -144,12 +139,12 @@ fun PostScreen(
             refreshState = refreshState,
             lazyState = lazyState,
             staggeredState = staggeredState,
-            onRefresh = { viewModel.refresh() },
-            onLoadMore = { viewModel.loadMore() },
+            onRefresh = { loader.refresh() },
+            onLoadMore = { loader.loadMore() },
             onGloballyPositioned = { index, height -> itemHeights[index] = height },
             onItemClick = {
                 Logger.d(TAG) { "onItemClick $it" }
-                viewModel.setViewIndex(it)
+                loader.setViewIndex(it)
                 navController.navigate(route = AppRoute.PostView(postId = it))
             }
         )
@@ -306,7 +301,7 @@ private fun PostRefreshBody(
             derivedStateOf { uiState.items.isEmpty() }
         }
         if (isEmpty) {
-            PostEmptyView(
+            EmptyView(
                 modifier = Modifier.fillMaxSize(),
                 loadState = uiState.loadState,
                 onRefresh = onRefresh
@@ -328,37 +323,6 @@ private fun PostRefreshBody(
                 onItemClick = onItemClick,
             )
         }
-    }
-}
-
-@Composable
-private fun PostEmptyView(
-    modifier: Modifier = Modifier,
-    loadState: LoadState,
-    onRefresh: () -> Unit
-) {
-    Column(
-        modifier = modifier.verticalScroll(rememberScrollState()),//
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        val text = if (loadState.isLoading) {
-            stringResource(R.string.loading)
-        } else if (loadState is LoadState.Error) {
-            stringResource(R.string.loading_failed)
-        } else {
-            stringResource(R.string.no_data)
-        }
-        Text(
-            text = text,
-            modifier = Modifier
-                .padding(15.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onRefresh
-                )
-        )
     }
 }
 
@@ -461,12 +425,12 @@ private fun RefreshScrollToTopChecker(
  */
 @Composable
 private fun ReturnedIndexChecker(
-    viewModel: PostViewModel,
+    loader: PostDataLoader,
     lazyState: LazyStaggeredGridState,
     itemHeights: MutableIntIntMap,
     postIndex: Int? = null
 ) {
-    val viewIndex by viewModel.viewIndex.collectAsStateWithLifecycle()
+    val viewIndex by loader.viewIndex.collectAsStateWithLifecycle()
     LaunchedEffect(postIndex, viewIndex) {
         if (viewIndex == null || postIndex == viewIndex || postIndex == null) {
             return@LaunchedEffect
@@ -475,36 +439,8 @@ private fun ReturnedIndexChecker(
         val itemHeight = itemHeights.getOrDefault(index, 0)
         val viewportHeight = lazyState.layoutInfo.viewportSize.height
         val offset = -(viewportHeight - itemHeight) / 2
-        viewModel.resetViewIndex()
+        loader.resetViewIndex()
         lazyState.scrollToItem(index, offset)
         Logger.d(TAG) { "scroll to postIndex: $index" }
-    }
-}
-
-/**
- * 用于检测是否需要加载更多
- */
-@Composable
-private fun LoadMoreChecker(
-    uiState: PostDataUiState,
-    state: LazyStaggeredGridState,
-    onLoadMore: () -> Unit,
-) {
-    // 检测加载进度，实现自动加载更多
-    LaunchedEffect(uiState, state) {
-        snapshotFlow {
-            state.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-        }.distinctUntilChanged().collect { lastVisibleIndex ->
-            if (uiState.hasNoMore || uiState.isLoading || lastVisibleIndex == null) {
-                return@collect
-            }
-            val totalItemsCount = state.layoutInfo.totalItemsCount
-            val remainingItemsCount = totalItemsCount - (lastVisibleIndex + 1)
-            val visibleItemsCount = state.layoutInfo.visibleItemsInfo.size
-            if (remainingItemsCount < visibleItemsCount * 2) {
-                Logger.d(TAG) { "call post on load more" }
-                onLoadMore()
-            }
-        }
     }
 }

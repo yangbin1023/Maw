@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
 import com.magic.maw.data.PoolData
+import com.magic.maw.data.loader.PoolDataLoader
+import com.magic.maw.data.loader.PostDataLoader
 import com.magic.maw.ui.post.UiStateType
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.RequestOption
@@ -11,6 +13,7 @@ import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -149,5 +152,31 @@ class PoolViewModel : ViewModel() {
 
     private fun getParser(): BaseParser {
         return BaseParser.get(configFlow.value.source)
+    }
+}
+
+class PoolViewModel2 : ViewModel() {
+    private val _postLoader = MutableStateFlow<PostDataLoader?>(null)
+
+    val loader = PoolDataLoader(scope = viewModelScope)
+
+    val postLoader = _postLoader.asStateFlow()
+
+    fun setViewPoolPost(poolId: Int) {
+        _postLoader.update {
+            PostDataLoader(poolId = poolId, scope = viewModelScope)
+        }
+    }
+
+    fun refresh(force: Boolean = false) {
+        loader.refresh(force)
+    }
+
+    fun loadMore() {
+        loader.loadMore()
+    }
+
+    fun search(text: String = "") {
+        loader.search(text)
     }
 }

@@ -46,10 +46,12 @@ import kotlinx.coroutines.withContext
 fun PoolItem(
     modifier: Modifier = Modifier,
     poolData: PoolData,
+    canClick: Boolean = true,
     onClick: () -> Unit,
 ) {
     Card(
         modifier = modifier,
+        enabled = canClick,
         onClick = onClick,
         shape = RoundedCornerShape(5.dp)
     ) {
