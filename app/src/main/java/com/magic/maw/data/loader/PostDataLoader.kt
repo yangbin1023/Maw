@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import com.magic.maw.data.PostData
 import com.magic.maw.data.SettingsService
 import com.magic.maw.data.WebsiteOption
+import com.magic.maw.website.PopularOption
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.collections.immutable.PersistentList
@@ -28,8 +29,9 @@ typealias PostDataUiState = ListUiState<PostData>
 class PostDataLoader(
     initialList: PersistentList<PostData> = persistentListOf(),
     hasNoMore: Boolean = false,
-    val poolId: Int = -1,
-    val scope: CoroutineScope,
+    poolId: Int = -1,
+    popularOption: PopularOption? = null,
+    private val scope: CoroutineScope,
 ) : DataLoader<PostData> {
     private var _website: WebsiteOption = SettingsService.settingsState.value.website
     private val _viewIndex = MutableStateFlow<Int?>(null)
@@ -51,10 +53,14 @@ class PostDataLoader(
 
     val viewIndex = _viewIndex.asStateFlow()
 
+    val popularOption: PopularOption?
+        get() = requestOption.popularOption
+
     init {
         requestOption = RequestOption(
             page = parser.firstPageIndex,
             poolId = poolId,
+            popularOption = popularOption,
             ratingSet = SettingsService.settingsState.value.websiteSettings.ratings
         )
         for (item in initialList) {
@@ -144,6 +150,11 @@ class PostDataLoader(
 
     fun resetViewIndex() {
         _viewIndex.update { null }
+    }
+
+    fun setPopularOption(option: PopularOption?) = launch {
+        requestOption = requestOption.copy(popularOption = option)
+        refresh(true)
     }
 
     private fun replaceAllData(list: List<PostData>) {

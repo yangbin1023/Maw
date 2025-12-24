@@ -93,7 +93,7 @@ fun PoolScreen(
     }
     NestedScaffold(
         modifier = modifier,
-        topBar = { PoolTopBar(openDrawer = openDrawer) },
+        topBar = { PoolTopBar(onNegative = openDrawer) },
         state = scaffoldState,
         canScroll = {
             refreshState.distanceFraction <= 0 && uiState.dataList.isNotEmpty()
@@ -122,7 +122,7 @@ fun PoolScreen(
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
-    onNegative: () -> Unit = {},
+    onNegative: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val dataState by viewModel.loader.uiState.collectAsStateWithLifecycle()
@@ -139,7 +139,7 @@ fun PoolScreen(
         modifier = modifier,
         topBar = {
             PoolTopBar(
-                openDrawer = onNegative,
+                onNegative = onNegative,
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -154,7 +154,7 @@ fun PoolScreen(
             lazyState = lazyState,
             onRefresh = { viewModel.loader.refresh() },
             onLoadMore = { viewModel.loader.loadMore() },
-            onItemClick = { index, poolData->
+            onItemClick = { index, poolData ->
                 Logger.d(TAG) { "onItemClick $poolData" }
                 viewModel.setViewPoolPost(poolData.id)
                 navController.navigate(route = AppRoute.PoolPost(poolId = poolData.id))
@@ -168,18 +168,20 @@ fun PoolScreen(
 private fun PoolTopBar(
     modifier: Modifier = Modifier,
     shadowEnable: Boolean = true,
-    openDrawer: () -> Unit = {},
+    onNegative: (() -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
     TopAppBar(
         title = { Text(text = stringResource(id = R.string.pool)) },
         modifier = modifier.let { if (shadowEnable) it.shadow(3.dp) else it },
         navigationIcon = {
-            IconButton(onClick = openDrawer) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = "",
-                )
+            onNegative?.let { onNegative ->
+                IconButton(onClick = onNegative) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "",
+                    )
+                }
             }
         },
         windowInsets = WindowInsets(top = LocalContext.current.getStatusBarHeight()),

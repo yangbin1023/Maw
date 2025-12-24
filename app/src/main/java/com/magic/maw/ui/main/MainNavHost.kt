@@ -34,6 +34,8 @@ import co.touchlab.kermit.Logger
 import com.magic.maw.data.loader.PostDataLoader
 import com.magic.maw.ui.pool.PoolScreen
 import com.magic.maw.ui.pool.PoolViewModel2
+import com.magic.maw.ui.popular.PopularScreen
+import com.magic.maw.ui.popular.PopularViewModel2
 import com.magic.maw.ui.post.PostScreen
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.search.SearchScreen
@@ -57,6 +59,7 @@ fun MainNavHost(
     val scope = rememberCoroutineScope()
     val postViewModel: PostViewModel = viewModel()
     val poolViewModel: PoolViewModel2 = viewModel()
+    val popularViewModel: PopularViewModel2 = viewModel()
 
     VerifyRequester.callback = { url ->
         scope.launch {
@@ -84,16 +87,11 @@ fun MainNavHost(
             onOpenDrawer = onOpenDrawer
         )
 
-        composable<AppRoute.Popular> {
-            Logger.d(TAG) { "Popular recompose" }
-            TestScaffold(
-                title = "Popular",
-                navigationIconOnClick = onOpenDrawer ?: {},
-                navigationIconImageVector = Icons.Default.Menu,
-                testText = "Popular",
-                testBtnOnClick = { }
-            )
-        }
+        popularGraph(
+            popularViewModel = popularViewModel,
+            navController = navController,
+            onOpenDrawer = onOpenDrawer
+        )
 
         composable<AppRoute.Favorite> {
             Logger.d(TAG) { "Favorite recompose" }
@@ -154,7 +152,7 @@ fun NavGraphBuilder.postGraph(
             PostScreen(
                 loader = postViewModel.loader,
                 navController = navController,
-                onNegative = onOpenDrawer ?: {},
+                onNegative = onOpenDrawer,
                 postIndex = postIndex
             )
         }
@@ -193,7 +191,7 @@ fun NavGraphBuilder.poolGraph(
             PoolScreen(
                 viewModel = poolViewModel,
                 navController = navController,
-                onNegative = onOpenDrawer ?: {}
+                onNegative = onOpenDrawer
             )
         }
         composable<AppRoute.PoolPost> { backStackEntry ->
@@ -205,15 +203,16 @@ fun NavGraphBuilder.poolGraph(
             }
             val loader by poolViewModel.postLoader.collectAsStateWithLifecycle()
             val postLoader = loader ?: PostDataLoader(
-                poolId = route.poolId,
-                scope = poolViewModel.viewModelScope
+                scope = poolViewModel.viewModelScope,
+                poolId = route.poolId
             )
             PostScreen(
                 loader = postLoader,
                 navController = navController,
-                onNegative = { navController.popBackStack() },
-                negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                titleText = "#${route.poolId}",
                 postIndex = postIndex,
+                negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                onNegative = { navController.popBackStack() },
             )
         }
         composable<AppRoute.PoolView> { backStackEntry ->
@@ -221,11 +220,38 @@ fun NavGraphBuilder.poolGraph(
             val route = backStackEntry.toRoute<AppRoute.PoolView>()
             val loader by poolViewModel.postLoader.collectAsStateWithLifecycle()
             val postLoader = loader ?: PostDataLoader(
-                poolId = route.poolId,
-                scope = poolViewModel.viewModelScope
+                scope = poolViewModel.viewModelScope,
+                poolId = route.poolId
             )
             ViewScreen(
                 loader = postLoader,
+                navController = navController,
+                postIndex = route.postId
+            )
+        }
+    }
+}
+
+fun NavGraphBuilder.popularGraph(
+    popularViewModel: PopularViewModel2,
+    navController: NavController,
+    onOpenDrawer: (() -> Unit)? = null
+) {
+    navigation<AppRoute.Popular>(startDestination = AppRoute.PopularList) {
+        composable<AppRoute.PopularList> {
+            Logger.d(TAG) { "PopularList recompose" }
+            PopularScreen(
+                viewModel = popularViewModel,
+                navController = navController,
+                onNegative = onOpenDrawer
+            )
+        }
+        composable<AppRoute.PopularView> { backStackEntry ->
+            Logger.d(TAG) { "PopularView recompose" }
+            val route = backStackEntry.toRoute<AppRoute.PopularView>()
+            val loader by popularViewModel.currentLoader.collectAsStateWithLifecycle()
+            ViewScreen(
+                loader = loader,
                 navController = navController,
                 postIndex = route.postId
             )

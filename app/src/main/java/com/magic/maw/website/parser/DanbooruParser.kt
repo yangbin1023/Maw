@@ -30,9 +30,13 @@ class DanbooruParser : BaseParser() {
     override val website: WebsiteOption = WebsiteOption.Danbooru
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.General.value or Rating.Sensitive.value or Rating.Questionable.value or Rating.Explicit.value
-    override val supportRatings: List<Rating> =
+    override val supportedRatings: List<Rating> =
         listOf(Rating.General, Rating.Sensitive, Rating.Questionable, Rating.Explicit)
     override val supportPopular: Int get() = PopularType.defaultSupport or PopularType.Year.value
+    override val supportedPopularDateTypes: List<PopularType> = listOf(
+        PopularType.Day, PopularType.Week, PopularType.Month,
+        PopularType.Year, PopularType.All
+    )
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         val url = getPostUrl(option)
@@ -214,7 +218,7 @@ class DanbooruParser : BaseParser() {
     }
 
     private fun getRatingTag(ratings: List<Rating>): String {
-        if (ratings.toSet() == supportRatings.toSet()) {
+        if (ratings.toSet() == supportedRatings.toSet()) {
             return ""
         }
         val ratingList: MutableList<String> = ArrayList<String>()

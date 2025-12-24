@@ -176,7 +176,7 @@ private fun RatingsSettingItem(
     val settingsState by viewModel.settingsState.collectAsState()
     val website by remember { derivedStateOf { settingsState.website } }
     val ratings by remember { derivedStateOf { settingsState.websiteSettings.ratings } }
-    val supportRatings = BaseParser.get(website).supportRatings
+    val supportRatings = BaseParser.get(website).supportedRatings
     val tips = if (ratings.toSet() == supportRatings.toSet()) {
         stringResource(R.string.all)
     } else {

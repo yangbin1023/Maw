@@ -164,7 +164,7 @@ class PoolViewModel2 : ViewModel() {
 
     fun setViewPoolPost(poolId: Int) {
         _postLoader.update {
-            PostDataLoader(poolId = poolId, scope = viewModelScope)
+            PostDataLoader(scope = viewModelScope, poolId = poolId)
         }
     }
 

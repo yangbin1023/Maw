@@ -19,8 +19,9 @@ abstract class BaseParser {
     abstract val website: WebsiteOption
     abstract val source: String
     abstract val supportRating: Int
-    abstract val supportRatings: List<Rating>
+    abstract val supportedRatings: List<Rating>
     open val supportPopular: Int = PopularType.defaultSupport
+    open val supportedPopularDateTypes: List<PopularType> = PopularType.defaultSupportedDateTypes
     open val tagManager: TagManager by lazy { TagManager.get(source) }
     open val userManager: UserManager by lazy { UserManager.get(source) }
     open val firstPageIndex: Int = 1

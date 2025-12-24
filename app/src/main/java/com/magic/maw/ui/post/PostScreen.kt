@@ -85,17 +85,16 @@ fun PostScreen(
     navController: NavController = rememberNavController(),
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
-    scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
     titleText: String = stringResource(R.string.post),
     postIndex: Int? = null,
     staggeredEnable: Boolean = true,
     shadowEnable: Boolean = true,
     searchEnable: Boolean = true,
     negativeIcon: ImageVector = Icons.Default.Menu,
-    onNegative: () -> Unit = {},
+    onNegative: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
-    val dataState by loader.uiState.collectAsStateWithLifecycle()
+    val uiState by loader.uiState.collectAsStateWithLifecycle()
     val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
     val scrollToTop: () -> Unit = {
         Logger.d(TAG) { "scrollToTop() called" }
@@ -112,7 +111,7 @@ fun PostScreen(
         postIndex = postIndex
     )
 
-    RefreshScrollToTopChecker(items = dataState.items, scrollToTop = scrollToTop)
+    RefreshScrollToTopChecker(items = uiState.items, scrollToTop = scrollToTop)
 
     Scaffold(
         modifier = modifier,
@@ -135,7 +134,7 @@ fun PostScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            uiState = dataState,
+            uiState = uiState,
             refreshState = refreshState,
             lazyState = lazyState,
             staggeredState = staggeredState,
@@ -229,7 +228,7 @@ private fun PostTopBar(
     searchEnable: Boolean = true,
     staggeredState: MutableState<Boolean>? = null,
     scrollToTop: () -> Unit = {},
-    onNegative: () -> Unit = {},
+    onNegative: (() -> Unit)? = null,
     onSearch: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
@@ -237,11 +236,13 @@ private fun PostTopBar(
         title = { Text(text = titleText) },
         modifier = modifier.let { if (shadowEnable) it.shadow(3.dp) else it },
         navigationIcon = {
-            IconButton(onClick = onNegative) {
-                Icon(
-                    imageVector = negativeIcon,
-                    contentDescription = "",
-                )
+            onNegative?.let { onNegative ->
+                IconButton(onClick = onNegative) {
+                    Icon(
+                        imageVector = negativeIcon,
+                        contentDescription = "",
+                    )
+                }
             }
         },
         actions = {
@@ -277,7 +278,7 @@ private fun PostTopBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PostRefreshBody(
+fun PostRefreshBody(
     modifier: Modifier = Modifier,
     uiState: PostDataUiState,
     refreshState: PullToRefreshState,
@@ -401,7 +402,7 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
  * 用于刷新时，若为增量刷新，则滚动到顶部
  */
 @Composable
-private fun RefreshScrollToTopChecker(
+fun RefreshScrollToTopChecker(
     items: PersistentList<PostData>,
     scrollToTop: () -> Unit
 ) {

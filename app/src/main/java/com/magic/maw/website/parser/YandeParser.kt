@@ -27,7 +27,7 @@ open class YandeParser : BaseParser() {
     override val website: WebsiteOption = WebsiteOption.Yande
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
-    override val supportRatings: List<Rating> =
+    override val supportedRatings: List<Rating> =
         listOf(Rating.Safe, Rating.Questionable, Rating.Explicit)
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
@@ -252,7 +252,7 @@ open class YandeParser : BaseParser() {
     }
 
     private fun getRatingTag(ratings: List<Rating>): String {
-        if (ratings.toSet() == supportRatings.toSet())
+        if (ratings.toSet() == supportedRatings.toSet())
             return ""
         val currentRating = ratings.join()
         println("ratings: $ratings, support rating: $supportRating, current rating: $currentRating")

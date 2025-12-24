@@ -25,6 +25,7 @@ enum class PopularType(val value: Int) {
 
     companion object {
         val defaultSupport: Int = Day.value or Week.value or Month.value or All.value
+        val defaultSupportedDateTypes: List<PopularType> = listOf(Day, Week, Month, All)
 
         fun Int.toPopularType(): PopularType {
             for (item in PopularType.entries) {

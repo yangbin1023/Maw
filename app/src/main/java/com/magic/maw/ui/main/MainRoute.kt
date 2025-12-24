@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.core.os.BundleCompat
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavController.Companion.KEY_DEEP_LINK_INTENT
@@ -14,7 +15,7 @@ import co.touchlab.kermit.Logger
 import kotlinx.serialization.Serializable
 
 const val POST_INDEX = "postIndex"
-const val POOL_INDEX = "postIndex"
+const val POOL_INDEX = "poolIndex"
 
 @Serializable
 sealed class AppRoute {
@@ -46,6 +47,12 @@ sealed class AppRoute {
     object Popular : AppRoute()
 
     @Serializable
+    object PopularList : AppRoute()
+
+    @Serializable
+    data class PopularView(val postId: Int) : AppRoute()
+
+    @Serializable
     object Favorite : AppRoute()
 
     @Serializable
@@ -59,7 +66,7 @@ val AppRoute.rootRoute: AppRoute
     get() = when (this) {
         AppRoute.Post, AppRoute.PostList, is AppRoute.PostView, is AppRoute.PostSearch -> AppRoute.Post
         AppRoute.Pool, AppRoute.PoolList, is AppRoute.PoolPost, is AppRoute.PoolView -> AppRoute.Pool
-        AppRoute.Popular -> AppRoute.Popular
+        AppRoute.Popular, AppRoute.PopularList, is AppRoute.PopularView -> AppRoute.Popular
         AppRoute.Favorite -> AppRoute.Favorite
         AppRoute.Settings -> AppRoute.Settings
         is AppRoute.Verify -> this
@@ -87,20 +94,25 @@ val NavController.topRoute: AppRoute
 
 val NavBackStackEntry.currentRoute: AppRoute
     get() {
-        arguments?.getParcelable<Intent>(KEY_DEEP_LINK_INTENT)?.data?.pathSegments?.let {
-            val appRouteClassName = AppRoute::class.java.name
-            if (it.isNotEmpty() && it[0].startsWith(appRouteClassName)) {
-                try {
-                    val className = appRouteClassName + it[0].substring(appRouteClassName.length)
-                        .replace(".", "$")
-                    Logger.d("MainRoute") { "className: $className" }
-                    val javaClass: Class<*> = Class.forName(className)
-                    val kotlinClass = javaClass.kotlin
-                    val route: AppRoute = toRoute(kotlinClass)
-                    Logger.d("MainRoute") { "find route: $route" }
-                    return route
-                } catch (e: Exception) {
-                    Logger.e("MainRoute", e)
+        arguments?.let { arguments ->
+            val intent: Intent? =
+                BundleCompat.getParcelable(arguments, KEY_DEEP_LINK_INTENT, Intent::class.java)
+            intent?.data?.pathSegments?.let {
+                val appRouteClassName = AppRoute::class.java.name
+                if (it.isNotEmpty() && it[0].startsWith(appRouteClassName)) {
+                    try {
+                        val className =
+                            appRouteClassName + it[0].substring(appRouteClassName.length)
+                                .replace(".", "$")
+                        Logger.d("MainRoute") { "className: $className" }
+                        val javaClass: Class<*> = Class.forName(className)
+                        val kotlinClass = javaClass.kotlin
+                        val route: AppRoute = toRoute(kotlinClass)
+                        Logger.d("MainRoute") { "find route: $route" }
+                        return route
+                    } catch (e: Exception) {
+                        Logger.e("MainRoute", e)
+                    }
                 }
             }
         }
