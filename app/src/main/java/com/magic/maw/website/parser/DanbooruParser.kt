@@ -42,12 +42,8 @@ class DanbooruParser : BaseParser() {
         val url = getPostUrl(option)
         val danbooruList: List<DanbooruData> = client.get(url)
         val list = ArrayList<PostData>()
-//        val ratings = SettingsService.settingsState.value.
         for (item in danbooruList) {
             val data = item.toPostData() ?: continue
-//            if (!ratings.hasFlag(data.rating.value)) {
-//                continue
-//            }
             data.createId?.let { createId ->
                 userManager.get(createId)?.let {
                     data.uploader = it.name

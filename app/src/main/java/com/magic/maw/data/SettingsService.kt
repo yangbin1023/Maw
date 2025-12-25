@@ -214,6 +214,11 @@ object SettingsService {
     val settingsState: StateFlow<AppSettings> get() = _settingsState
 
     /**
+     * 获取 AppSettings 对象
+     */
+    val settings: AppSettings get() = settingsState.value
+
+    /**
      * 初始化 SettingsService
      *
      * @param context 上下文对象

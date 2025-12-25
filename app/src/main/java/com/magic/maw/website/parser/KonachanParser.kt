@@ -32,7 +32,7 @@ class KonachanParser : YandeParser() {
             return emptyList()
         val url = getPostUrl(option)
         val list = ArrayList<PostData>()
-        val ratings = SettingsService.settingsState.value.websiteSettings.ratings
+        val ratings = SettingsService.settings.websiteSettings.ratings
         if (option.poolId >= 0) {
             val konachanPool: KonachanPool = client.get(url)
             konachanPool.posts?.let { posts ->

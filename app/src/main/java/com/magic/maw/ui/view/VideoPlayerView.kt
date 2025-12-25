@@ -114,7 +114,7 @@ fun VideoPlayerView(
                             onLongPress = {
                                 isLongPress.value = true
                                 val videoSettings =
-                                    SettingsService.settingsState.value.videoSettings
+                                    SettingsService.settings.videoSettings
                                 state.setPlaySpeed(videoSettings.playbackSpeedMultiplier)
                             },
                             onPress = {
@@ -221,8 +221,8 @@ fun VideoPlayerControllerBarPreview() {
 }
 
 class VideoPlayerState(
-    isPlaying: Boolean = SettingsService.settingsState.value.videoSettings.autoplay,
-    isMuted: Boolean = SettingsService.settingsState.value.videoSettings.mute,
+    isPlaying: Boolean = SettingsService.settings.videoSettings.autoplay,
+    isMuted: Boolean = SettingsService.settings.videoSettings.mute,
     context: Context
 ) : Player.Listener {
     val exoPlayer = ExoPlayer.Builder(context).build().apply {
@@ -270,7 +270,7 @@ class VideoPlayerState(
     fun changeVideoSource(uri: Uri) {
         exoPlayer.setMediaItem(MediaItem.fromUri(uri))
         exoPlayer.prepare()
-        if (!exoPlayer.isPlaying && SettingsService.settingsState.value.videoSettings.autoplay) {
+        if (!exoPlayer.isPlaying && SettingsService.settings.videoSettings.autoplay) {
             exoPlayer.play()
         }
         isReady.value = false

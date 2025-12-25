@@ -2,8 +2,10 @@ package com.magic.maw.ui.popular
 
 import androidx.collection.mutableIntIntMapOf
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
@@ -28,7 +30,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,10 +55,8 @@ import com.magic.maw.ui.post.PostDefaults
 import com.magic.maw.ui.post.PostRefreshBody
 import com.magic.maw.ui.post.RefreshScrollToTopChecker
 import com.magic.maw.util.UiUtils.getStatusBarHeight
-import com.magic.maw.website.PopularOption
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 private const val TAG = "PopularScreen"
 
@@ -69,17 +68,6 @@ fun PopularScreen(
     navController: NavController = rememberNavController(),
     onNegative: (() -> Unit)? = null,
 ) {
-    val settingState by SettingsService.settingsState.collectAsStateWithLifecycle()
-    val supportedPopularDateTypes by remember {
-        derivedStateOf {
-            BaseParser.get(settingState.website).supportedPopularDateTypes
-        }
-    }
-
-    val pagerState = rememberPagerState {
-        supportedPopularDateTypes.size
-    }
-
     val staggeredState = remember { mutableStateOf(false) }
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
@@ -100,10 +88,9 @@ fun PopularScreen(
                 .padding(innerPadding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             viewModel = viewModel,
-            pagerState = pagerState,
             navController = navController,
             staggeredState = staggeredState,
-            supportedPopularDateTypes = supportedPopularDateTypes,
+            scrollBehavior = scrollBehavior,
         )
     }
 }
@@ -114,7 +101,7 @@ private fun PopularTopBar(
     modifier: Modifier = Modifier,
     titleText: String = stringResource(id = R.string.popular),
     negativeIcon: ImageVector = Icons.Default.Menu,
-    shadowEnable: Boolean = true,
+    shadowEnable: Boolean = false,
     staggeredState: MutableState<Boolean>? = null,
     scrollToTop: () -> Unit = {},
     onNegative: (() -> Unit)? = null,
@@ -156,17 +143,18 @@ private fun PopularTopBar(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PopularBody(
     modifier: Modifier = Modifier,
     viewModel: PopularViewModel2,
-    pagerState: PagerState,
+    pagerState: PagerState = rememberPopularPagerState(),
     navController: NavController = rememberNavController(),
     staggeredState: MutableState<Boolean>? = null,
-    supportedPopularDateTypes: List<PopularType>
+    scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     val scope = rememberCoroutineScope()
-    val datePickerEnable = remember { mutableStateOf(true) }
+    val supportedPopularDateTypes = getSupportedPopularDateTypes()
     val popularType by remember {
         derivedStateOf {
             try {
@@ -177,10 +165,7 @@ private fun PopularBody(
             }
         }
     }
-    val dateMap = remember { mutableStateMapOf<PopularType, LocalDate>() }
-    val currentDate = dateMap[popularType] ?: viewModel.getDefaultPopularDate().also {
-        dateMap[popularType] = it
-    }
+    val currentDate by viewModel.getPopularDate(popularType).collectAsStateWithLifecycle()
 
     LaunchedEffect(popularType) {
         viewModel.setCurrentPopularType(popularType)
@@ -188,57 +173,77 @@ private fun PopularBody(
     Box(
         modifier = modifier
     ) {
-        HorizontalPager(
-            state = pagerState
-        ) { index ->
-            val popularType = try {
-                supportedPopularDateTypes[index]
-            } catch (_: ArrayIndexOutOfBoundsException) {
-                Logger.e(TAG) { "index exception." }
-                LaunchedEffect(Unit) {
-                    pagerState.scrollToPage(page = 0)
-                }
-                return@HorizontalPager
-            }
-            val loader = viewModel.getLoader(popularType)
-            val uiState by loader.uiState.collectAsStateWithLifecycle()
-            val lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState()
-            val itemHeights = remember { mutableIntIntMapOf() }
-
-            LaunchedEffect(staggeredState) {
-                lazyState.scrollToItem(0, 0)
-            }
-
-            RefreshScrollToTopChecker(items = uiState.items, scrollToTop = {
-                scope.launch { lazyState.scrollToItem(0, 0) }
-            })
-
-            PostRefreshBody(
-                modifier = Modifier.fillMaxSize(),
-                uiState = uiState,
-                refreshState = rememberPullToRefreshState(),
-                lazyState = lazyState,
-                staggeredState = staggeredState,
-                onRefresh = { loader.refresh() },
-                onLoadMore = { loader.loadMore() },
-                onGloballyPositioned = { index, height -> itemHeights[index] = height },
-                onItemClick = {
-                    Logger.d(TAG) { "onItemClick $it" }
-                    loader.setViewIndex(it)
-                    navController.navigate(route = AppRoute.PopularView(postId = it))
-                }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            PopularDateTypePicker(
+                pagerState = pagerState,
+                scrollBehavior = scrollBehavior,
             )
+
+            HorizontalPager(
+                state = pagerState,
+                beyondViewportPageCount = 1,
+            ) { index ->
+                val popularType = try {
+                    supportedPopularDateTypes[index]
+                } catch (_: ArrayIndexOutOfBoundsException) {
+                    LaunchedEffect(Unit) {
+                        pagerState.scrollToPage(page = 0)
+                    }
+                    return@HorizontalPager
+                }
+                val loader = viewModel.getLoader(popularType)
+                Logger.d(TAG) { "popularOption: ${loader.popularOption}" }
+                val uiState by loader.uiState.collectAsStateWithLifecycle()
+                val lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState()
+                val itemHeights = remember { mutableIntIntMapOf() }
+
+                LaunchedEffect(staggeredState) {
+                    lazyState.scrollToItem(0, 0)
+                }
+
+                RefreshScrollToTopChecker(items = uiState.items) {
+                    lazyState.scrollToItem(0, 0)
+                }
+
+                PostRefreshBody(
+                    modifier = Modifier.fillMaxSize(),
+                    uiState = uiState,
+                    refreshState = rememberPullToRefreshState(),
+                    lazyState = lazyState,
+                    staggeredState = staggeredState,
+                    onRefresh = { loader.refresh(true) },
+                    onLoadMore = { loader.loadMore() },
+                    onGloballyPositioned = { index, height -> itemHeights[index] = height },
+                    onItemClick = {
+                        Logger.d(TAG) { "onItemClick $it" }
+                        loader.setViewIndex(it)
+                        navController.navigate(route = AppRoute.PopularView(postId = it))
+                    }
+                )
+            }
         }
 
         PopularDatePicker(
             modifier = Modifier.align(Alignment.BottomCenter),
-            enabled = datePickerEnable.value,
             popularType = popularType,
             focusDate = currentDate,
-            onDateChanged = { date ->
-                dateMap[popularType] = date
-                viewModel.getLoader(popularType).setPopularOption(PopularOption(popularType, date))
-            }
+            onDateChanged = { viewModel.setPopularDate(popularType, date = it) }
         )
     }
+}
+
+@Composable
+fun rememberPopularPagerState() = rememberPagerState {
+    BaseParser.get(SettingsService.settings.website).supportedPopularDateTypes.size
+}
+
+@Composable
+fun getSupportedPopularDateTypes(): List<PopularType> {
+    val settingState by SettingsService.settingsState.collectAsStateWithLifecycle()
+    val types by remember {
+        derivedStateOf {
+            BaseParser.get(settingState.website).supportedPopularDateTypes
+        }
+    }
+    return types
 }

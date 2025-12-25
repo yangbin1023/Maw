@@ -25,7 +25,7 @@ private const val TAG = "PoolDataLoader"
 typealias PoolDataUiState = ListUiState<PoolData>
 
 class PoolDataLoader(val scope: CoroutineScope) : DataLoader<PoolData> {
-    private var _website: WebsiteOption = SettingsService.settingsState.value.website
+    private var _website: WebsiteOption = SettingsService.settings.website
     private var parser = BaseParser.get(_website)
     private var scopeJob: Job? = null
     private var requestOption: RequestOption
@@ -40,7 +40,7 @@ class PoolDataLoader(val scope: CoroutineScope) : DataLoader<PoolData> {
     init {
         requestOption = RequestOption(
             page = parser.firstPageIndex,
-            ratingSet = SettingsService.settingsState.value.websiteSettings.ratings
+            ratingSet = SettingsService.settings.websiteSettings.ratings
         )
         refresh()
         scope.launch {

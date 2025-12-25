@@ -404,7 +404,7 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
 @Composable
 fun RefreshScrollToTopChecker(
     items: PersistentList<PostData>,
-    scrollToTop: () -> Unit
+    scrollToTop: suspend () -> Unit
 ) {
     val topItemId by remember(items) {
         derivedStateOf { items.firstOrNull()?.id }

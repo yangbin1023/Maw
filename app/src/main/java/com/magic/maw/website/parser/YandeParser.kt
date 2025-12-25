@@ -36,7 +36,7 @@ open class YandeParser : BaseParser() {
             return emptyList()
         val url = getPostUrl(option)
         val list: ArrayList<PostData> = ArrayList()
-        val ratings = SettingsService.settingsState.value.websiteSettings.ratings
+        val ratings = SettingsService.settings.websiteSettings.ratings
         if (option.poolId >= 0) {
             client.get<YandePool>(url).posts?.let { posts ->
                 for (item in posts) {

@@ -11,7 +11,6 @@ import com.magic.maw.util.configFlow
 import com.magic.maw.website.PopularOption
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,24 +51,25 @@ class PopularViewModel : ViewModel() {
 }
 
 class PopularViewModel2 : ViewModel() {
-    private var _website: WebsiteOption = SettingsService.settingsState.value.website
-    private var parser = BaseParser.get(_website)
-    private var scopeJob: Job? = null
-    private var supportedPopularDateTypes = parser.supportedPopularDateTypes
+    private var website: WebsiteOption = SettingsService.settings.website
+    private var parser = BaseParser.get(website)
     private val loaderMap: MutableMap<PopularType, PostDataLoader> = mutableMapOf()
-    private var currentPopularType: PopularType = PopularType.Day
+    private var localDateFlowMap: MutableMap<PopularType, MutableStateFlow<LocalDate>> =
+        mutableMapOf()
     private var _currentLoader = MutableStateFlow(value = getLoader(type = PopularType.Day))
-    val website get() = _website
 
     val currentLoader = _currentLoader.asStateFlow()
 
     init {
         viewModelScope.launch {
             SettingsService.settingsState.collect { settingsState ->
-                if (settingsState.website != _website) {
-                    _website = settingsState.website
-                    parser = BaseParser.get(_website)
-                    supportedPopularDateTypes = parser.supportedPopularDateTypes
+                if (settingsState.website != website) {
+                    website = settingsState.website
+                    parser = BaseParser.get(website)
+                    loaderMap.clear()
+                    _currentLoader.update {
+                        getLoader(type = PopularType.Day)
+                    }
                 }
             }
         }
@@ -97,8 +97,19 @@ class PopularViewModel2 : ViewModel() {
         }
     }
 
+    fun getPopularDate(type: PopularType): MutableStateFlow<LocalDate> = synchronized(this) {
+        localDateFlowMap[type] ?: MutableStateFlow(getDefaultPopularDate()).apply {
+            localDateFlowMap[type] = this
+        }
+    }
+
+    fun setPopularDate(type: PopularType, date: LocalDate) = synchronized(this) {
+        getPopularDate(type).update { date }
+        getLoader(type).setPopularOption(PopularOption(type = type, date = date))
+    }
+
     fun getDefaultPopularDate(): LocalDate {
-        return if (_website == WebsiteOption.Konachan) {
+        return if (website == WebsiteOption.Konachan) {
             LocalDate.now().minusDays(1)
         } else {
             LocalDate.now()

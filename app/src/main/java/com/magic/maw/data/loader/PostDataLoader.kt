@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import kotlin.coroutines.CoroutineContext
 
 private const val TAG = "PostDataLoader"
@@ -33,7 +34,7 @@ class PostDataLoader(
     popularOption: PopularOption? = null,
     private val scope: CoroutineScope,
 ) : DataLoader<PostData> {
-    private var _website: WebsiteOption = SettingsService.settingsState.value.website
+    private var _website: WebsiteOption = SettingsService.settings.website
     private val _viewIndex = MutableStateFlow<Int?>(null)
     private var parser = BaseParser.get(_website)
     private var scopeJob: Job? = null
@@ -61,7 +62,7 @@ class PostDataLoader(
             page = parser.firstPageIndex,
             poolId = poolId,
             popularOption = popularOption,
-            ratingSet = SettingsService.settingsState.value.websiteSettings.ratings
+            ratingSet = SettingsService.settings.websiteSettings.ratings
         )
         for (item in initialList) {
             dataIdSet.add(item.id)
@@ -88,7 +89,7 @@ class PostDataLoader(
     }
 
     override fun refresh(force: Boolean) {
-        Logger.d(TAG) { "refresh called." }
+        Logger.d(TAG) { "refresh called. force: $force, popularOption: $popularOption" }
         if (uiState.value.loadState == LoadState.Refreshing) return
         _uiState.update { it.copy(loadState = LoadState.Refreshing) }
         launch {
@@ -113,7 +114,7 @@ class PostDataLoader(
 
     override fun loadMore() {
         Logger.d(TAG) { "loadMore called." }
-        if (uiState.value.isLoading) return
+        if (uiState.value.isLoading || uiState.value.hasNoMore) return
         _uiState.update { it.copy(loadState = LoadState.LoadingMore) }
         launch {
             try {
@@ -157,6 +158,13 @@ class PostDataLoader(
         refresh(true)
     }
 
+    fun setPopularDate(localDate: LocalDate) = launch {
+        requestOption.popularOption?.let {
+            requestOption = requestOption.copy(popularOption = it.copy(date = localDate))
+            refresh(true)
+        }
+    }
+
     private fun replaceAllData(list: List<PostData>) {
         _uiState.update { currentState ->
             dataIdSet.clear()
@@ -192,10 +200,11 @@ class PostDataLoader(
             } else {
                 updatedList.addAll(0, toInsert)
             }
-
+            val hasNoMore = list.isEmpty() && appendEnd
             currentState.copy(
                 items = finalList,
-                loadState = LoadState.Idle
+                loadState = LoadState.Idle,
+                hasNoMore = hasNoMore
             )
         }
     }

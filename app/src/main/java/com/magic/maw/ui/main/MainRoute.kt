@@ -74,8 +74,10 @@ val AppRoute.rootRoute: AppRoute
 
 val AppRoute.isRootRoute: Boolean
     get() = when (this) {
-        AppRoute.Post, AppRoute.PostList, AppRoute.Pool, AppRoute.PoolList,
-        AppRoute.Popular, AppRoute.Favorite -> true
+        AppRoute.Post, AppRoute.PostList,
+        AppRoute.Pool, AppRoute.PoolList,
+        AppRoute.Popular, AppRoute.PopularList,
+        AppRoute.Favorite -> true
 
         else -> false
     }
@@ -104,11 +106,9 @@ val NavBackStackEntry.currentRoute: AppRoute
                         val className =
                             appRouteClassName + it[0].substring(appRouteClassName.length)
                                 .replace(".", "$")
-                        Logger.d("MainRoute") { "className: $className" }
                         val javaClass: Class<*> = Class.forName(className)
                         val kotlinClass = javaClass.kotlin
                         val route: AppRoute = toRoute(kotlinClass)
-                        Logger.d("MainRoute") { "find route: $route" }
                         return route
                     } catch (e: Exception) {
                         Logger.e("MainRoute", e)

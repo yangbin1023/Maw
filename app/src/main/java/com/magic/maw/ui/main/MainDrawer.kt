@@ -95,7 +95,10 @@ fun MainModalDrawerSheet(
             iconRes = R.drawable.ic_image,
             selected = currentRoute == AppRoute.Post,
             onClick = {
-                navController.navigate(route = AppRoute.Post) { popUpTo(route = AppRoute.Post) }
+                navController.navigate(route = AppRoute.Post) {
+                    popUpTo(route = AppRoute.Post)
+                    launchSingleTop = true
+                }
                 closeDrawer()
             }
         )
