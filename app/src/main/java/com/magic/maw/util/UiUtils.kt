@@ -7,11 +7,15 @@ import android.content.ContextWrapper
 import android.os.Build
 import android.view.View
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -36,8 +40,7 @@ object UiUtils {
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
 
         insetsController.apply {
-            hide(WindowInsetsCompat.Type.statusBars())
-            hide(WindowInsetsCompat.Type.navigationBars())
+            hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }
@@ -47,8 +50,7 @@ object UiUtils {
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
 
         insetsController.apply {
-            show(WindowInsetsCompat.Type.statusBars())
-            show(WindowInsetsCompat.Type.navigationBars())
+            show(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         }
     }
@@ -84,9 +86,33 @@ object UiUtils {
         return 0
     }
 
+    @Composable
+    fun shouldShowSystemBar(): Boolean {
+        val height = with(LocalDensity.current) {
+            LocalWindowInfo.current.containerSize.height.toDp()
+        }
+        return height > 600.dp
+    }
+
+    @Composable
+    fun updateSystemBarStatus(showBar: Boolean? = null) {
+        val showBar = shouldShowSystemBar() && showBar != false
+        LocalContext.current.showSystemBars(showBar)
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun getTopBarHeight(): Dp {
+        val height = LocalContext.current.getStatusBarHeight()
+        val heightDp = with(LocalDensity.current) { (if (height > 0) height else 24).toDp() }
+        return heightDp + TopAppBarDefaults.TopAppBarExpandedHeight
+    }
+
+    @Composable
+    fun getTopBarHeight2(): Dp {
+        if (!shouldShowSystemBar()) {
+            return TopAppBarDefaults.TopAppBarExpandedHeight
+        }
         val height = LocalContext.current.getStatusBarHeight()
         val heightDp = with(LocalDensity.current) { (if (height > 0) height else 24).toDp() }
         return heightDp + TopAppBarDefaults.TopAppBarExpandedHeight
@@ -107,4 +133,18 @@ object UiUtils {
         }
         return false
     }
+
+    private var _topAppBarColors: TopAppBarColors? = null
+    val topAppBarColors: TopAppBarColors
+        @Composable get() {
+            val colorScheme = MaterialTheme.colorScheme
+            return TopAppBarColors(
+                containerColor = colorScheme.surface,
+                scrolledContainerColor = colorScheme.surface,
+                navigationIconContentColor = colorScheme.onSurface,
+                titleContentColor = colorScheme.onSurface,
+                actionIconContentColor = colorScheme.onSurfaceVariant,
+                subtitleContentColor = colorScheme.onSurfaceVariant,
+            )
+        }
 }

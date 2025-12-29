@@ -15,6 +15,7 @@ import com.magic.maw.data.danbooru.DanbooruUser
 import com.magic.maw.util.TimeUtils
 import com.magic.maw.util.client
 import com.magic.maw.util.get
+import com.magic.maw.util.json
 import com.magic.maw.website.RequestOption
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
@@ -40,7 +41,13 @@ class DanbooruParser : BaseParser() {
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         val url = getPostUrl(option)
-        val danbooruList: List<DanbooruData> = client.get(url)
+        val resultStr:String = client.get(url)
+        val danbooruList: List<DanbooruData> = try {
+            json.decodeFromString(resultStr)
+        } catch (e: Exception) {
+            Logger.e(TAG) { "request failed, url: $url, resultStr: \n$resultStr" }
+            throw e
+        }
         val list = ArrayList<PostData>()
         for (item in danbooruList) {
             val data = item.toPostData() ?: continue
@@ -131,16 +138,14 @@ class DanbooruParser : BaseParser() {
         return null
     }
 
-    override fun RequestOption.parseSearchText(text: String): List<String> {
+    override fun parseSearchText(text: String): Set<String> {
         if (text.isEmpty())
-            return emptyList()
+            return emptySet()
         val tagTexts = text.decode().split(" ")
-        val tagList = ArrayList<String>()
+        val tagList = mutableSetOf<String>()
         for (tagText in tagTexts) {
             val tmp = if (tagText.startsWith("-")) tagText.substring(1) else tagText
-            if (tmp.isEmpty()
-                || tmp.startsWith("tag:")
-            )
+            if (tmp.isEmpty() || tmp.startsWith("tag:"))
                 continue
             tagList.add(tagText)
         }

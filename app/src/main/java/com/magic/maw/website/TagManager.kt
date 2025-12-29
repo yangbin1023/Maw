@@ -128,8 +128,8 @@ class TagManager(val source: String) {
         dao.deleteAllHistory(source)
     }
 
-    fun dealSearchTags(tagList: List<String>) = dbHandler.post {
-        for (item in tagList) {
+    fun dealSearchTags(tagSet: Set<String>) = dbHandler.post {
+        for (item in tagSet) {
             dao.updateOrInsertHistory(TagHistory(source = source, name = item))
         }
         loadTagHistory()

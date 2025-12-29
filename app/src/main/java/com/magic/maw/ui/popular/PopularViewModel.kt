@@ -88,7 +88,7 @@ class PopularViewModel2 : ViewModel() {
                     scope = viewModelScope,
                     popularOption = PopularOption(
                         type = type,
-                        date = getDefaultPopularDate()
+                        date = LocalDate.now().minusDays(1)
                     )
                 )
                 loaderMap[type] = loader
@@ -98,7 +98,7 @@ class PopularViewModel2 : ViewModel() {
     }
 
     fun getPopularDate(type: PopularType): MutableStateFlow<LocalDate> = synchronized(this) {
-        localDateFlowMap[type] ?: MutableStateFlow(getDefaultPopularDate()).apply {
+        localDateFlowMap[type] ?: MutableStateFlow(LocalDate.now().minusDays(1)).apply {
             localDateFlowMap[type] = this
         }
     }
@@ -109,10 +109,6 @@ class PopularViewModel2 : ViewModel() {
     }
 
     fun getDefaultPopularDate(): LocalDate {
-        return if (website == WebsiteOption.Konachan) {
-            LocalDate.now().minusDays(1)
-        } else {
-            LocalDate.now()
-        }
+        return LocalDate.now().minusDays(1)
     }
 }

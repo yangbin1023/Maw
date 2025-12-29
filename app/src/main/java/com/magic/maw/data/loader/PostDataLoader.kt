@@ -57,6 +57,12 @@ class PostDataLoader(
     val popularOption: PopularOption?
         get() = requestOption.popularOption
 
+    val hasTags: Boolean
+        get() = requestOption.tags.isNotEmpty()
+
+    val tags: Set<String>
+        get() = requestOption.tags
+
     init {
         requestOption = RequestOption(
             page = parser.firstPageIndex,
@@ -136,11 +142,12 @@ class PostDataLoader(
     }
 
     override fun search(text: String): Any = with(parser) {
-        val list = requestOption.parseSearchText(text)
-        if (list.isNotEmpty() && list != requestOption.tags.toList()) {
+        val tags = parseSearchText(text)
+        if (tags.isNotEmpty() && tags != requestOption.tags) {
             requestOption.clearTags()
-            requestOption.addTags(list)
-            tagManager.dealSearchTags(list)
+            requestOption.tags.addAll(tags)
+            tagManager.dealSearchTags(tags)
+            Logger.d(TAG) { "PostScreen start search tags: $tags" }
             refresh(true)
         }
     }

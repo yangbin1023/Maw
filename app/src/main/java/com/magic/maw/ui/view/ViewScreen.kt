@@ -50,6 +50,7 @@ import com.magic.maw.ui.theme.ViewDetailBarFold
 import com.magic.maw.ui.theme.ViewDetailBarHalfFold
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.isShowStatusBars
+import com.magic.maw.util.UiUtils.showSystemBars
 import kotlinx.coroutines.delay
 
 private const val viewName = "View"
@@ -132,6 +133,7 @@ fun ViewScreen(
     loader: PostDataLoader = viewModel<PostViewModel>().loader,
     navController: NavController = rememberNavController(),
     postIndex: Int = 0,
+    route: AppRoute = AppRoute.PostView(postId = postIndex),
 ) {
     val uiState by loader.uiState.collectAsStateWithLifecycle()
     val pagerState = rememberPagerState(initialPage = postIndex) { uiState.items.size }
@@ -143,6 +145,26 @@ fun ViewScreen(
             ?.set(POST_INDEX, pagerState.currentPage)
         navController.popBackStack()
     }
+    val topBarMaxHeight = UiUtils.getTopBarHeight2()
+    val shouldShowTopBar = UiUtils.shouldShowSystemBar()
+    var showTopBar by remember { mutableStateOf(true) }
+    val offsetValue = if (showTopBar) topBarMaxHeight else 0.dp
+    val onTap: () -> Unit = { showTopBar = !showTopBar }
+    val topAppBarOffset by animateDpAsState(targetValue = offsetValue - topBarMaxHeight)
+
+    LaunchedEffect(Unit) {
+        delay(1500)
+        showTopBar = false
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            playerState.release()
+            if (shouldShowTopBar) {
+                context.showSystemBars(true)
+            }
+        }
+    }
+    UiUtils.updateSystemBarStatus(showTopBar)
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val postData = try {
@@ -151,7 +173,7 @@ fun ViewScreen(
             onExit()
             return@BoxWithConstraints
         }
-        val draggableHeight = this.maxHeight
+        val draggableHeight = this.maxHeight - offsetValue
 
         ViewContent(
             pagerState = pagerState,
@@ -159,17 +181,17 @@ fun ViewScreen(
             playerState = playerState,
             onLoadMore = { loader.loadMore() },
             onExit = onExit,
-//            onTab = onTap
+            onTab = onTap
         )
 
         ViewTopBar(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-            /*.offset {
-                val y = topAppBarOffset.toPx()
-                IntOffset(0, y.toInt())
-            }*/,
+                .offset {
+                    val y = topAppBarOffset.toPx()
+                    IntOffset(0, y.toInt())
+                },
             postData = postData,
             onExit = onExit
         )
@@ -182,8 +204,11 @@ fun ViewScreen(
             maxDraggableHeight = draggableHeight,
             onTagClick = { navController.navigate(route = AppRoute.PostSearch(text = it.name)) },
             onSearchTag = {
-                loader.search(text = it.name)
-                navController.navigate(route = AppRoute.Post) { popUpTo(route = AppRoute.Post) }
+                navController.navigate(route =  AppRoute.Post(searchQuery = it.name)) {
+                    popUpTo(route = route) {
+                        inclusive = route is AppRoute.PostView
+                    }
+                }
             }
         )
     }

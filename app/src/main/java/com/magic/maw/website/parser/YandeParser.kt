@@ -150,11 +150,11 @@ open class YandeParser : BaseParser() {
         return null
     }
 
-    override fun RequestOption.parseSearchText(text: String): List<String> {
+    override fun parseSearchText(text: String): Set<String> {
         if (text.isEmpty())
-            return emptyList()
+            return emptySet()
         val tagTexts = text.decode().split(" ")
-        val tagList = ArrayList<String>()
+        val tagList = mutableSetOf<String>()
         for (tagText in tagTexts) {
             if (tagText.isEmpty())
                 continue

@@ -1,5 +1,6 @@
 package com.magic.maw.ui.post
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -15,7 +16,6 @@ import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -216,7 +216,7 @@ class PostViewModel2(
     }
 
     fun search(text: String) = with(getParser()) {
-        val list = viewModelState.value.requestOption.parseSearchText(text)
+        val list = parseSearchText(text)
         if (list.isNotEmpty() && list != viewModelState.value.requestOption.tags.toList()) {
             viewModelState.value.requestOption.clearTags()
             viewModelState.value.requestOption.addTags(list)
@@ -273,29 +273,16 @@ class PostViewModel2(
     }
 }
 
-class PostViewModel : ViewModel() {
-    private val _viewIndex = MutableStateFlow<Int?>(null)
-    val viewIndex = _viewIndex.asStateFlow()
-
-    fun setViewIndex(viewIndex: Int) {
-        _viewIndex.update { viewIndex }
-    }
-
-    fun resetViewIndex() {
-        _viewIndex.update { null }
-    }
-
+class PostViewModel(
+    savedStateHandle: SavedStateHandle,
+) : ViewModel() {
+    private val searchQuery = savedStateHandle.get<String>("searchQuery")
     val loader = PostDataLoader(scope = viewModelScope)
 
-    fun refresh(force: Boolean = false) {
-        loader.refresh(force)
-    }
-
-    fun loadMore() {
-        loader.loadMore()
-    }
-
-    fun search(text: String = "") {
-        loader.search(text)
+    init {
+        if (!searchQuery.isNullOrEmpty()) {
+            Logger.d(TAG) { "PostScreen searchQuery: $searchQuery" }
+            loader.search(searchQuery)
+        }
     }
 }

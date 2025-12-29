@@ -15,11 +15,13 @@ data class RequestOption(
     var ratings: Int = Rating.None.value,
     var popularOption: PopularOption? = null,
     val ratingSet: List<Rating> = emptyList(),
-    internal val tags: HashSet<String> = HashSet(),
+    internal val tags: MutableSet<String> = mutableSetOf(),
 ) {
     fun addTag(tag: String) = apply { if (tag.isNotEmpty()) tags.add(tag) }
 
-    fun addTags(tags: List<String>) = apply { for (item in tags) addTag(item) }
+    fun addTags(tags: Set<String>) = apply { for (item in tags) addTag(item) }
 
     fun clearTags() = apply { tags.clear() }
+
+    fun hasTags(): Boolean = tags.isNotEmpty()
 }

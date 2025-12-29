@@ -20,10 +20,10 @@ const val POOL_INDEX = "poolIndex"
 @Serializable
 sealed class AppRoute {
     @Serializable
-    object Post : AppRoute()
+    data class Post(val searchQuery: String? = null) : AppRoute()
 
     @Serializable
-    object PostList : AppRoute()
+    data class PostList(val searchQuery: String? = null) : AppRoute()
 
     @Serializable
     data class PostView(val postId: Int) : AppRoute()
@@ -64,7 +64,7 @@ sealed class AppRoute {
 
 val AppRoute.rootRoute: AppRoute
     get() = when (this) {
-        AppRoute.Post, AppRoute.PostList, is AppRoute.PostView, is AppRoute.PostSearch -> AppRoute.Post
+        is AppRoute.Post, is AppRoute.PostList, is AppRoute.PostView, is AppRoute.PostSearch -> AppRoute.Post()
         AppRoute.Pool, AppRoute.PoolList, is AppRoute.PoolPost, is AppRoute.PoolView -> AppRoute.Pool
         AppRoute.Popular, AppRoute.PopularList, is AppRoute.PopularView -> AppRoute.Popular
         AppRoute.Favorite -> AppRoute.Favorite
@@ -74,7 +74,7 @@ val AppRoute.rootRoute: AppRoute
 
 val AppRoute.isRootRoute: Boolean
     get() = when (this) {
-        AppRoute.Post, AppRoute.PostList,
+        is AppRoute.Post, is AppRoute.PostList,
         AppRoute.Pool, AppRoute.PoolList,
         AppRoute.Popular, AppRoute.PopularList,
         AppRoute.Favorite -> true
@@ -88,7 +88,7 @@ val NavController.topRoute: AppRoute
         val backStackEntry by this.currentBackStackEntryAsState()
         val route by remember {
             derivedStateOf {
-                backStackEntry?.currentRoute?.rootRoute ?: AppRoute.Post
+                backStackEntry?.currentRoute?.rootRoute ?: AppRoute.Post()
             }
         }
         return route
@@ -117,5 +117,5 @@ val NavBackStackEntry.currentRoute: AppRoute
             }
         }
 
-        return AppRoute.Post
+        return AppRoute.Post()
     }

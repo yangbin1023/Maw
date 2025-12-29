@@ -54,6 +54,7 @@ import com.magic.maw.ui.main.AppRoute
 import com.magic.maw.ui.post.PostDefaults
 import com.magic.maw.ui.post.PostRefreshBody
 import com.magic.maw.ui.post.RefreshScrollToTopChecker
+import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.launch
@@ -90,7 +91,6 @@ fun PopularScreen(
             viewModel = viewModel,
             navController = navController,
             staggeredState = staggeredState,
-            scrollBehavior = scrollBehavior,
         )
     }
 }
@@ -139,6 +139,7 @@ private fun PopularTopBar(
             }
         },
         windowInsets = WindowInsets(top = LocalContext.current.getStatusBarHeight()),
+        colors = UiUtils.topAppBarColors,
         scrollBehavior = scrollBehavior
     )
 }
@@ -151,7 +152,6 @@ private fun PopularBody(
     pagerState: PagerState = rememberPopularPagerState(),
     navController: NavController = rememberNavController(),
     staggeredState: MutableState<Boolean>? = null,
-    scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     val scope = rememberCoroutineScope()
     val supportedPopularDateTypes = getSupportedPopularDateTypes()
@@ -174,10 +174,7 @@ private fun PopularBody(
         modifier = modifier
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            PopularDateTypePicker(
-                pagerState = pagerState,
-                scrollBehavior = scrollBehavior,
-            )
+            PopularDateTypePicker(pagerState = pagerState)
 
             HorizontalPager(
                 state = pagerState,

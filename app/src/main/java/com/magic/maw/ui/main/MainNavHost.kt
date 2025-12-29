@@ -2,6 +2,7 @@ package com.magic.maw.ui.main
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -53,7 +54,7 @@ private const val TAG = "MainNavHost"
 fun MainNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController,
-    startDestination: AppRoute = AppRoute.Post,
+    startDestination: AppRoute = AppRoute.Post(),
     onOpenDrawer: (() -> Unit)? = null
 ) {
     Logger.d(TAG) { "MainNavHost recompose" }
@@ -89,13 +90,18 @@ fun MainNavHost(
 
         composable<AppRoute.Favorite> {
             Logger.d(TAG) { "Favorite recompose" }
-            TestScaffold(
-                title = "Favorite",
-                navigationIconOnClick = onOpenDrawer ?: {},
-                navigationIconImageVector = Icons.Default.Menu,
-                testText = "Favorite",
-                testBtnOnClick = { }
-            )
+            Row(modifier = Modifier.fillMaxSize()) {
+                if (useNavRail()) {
+                    MainNavRail(navController = navController, topRoute = AppRoute.Favorite)
+                }
+                TestScaffold(
+                    title = "Favorite",
+                    navigationIconOnClick = onOpenDrawer ?: {},
+                    navigationIconImageVector = Icons.Default.Menu,
+                    testText = "Favorite",
+                    testBtnOnClick = { }
+                )
+            }
         }
 
         composable<AppRoute.Settings> {
@@ -134,51 +140,42 @@ fun NavGraphBuilder.postGraph(
     navController: NavController,
     onOpenDrawer: (() -> Unit)? = null
 ) {
-    navigation<AppRoute.Post>(startDestination = AppRoute.PostList) {
+    navigation<AppRoute.Post>(startDestination = AppRoute.PostList()) {
         Logger.d(TAG) { "postGraph content recompose" }
         composable<AppRoute.PostList> { backStackEntry ->
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(AppRoute.Post)
-            }
-            val viewModel: PostViewModel = viewModel(parentEntry)
-            val postIndex = backStackEntry.savedStateHandle.getLiveData<Int>(POST_INDEX).value
-            if (postIndex != null) {
-                backStackEntry.savedStateHandle.remove<String>(POST_INDEX)
-            }
-            Logger.d(TAG) { "PostList recompose $postIndex" }
+            Logger.d(TAG) { "PostList recompose." }
             PostScreen(
-                loader = viewModel.loader,
+                backStackEntry = backStackEntry,
                 navController = navController,
-                onNegative = onOpenDrawer,
-                postIndex = postIndex
+                onOpenDrawer = onOpenDrawer
             )
         }
         composable<AppRoute.PostView> { backStackEntry ->
             Logger.d(TAG) { "PostView recompose" }
             val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(AppRoute.Post)
+                navController.getBackStackEntry<AppRoute.Post>()
             }
             val viewModel: PostViewModel = viewModel(parentEntry)
             val route: AppRoute.PostView = backStackEntry.toRoute()
             ViewScreen(
                 loader = viewModel.loader,
                 navController = navController,
-                postIndex = route.postId
+                postIndex = route.postId,
+                route = route
             )
         }
         composable<AppRoute.PostSearch> { backStackEntry ->
             Logger.d(TAG) { "PostSearch recompose" }
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(AppRoute.Post)
-            }
-            val viewModel: PostViewModel = viewModel(parentEntry)
             val route: AppRoute.PostSearch = backStackEntry.toRoute()
             SearchScreen(
                 initText = route.text,
                 onFinish = { navController.popBackStack() },
                 onSearch = {
-                    viewModel.loader.search(text = it)
-                    navController.navigate(route = AppRoute.Post) { popUpTo(route = AppRoute.Post) }
+                    navController.navigate(route = AppRoute.Post(searchQuery = it)) {
+                        popUpTo(route = route) {
+                            inclusive = true
+                        }
+                    }
                 }
             )
         }
@@ -193,19 +190,24 @@ fun NavGraphBuilder.poolGraph(
         composable<AppRoute.PoolList> { backStackEntry ->
             Logger.d(TAG) { "PoolList recompose" }
             val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(AppRoute.Pool)
+                navController.getBackStackEntry<AppRoute.Pool>()
             }
             val viewModel: PoolViewModel2 = viewModel(parentEntry)
-            PoolScreen(
-                viewModel = viewModel,
-                navController = navController,
-                onNegative = onOpenDrawer
-            )
+            Row(modifier = Modifier.fillMaxSize()) {
+                if (useNavRail()) {
+                    MainNavRail(navController = navController, topRoute = AppRoute.Pool)
+                }
+                PoolScreen(
+                    viewModel = viewModel,
+                    navController = navController,
+                    onNegative = onOpenDrawer
+                )
+            }
         }
         composable<AppRoute.PoolPost> { backStackEntry ->
             Logger.d(TAG) { "PoolPost recompose" }
             val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(AppRoute.Pool)
+                navController.getBackStackEntry<AppRoute.Pool>()
             }
             val viewModel: PoolViewModel2 = viewModel(parentEntry)
             val route = backStackEntry.toRoute<AppRoute.PoolPost>()
@@ -223,6 +225,7 @@ fun NavGraphBuilder.poolGraph(
                 navController = navController,
                 titleText = "#${route.poolId}",
                 postIndex = postIndex,
+                searchEnable = false,
                 negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNegative = { navController.popBackStack() },
             )
@@ -230,7 +233,7 @@ fun NavGraphBuilder.poolGraph(
         composable<AppRoute.PoolView> { backStackEntry ->
             Logger.d(TAG) { "PoolView recompose" }
             val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(AppRoute.Pool)
+                navController.getBackStackEntry<AppRoute.Pool>()
             }
             val viewModel: PoolViewModel2 = viewModel(parentEntry)
             val route = backStackEntry.toRoute<AppRoute.PoolView>()
@@ -242,7 +245,8 @@ fun NavGraphBuilder.poolGraph(
             ViewScreen(
                 loader = postLoader,
                 navController = navController,
-                postIndex = route.postId
+                postIndex = route.postId,
+                route = route
             )
         }
     }
@@ -256,19 +260,24 @@ fun NavGraphBuilder.popularGraph(
         composable<AppRoute.PopularList> { backStackEntry ->
             Logger.d(TAG) { "PopularList recompose" }
             val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(AppRoute.Popular)
+                navController.getBackStackEntry<AppRoute.Popular>()
             }
             val viewModel: PopularViewModel2 = viewModel(parentEntry)
-            PopularScreen(
-                viewModel = viewModel,
-                navController = navController,
-                onNegative = onOpenDrawer
-            )
+            Row(modifier = Modifier.fillMaxSize()) {
+                if (useNavRail()) {
+                    MainNavRail(navController = navController, topRoute = AppRoute.Popular)
+                }
+                PopularScreen(
+                    viewModel = viewModel,
+                    navController = navController,
+                    onNegative = onOpenDrawer
+                )
+            }
         }
         composable<AppRoute.PopularView> { backStackEntry ->
             Logger.d(TAG) { "PopularView recompose" }
             val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(AppRoute.Popular)
+                navController.getBackStackEntry<AppRoute.Popular>()
             }
             val viewModel: PopularViewModel2 = viewModel(parentEntry)
             val route = backStackEntry.toRoute<AppRoute.PopularView>()
@@ -276,7 +285,8 @@ fun NavGraphBuilder.popularGraph(
             ViewScreen(
                 loader = loader,
                 navController = navController,
-                postIndex = route.postId
+                postIndex = route.postId,
+                route = route
             )
         }
     }

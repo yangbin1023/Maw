@@ -1,9 +1,11 @@
 package com.magic.maw.ui.post
 
+import androidx.activity.compose.BackHandler
 import androidx.collection.MutableIntIntMap
 import androidx.collection.mutableIntIntMapOf
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -17,6 +19,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +57,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import co.touchlab.kermit.Logger
@@ -68,6 +72,10 @@ import com.magic.maw.ui.components.NestedScaffold
 import com.magic.maw.ui.components.NestedScaffoldState
 import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.main.AppRoute
+import com.magic.maw.ui.main.MainNavRail
+import com.magic.maw.ui.main.POST_INDEX
+import com.magic.maw.ui.main.useNavRail
+import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.coroutines.launch
@@ -76,6 +84,50 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 private const val TAG = "PostScreen"
+
+@Composable
+fun PostScreen(
+    modifier: Modifier = Modifier,
+    navController: NavController,
+    backStackEntry: NavBackStackEntry,
+    onOpenDrawer: (() -> Unit)? = null
+) {
+    val parentEntry = remember(backStackEntry) {
+        navController.getBackStackEntry<AppRoute.Post>()
+    }
+    val viewModel: PostViewModel = viewModel(parentEntry)
+    val postIndex = backStackEntry.getPostIndex()
+    Logger.d(TAG) { "parent entry: ${parentEntry.id}, viewModel: $viewModel, postIndex: $postIndex" }
+
+    if (viewModel.loader.hasTags) {
+        PostScreen(
+            modifier = modifier,
+            loader = viewModel.loader,
+            navController = navController,
+            postIndex = postIndex,
+            negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
+            onNegative = { navController.popBackStack() },
+        )
+
+        // WARNING:此处需要拦截返回键，如果不拦截会将旧的AppRoute.PostList出栈
+        BackHandler {
+            navController.popBackStack()
+        }
+    } else {
+        Row(modifier = Modifier.fillMaxSize()) {
+            if (useNavRail()) {
+                MainNavRail(navController = navController, topRoute = AppRoute.Post())
+            }
+            PostScreen(
+                modifier = modifier,
+                loader = viewModel.loader,
+                navController = navController,
+                postIndex = postIndex,
+                onNegative = onOpenDrawer
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -272,6 +324,7 @@ private fun PostTopBar(
             }
         },
         windowInsets = WindowInsets(top = LocalContext.current.getStatusBarHeight()),
+        colors = UiUtils.topAppBarColors,
         scrollBehavior = scrollBehavior
     )
 }
@@ -396,6 +449,14 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
         Logger.w(TAG) { "No suitable space found" }
     }
     currentSpace.toDp() / 2
+}
+
+fun NavBackStackEntry.getPostIndex(): Int? {
+    val postIndex = savedStateHandle.getLiveData<Int>(POST_INDEX).value
+    if (postIndex != null) {
+        savedStateHandle.remove<Int>(POST_INDEX)
+    }
+    return postIndex
 }
 
 /**

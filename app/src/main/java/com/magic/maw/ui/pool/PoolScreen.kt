@@ -63,6 +63,7 @@ import com.magic.maw.ui.components.rememberNestedScaffoldState
 import com.magic.maw.ui.main.AppRoute
 import com.magic.maw.ui.post.PostDefaults
 import com.magic.maw.ui.post.UiStateType
+import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.coroutines.launch
@@ -185,6 +186,7 @@ private fun PoolTopBar(
             }
         },
         windowInsets = WindowInsets(top = LocalContext.current.getStatusBarHeight()),
+        colors = UiUtils.topAppBarColors,
         scrollBehavior = scrollBehavior
     )
 }

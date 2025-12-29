@@ -31,7 +31,7 @@ abstract class BaseParser {
     abstract suspend fun requestTagInfo(name: String): TagInfo?
     abstract suspend fun requestSuggestTagInfo(name: String, limit: Int = 10): List<TagInfo>
     abstract suspend fun requestUserInfo(userId: Int): UserInfo?
-    abstract fun RequestOption.parseSearchText(text: String): List<String>
+    abstract fun parseSearchText(text: String): Set<String>
 
     protected abstract fun getPostUrl(option: RequestOption): String
     protected abstract fun getPoolUrl(option: RequestOption): String

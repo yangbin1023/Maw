@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.NavOptionsBuilder
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.ui.components.DrawerItem
@@ -93,38 +94,59 @@ fun MainModalDrawerSheet(
         DrawerItem(
             labelRes = R.string.post,
             iconRes = R.drawable.ic_image,
-            selected = currentRoute == AppRoute.Post,
+            selected = currentRoute is AppRoute.Post,
             onClick = {
-                navController.navigate(route = AppRoute.Post) {
-                    popUpTo(route = AppRoute.Post)
-                    launchSingleTop = true
+                navController.navigateAndCloseDrawer(
+                    route = AppRoute.Pool,
+                    closeDrawer = closeDrawer
+                ) {
+                    popUpTo(route = AppRoute.Post())
                 }
-                closeDrawer()
             }
         )
         DrawerItem(
             labelRes = R.string.pool,
             iconRes = R.drawable.ic_album,
             selected = currentRoute == AppRoute.Pool,
-            onClick = { navController.navigate(route = AppRoute.Pool); closeDrawer() }
+            onClick = {
+                navController.navigateAndCloseDrawer(
+                    route = AppRoute.Pool,
+                    closeDrawer = closeDrawer
+                )
+            }
         )
         DrawerItem(
             labelRes = R.string.popular,
             iconRes = R.drawable.ic_popular,
             selected = currentRoute == AppRoute.Popular,
-            onClick = { navController.navigate(route = AppRoute.Popular); closeDrawer() }
+            onClick = {
+                navController.navigateAndCloseDrawer(
+                    route = AppRoute.Popular,
+                    closeDrawer = closeDrawer
+                )
+            }
         )
         DrawerItem(
             labelRes = R.string.favorite,
             imageVector = Icons.Filled.Favorite,
             selected = currentRoute == AppRoute.Favorite,
-            onClick = { navController.navigate(route = AppRoute.Favorite); closeDrawer() }
+            onClick = {
+                navController.navigateAndCloseDrawer(
+                    route = AppRoute.Favorite,
+                    closeDrawer = closeDrawer
+                )
+            }
         )
         DrawerItem(
             labelRes = R.string.setting,
             iconRes = R.drawable.ic_setting,
             selected = currentRoute == AppRoute.Settings,
-            onClick = { navController.navigate(route = AppRoute.Settings); closeDrawer() }
+            onClick = {
+                navController.navigateAndCloseDrawer(
+                    route = AppRoute.Settings,
+                    closeDrawer = closeDrawer
+                )
+            }
         )
     }
 }
@@ -142,5 +164,16 @@ private fun Modifier.resetDrawerWidth(): Modifier {
         )
     } else {
         this
+    }
+}
+
+private fun <T : Any> NavController.navigateAndCloseDrawer(
+    route: T,
+    closeDrawer: () -> Unit,
+    builder: NavOptionsBuilder.() -> Unit = {}
+) {
+    if (currentBackStackEntry?.currentRoute?.rootRoute != route) {
+        navigate(route, builder)
+        closeDrawer()
     }
 }

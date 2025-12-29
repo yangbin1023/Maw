@@ -19,6 +19,7 @@ import androidx.core.view.WindowCompat
 import co.touchlab.kermit.Logger
 import com.magic.maw.data.SettingsService
 import com.magic.maw.data.ThemeMode
+import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.findActivity
 
 private val DarkColorScheme = darkColorScheme()
@@ -58,6 +59,7 @@ fun MawTheme(content: @Composable () -> Unit) {
             }
         }
     }
+    UiUtils.updateSystemBarStatus()
 
     Logger.d("MawTAG") { "MawTheme compose1" }
     MaterialTheme(

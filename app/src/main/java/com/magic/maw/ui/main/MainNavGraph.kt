@@ -13,6 +13,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -197,15 +198,15 @@ private val defaultPopExit: AnimatedScope.() -> ExitTransition = {
 }
 
 @SuppressLint("RestrictedApi")
-private fun printNavBackStack(navController: NavHostController) {
+fun printNavBackStack(navController: NavController, tag: String = TAG) {
     try {
         val list = navController.currentBackStack.value
         val routeList = ArrayList<String>()
         for (item in list) {
             routeList.add(item.destination.route ?: "unknown")
         }
-        Logger.d(TAG) { "current back stack list: $routeList" }
+        Logger.d(tag) { "current back stack list: $routeList" }
     } catch (e: Exception) {
-        Logger.e(e, TAG) { "printNavBackStack failed. ${e.message}" }
+        Logger.e(e, tag) { "printNavBackStack failed. ${e.message}" }
     }
 }
