@@ -31,9 +31,9 @@ import coil3.request.ImageRequest
 import com.magic.maw.R
 import com.magic.maw.data.PoolData
 import com.magic.maw.data.Quality
+import com.magic.maw.data.SettingsService
 import com.magic.maw.ui.components.ConfigChangeChecker
 import com.magic.maw.util.TimeUtils
-import com.magic.maw.util.configFlow
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.LoadType
 import com.magic.maw.website.RequestOption
@@ -125,7 +125,7 @@ private fun ItemImageView(modifier: Modifier = Modifier, poolData: PoolData) {
                     val option = RequestOption(
                         page = parser.firstPageIndex,
                         poolId = poolData.id,
-                        ratings = configFlow.value.getWebsiteConfig(poolData.source).rating
+                        ratingSet = SettingsService.settings.websiteSettings.ratings
                     )
                     parser.requestPostData(option)
                 } catch (_: Exception) {

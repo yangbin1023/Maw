@@ -22,7 +22,8 @@ import com.magic.maw.website.RequestOption
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
 
-open class YandeParser : BaseParser() {
+object YandeParser : BaseParser() {
+    const val SOURCE = "yande"
     override val baseUrl: String get() = "https://yande.re"
     override val website: WebsiteOption = WebsiteOption.Yande
     override val source: String get() = SOURCE
@@ -265,9 +266,5 @@ open class YandeParser : BaseParser() {
             Rating.Questionable.value or Rating.Explicit.value -> "-rating:s"
             else -> ""
         }
-    }
-
-    companion object {
-        const val SOURCE = "yande"
     }
 }

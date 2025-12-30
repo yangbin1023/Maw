@@ -1,8 +1,11 @@
 package com.magic.maw.website.parser
 
+import co.touchlab.kermit.Logger
 import com.magic.maw.data.PoolData
+import com.magic.maw.data.PopularType
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Rating
+import com.magic.maw.data.Rating.Companion.join
 import com.magic.maw.data.SettingsService
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.UserInfo
@@ -13,18 +16,24 @@ import com.magic.maw.data.konachan.KonachanTag
 import com.magic.maw.data.konachan.KonachanUser
 import com.magic.maw.util.client
 import com.magic.maw.util.get
+import com.magic.maw.util.toMonday
 import com.magic.maw.website.RequestOption
+import io.ktor.http.URLBuilder
+import io.ktor.http.path
 
-private const val TAG = KonachanParser.SOURCE
+private const val TAG = "konachan"
 
 /**
  * Konachan的API和Yande的API大部分相同
  */
-class KonachanParser : YandeParser() {
+object KonachanParser : BaseParser() {
+    const val SOURCE = "konachan"
     override val baseUrl: String get() = "https://konachan.net"
     override val website: WebsiteOption = WebsiteOption.Konachan
     override val source: String get() = SOURCE
     override val supportRating: Int get() = Rating.Safe.value or Rating.Questionable.value or Rating.Explicit.value
+    override val supportedRatings: List<Rating> =
+        listOf(Rating.Safe, Rating.Questionable, Rating.Explicit)
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         // pool.post 和 popular 没有第二页
@@ -149,7 +158,105 @@ class KonachanParser : YandeParser() {
         return null
     }
 
-    companion object {
-        const val SOURCE = "konachan"
+    override fun parseSearchText(text: String): Set<String> {
+        if (text.isEmpty())
+            return emptySet()
+        val tagTexts = text.decode().split(" ")
+        val tagList = mutableSetOf<String>()
+        for (tagText in tagTexts) {
+            if (tagText.isEmpty())
+                continue
+            if (tagText.startsWith("tag:") || tagText.startsWith("-tag:"))
+                continue
+            tagList.add(tagText)
+        }
+        return tagList
+    }
+
+    override fun getPostUrl(option: RequestOption): String {
+        if (option.poolId != -1) {
+            // 图册
+            return "$baseUrl/pool/show.json?id=${option.poolId}"
+        }
+        val builder = URLBuilder(baseUrl)
+        option.popularOption?.let { popularOption ->
+            // 热门
+            var date = popularOption.date
+            when (popularOption.type) {
+                PopularType.Day -> {
+                    builder.path("post/popular_by_day.json")
+                    builder.encodedParameters.apply {
+                        append("day", date.dayOfMonth.toString())
+                        append("month", date.monthValue.toString())
+                        append("year", date.year.toString())
+                    }
+                }
+
+                PopularType.Week -> {
+                    builder.path("post/popular_by_week.json")
+                    date = date.toMonday()
+                    builder.encodedParameters.apply {
+                        append("day", date.dayOfMonth.toString())
+                        append("month", date.monthValue.toString())
+                        append("year", date.year.toString())
+                    }
+                }
+
+                PopularType.Month -> {
+                    builder.path("post/popular_by_month.json")
+                    builder.encodedParameters.apply {
+                        append("month", date.monthValue.toString())
+                        append("year", date.year.toString())
+                    }
+                }
+
+                else -> {
+                    builder.path("post.json")
+                    option.addTag("order:score")
+                }
+            }
+        } ?: let {
+            // 普通
+            builder.path("post.json")
+        }
+        val tags = HashSet<String>().apply { addAll(option.tags) }
+        getRatingTag(option.ratingSet).let { if (it.isNotEmpty()) tags.add(it) }
+        val tagStr = tags.joinToString("+")
+        builder.encodedParameters.append("page", option.page.toString())
+        builder.encodedParameters.append("limit", "40")
+        builder.encodedParameters.append("tags", tagStr)
+        return builder.build().toString().apply {
+            Logger.d("PostDataLoader") { "url: $this" }
+        }
+    }
+
+    override fun getPoolUrl(option: RequestOption): String {
+        return "$baseUrl/pool.json?page=${option.page}"
+    }
+
+    override fun getTagUrl(name: String, page: Int, limit: Int): String {
+        val limit2 = if (limit < 5) 5 else limit
+        return "$baseUrl/tag.json?name=$name&page=$page&limit=$limit2&order=count"
+    }
+
+    override fun getUserUrl(userId: Int): String {
+        return "$baseUrl/user.json?id=$userId"
+    }
+
+    private fun getRatingTag(ratings: List<Rating>): String {
+        if (ratings.toSet() == supportedRatings.toSet())
+            return ""
+        val currentRating = ratings.join()
+        println("ratings: $ratings, support rating: $supportRating, current rating: $currentRating")
+        return when (currentRating) {
+            Rating.Safe.value -> "rating:s"
+            Rating.Questionable.value -> "rating:q"
+            Rating.Explicit.value -> "rating:e"
+            Rating.Safe.value or Rating.Questionable.value -> "-rating:e"
+            Rating.Safe.value or Rating.Explicit.value -> "-rating:q"
+            Rating.Questionable.value or Rating.Explicit.value -> "-rating:s"
+            else -> ""
+        }
     }
 }
+

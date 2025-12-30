@@ -3,8 +3,6 @@ package com.magic.maw.data
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.magic.maw.data.Quality.Companion.toQuality
-import com.magic.maw.util.configFlow
 import com.magic.maw.website.DLManager
 import java.io.File
 import java.util.Locale
@@ -50,7 +48,7 @@ data class PostData(
     var quality: Quality by mutableStateOf(Quality.Sample)
 
     fun getDefaultQuality(): Quality {
-        val targetQuality = configFlow.value.websiteConfig.quality.toQuality()
+        val targetQuality = SettingsService.settings.websiteSettings.showQuality
         val qualities = Quality.getQualities()
         val baseData = BaseData(this, Quality.File)
         for (quality in qualities) {

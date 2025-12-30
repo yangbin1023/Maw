@@ -2,6 +2,7 @@ package com.magic.maw.website
 
 import com.magic.maw.data.TagHistory
 import com.magic.maw.data.TagInfo
+import com.magic.maw.data.WebsiteOption
 import com.magic.maw.db.AppDB
 import com.magic.maw.db.updateOrInsert
 import com.magic.maw.db.updateOrInsertHistory
@@ -185,6 +186,19 @@ class TagManager(val source: String) {
         private val map = HashMap<String, SoftReference<TagManager>>()
 
         fun get(source: String): TagManager = synchronized(map) {
+            map[source]?.get()?.let { return it }
+            val manager = when (source) {
+                YandeParser.SOURCE -> TagManager(YandeParser.SOURCE)
+                KonachanParser.SOURCE -> TagManager(KonachanParser.SOURCE)
+                DanbooruParser.SOURCE -> TagManager(DanbooruParser.SOURCE)
+                else -> throw RuntimeException("Unknown source: $source")
+            }
+            map[source] = SoftReference(manager)
+            manager
+        }
+
+        fun get(website: WebsiteOption): TagManager = synchronized(map) {
+            val source = website.name.lowercase()
             map[source]?.get()?.let { return it }
             val manager = when (source) {
                 YandeParser.SOURCE -> TagManager(YandeParser.SOURCE)

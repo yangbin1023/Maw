@@ -24,9 +24,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.TimeZone
 
-private const val TAG = DanbooruParser.SOURCE
+private const val TAG = "danbooru"
 
-class DanbooruParser : BaseParser() {
+object DanbooruParser : BaseParser() {
+    const val SOURCE = "danbooru"
     override val baseUrl: String get() = "https://danbooru.donmai.us"
     override val website: WebsiteOption = WebsiteOption.Danbooru
     override val source: String get() = SOURCE
@@ -236,20 +237,16 @@ class DanbooruParser : BaseParser() {
         return "rating:" + ratingList.joinToString(",")
     }
 
-    companion object {
-        private val format by lazy { SimpleDateFormat(TimeUtils.FORMAT_4, Locale.getDefault()) }
-        const val SOURCE = "danbooru"
+    private val format by lazy { SimpleDateFormat(TimeUtils.FORMAT_4, Locale.getDefault()) }
 
-        @JvmStatic
-        fun getUnixTime(timeStr: String?): Long? {
-            timeStr ?: return null
-            try {
-                val zoneStr = timeStr.substring(23)
-                format.timeZone = TimeZone.getTimeZone("GMT$zoneStr")
-                return format.parse(timeStr.substring(0, 23))?.time
-            } catch (_: Exception) {
-            }
-            return null
+    fun getUnixTime(timeStr: String?): Long? {
+        timeStr ?: return null
+        try {
+            val zoneStr = timeStr.substring(23)
+            format.timeZone = TimeZone.getTimeZone("GMT$zoneStr")
+            return format.parse(timeStr.substring(0, 23))?.time
+        } catch (_: Exception) {
         }
+        return null
     }
 }

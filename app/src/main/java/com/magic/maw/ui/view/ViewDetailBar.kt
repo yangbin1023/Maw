@@ -64,6 +64,7 @@ import com.magic.maw.R
 import com.magic.maw.data.PostData
 import com.magic.maw.data.Quality
 import com.magic.maw.data.Quality.Companion.toQuality
+import com.magic.maw.data.SettingsService
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
 import com.magic.maw.data.UserInfo
@@ -411,8 +412,8 @@ private fun DetailContent(
     onTagClick: (TagInfo, Boolean) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    val config by configFlow.collectAsState()
-    val tagManager = TagManager.get(config.source)
+    val settings by SettingsService.settingsState.collectAsState()
+    val tagManager = TagManager.get(settings.website)
     val context = LocalContext.current
     Column(
         modifier = modifier
@@ -465,7 +466,7 @@ private fun DetailContent(
         // Author
         if (postData.uploader.isNullOrEmpty()) {
             postData.createId?.let { createId ->
-                val userManager = BaseParser.get(config.source).userManager
+                val userManager = BaseParser.get(settings.website).userManager
                 val status = userManager.getStatus(createId).collectAsState().value
                 if (status is LoadStatus.Success<UserInfo>) {
                     postData.uploader = status.result.name

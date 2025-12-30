@@ -61,12 +61,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
+import com.magic.maw.data.SettingsService
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
 import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.theme.PreviewTheme
-import com.magic.maw.util.configFlow
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.delay
@@ -80,8 +80,8 @@ fun SearchScreen(
     onFinish: () -> Unit = {},
     onSearch: (String) -> Unit = {}
 ) {
-    val source = configFlow.collectAsState().value.source
-    val tagManager = TagManager.get(source)
+    val settings by SettingsService.settingsState.collectAsState()
+    val tagManager = TagManager.get(settings.website)
     val isSearch = remember { mutableStateOf(false) }
     val (inputText, setInputText) = remember {
         val text = initText.toSearchTagText()
@@ -124,7 +124,7 @@ fun SearchScreen(
                 text = inputText.text,
                 onGetHistory = {
                     delay(500)
-                    BaseParser.get(source).requestSuggestTagInfo(it)
+                    BaseParser.get(settings.website).requestSuggestTagInfo(it)
                 },
                 onItemClick = {
                     val old = inputText.text.substring(0, inputText.text.lastIndexOf(" ") + 1)

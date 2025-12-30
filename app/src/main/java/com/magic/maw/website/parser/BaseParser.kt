@@ -10,7 +10,6 @@ import com.magic.maw.data.WebsiteOption
 import com.magic.maw.website.RequestOption
 import com.magic.maw.website.TagManager
 import com.magic.maw.website.UserManager
-import java.lang.ref.SoftReference
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -39,27 +38,20 @@ abstract class BaseParser {
     protected abstract fun getUserUrl(userId: Int): String
 
     companion object {
-        private val parserMap = HashMap<String, SoftReference<BaseParser>>()
-
         fun get(source: String): BaseParser {
-            synchronized(parserMap) {
-                parserMap[source]?.get()?.let { return it }
-                val parser = when (source) {
-                    YandeParser.SOURCE -> YandeParser()
-                    KonachanParser.SOURCE -> KonachanParser()
-                    DanbooruParser.SOURCE -> DanbooruParser()
-                    else -> throw RuntimeException("Unknown source: $source")
-                }
-                parserMap[source] = SoftReference(parser)
-                return parser
+            return when (source) {
+                YandeParser.SOURCE -> YandeParser
+                KonachanParser.SOURCE -> KonachanParser
+                DanbooruParser.SOURCE -> DanbooruParser
+                else -> throw RuntimeException("Unknown source: $source")
             }
         }
 
         fun get(website: WebsiteOption): BaseParser {
-            return when(website) {
-                WebsiteOption.Yande -> YandeParser()
-                WebsiteOption.Konachan -> KonachanParser()
-                WebsiteOption.Danbooru -> DanbooruParser()
+            return when (website) {
+                WebsiteOption.Yande -> YandeParser
+                WebsiteOption.Konachan -> KonachanParser
+                WebsiteOption.Danbooru -> DanbooruParser
             }
         }
 
