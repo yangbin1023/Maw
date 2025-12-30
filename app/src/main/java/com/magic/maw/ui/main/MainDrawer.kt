@@ -96,11 +96,12 @@ fun MainModalDrawerSheet(
             iconRes = R.drawable.ic_image,
             selected = currentRoute is AppRoute.Post,
             onClick = {
+                val route = AppRoute.Post()
                 navController.navigateAndCloseDrawer(
-                    route = AppRoute.Pool,
+                    route = route,
                     closeDrawer = closeDrawer
                 ) {
-                    popUpTo(route = AppRoute.Post())
+                    popUpTo(route = route)
                 }
             }
         )
