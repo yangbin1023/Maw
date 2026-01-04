@@ -37,12 +37,12 @@ object KonachanParser : BaseParser() {
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         // pool.post 和 popular 没有第二页
-        if ((option.poolId >= 0 || option.popularOption != null) && option.page > firstPageIndex)
+        if ((option.poolId != null || option.popularOption != null) && option.page > firstPageIndex)
             return emptyList()
         val url = getPostUrl(option)
         val list = ArrayList<PostData>()
         val ratings = SettingsService.settings.websiteSettings.ratings
-        if (option.poolId >= 0) {
+        if (option.poolId != null) {
             val konachanPool: KonachanPool = client.get(url)
             konachanPool.posts?.let { posts ->
                 for (item in posts) {
@@ -174,11 +174,12 @@ object KonachanParser : BaseParser() {
     }
 
     override fun getPostUrl(option: RequestOption): String {
-        if (option.poolId != -1) {
+        option.poolId?.let {
             // 图册
-            return "$baseUrl/pool/show.json?id=${option.poolId}"
+            return "$baseUrl/pool/show.json?id=${it}"
         }
         val builder = URLBuilder(baseUrl)
+        val tags = mutableSetOf<String>().apply { addAll(option.tags) }
         option.popularOption?.let { popularOption ->
             // 热门
             var date = popularOption.date
@@ -212,15 +213,14 @@ object KonachanParser : BaseParser() {
 
                 else -> {
                     builder.path("post.json")
-                    option.addTag("order:score")
+                    tags.add("order:score")
                 }
             }
         } ?: let {
             // 普通
             builder.path("post.json")
         }
-        val tags = HashSet<String>().apply { addAll(option.tags) }
-        getRatingTag(option.ratingSet).let { if (it.isNotEmpty()) tags.add(it) }
+        getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it) }
         val tagStr = tags.joinToString("+")
         builder.encodedParameters.append("page", option.page.toString())
         builder.encodedParameters.append("limit", "40")

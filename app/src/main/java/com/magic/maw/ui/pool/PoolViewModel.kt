@@ -68,7 +68,7 @@ class PoolViewModel : ViewModel() {
     init {
         val parser = getParser()
         val websiteConfig = configFlow.value.websiteConfig
-        val option = RequestOption(page = parser.firstPageIndex, ratings = websiteConfig.rating)
+        val option = RequestOption(page = parser.firstPageIndex, ratingFlag = websiteConfig.rating)
         viewModelState = MutableStateFlow(PoolUiState(noMore = false, requestOption = option))
     }
 
@@ -86,7 +86,7 @@ class PoolViewModel : ViewModel() {
                 Logger.d(TAG) { "pool refresh." }
                 val parser = getParser()
                 val option = viewModelState.value.requestOption
-                option.ratings = configFlow.value.websiteConfig.rating
+                option.ratingFlag = configFlow.value.websiteConfig.rating
                 val list = parser.requestPoolData(option.copy(page = parser.firstPageIndex))
                 viewModelState.update {
                     if (force) {
@@ -147,7 +147,7 @@ class PoolViewModel : ViewModel() {
         val websiteConfig = configFlow.value.websiteConfig
         val state = viewModelState.value
         return state.dataList.isEmpty()
-                || websiteConfig.rating != state.requestOption.ratings
+                || websiteConfig.rating != state.requestOption.ratingFlag
     }
 
     private fun getParser(): BaseParser {

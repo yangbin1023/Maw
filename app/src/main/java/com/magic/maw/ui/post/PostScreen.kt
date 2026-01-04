@@ -144,6 +144,10 @@ fun PostScreen(
     searchEnable: Boolean = true,
     negativeIcon: ImageVector = Icons.Default.Menu,
     onNegative: (() -> Unit)? = null,
+    onItemClick: (Int) -> Unit = {
+        loader.setViewIndex(it)
+        navController.navigate(route = AppRoute.PostView(postId = it))
+    }
 ) {
     val scope = rememberCoroutineScope()
     val uiState by loader.uiState.collectAsStateWithLifecycle()
@@ -193,11 +197,7 @@ fun PostScreen(
             onRefresh = { loader.refresh() },
             onLoadMore = { loader.loadMore() },
             onGloballyPositioned = { index, height -> itemHeights[index] = height },
-            onItemClick = {
-                Logger.d(TAG) { "onItemClick $it" }
-                loader.setViewIndex(it)
-                navController.navigate(route = AppRoute.PostView(postId = it))
-            }
+            onItemClick = onItemClick
         )
     }
 }
@@ -486,7 +486,7 @@ fun RefreshScrollToTopChecker(
  * 用于从View界面返回Post界面时，若查看项的索引发生变化时，将对应索引滚动到中央
  */
 @Composable
-private fun ReturnedIndexChecker(
+fun ReturnedIndexChecker(
     loader: PostDataLoader,
     lazyState: LazyStaggeredGridState,
     itemHeights: MutableIntIntMap,

@@ -33,12 +33,12 @@ object YandeParser : BaseParser() {
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         // pool.post 和 popular 没有第二页
-        if ((option.poolId >= 0 || option.popularOption != null) && option.page > firstPageIndex)
+        if ((option.poolId != null || option.popularOption != null) && option.page > firstPageIndex)
             return emptyList()
         val url = getPostUrl(option)
         val list: ArrayList<PostData> = ArrayList()
         val ratings = SettingsService.settings.websiteSettings.ratings
-        if (option.poolId >= 0) {
+        if (option.poolId != null) {
             client.get<YandePool>(url).posts?.let { posts ->
                 for (item in posts) {
                     val data = item.toPostData() ?: continue
@@ -167,11 +167,12 @@ object YandeParser : BaseParser() {
     }
 
     override fun getPostUrl(option: RequestOption): String {
-        if (option.poolId != -1) {
+        option.poolId?.let {
             // 图册
-            return "$baseUrl/pool/show.json?id=${option.poolId}"
+            return "$baseUrl/pool/show.json?id=${it}"
         }
         val builder = URLBuilder(baseUrl)
+        val tags = mutableSetOf<String>().apply { addAll(option.tags) }
         option.popularOption?.let { popularOption ->
             // 热门
             var date = popularOption.date
@@ -205,15 +206,14 @@ object YandeParser : BaseParser() {
 
                 else -> {
                     builder.path("post.json")
-                    option.addTag("order:score")
+                    tags.add("order:score")
                 }
             }
         } ?: let {
             // 普通
             builder.path("post.json")
         }
-        val tags = HashSet<String>().apply { addAll(option.tags) }
-        getRatingTag(option.ratingSet).let { if (it.isNotEmpty()) tags.add(it) }
+        getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it) }
         val tagStr = tags.joinToString("+")
         builder.encodedParameters.append("page", option.page.toString())
         builder.encodedParameters.append("limit", "40")
@@ -234,22 +234,6 @@ object YandeParser : BaseParser() {
 
     override fun getUserUrl(userId: Int): String {
         return "$baseUrl/user.json?id=$userId"
-    }
-
-    private fun getRatingTag(ratings: Int): String {
-        if ((ratings and supportRating) == supportRating)
-            return ""
-        val currentRating = (ratings and supportRating)
-        println("ratings: $ratings, support rating: $supportRating, current rating: $currentRating")
-        return when (currentRating) {
-            Rating.Safe.value -> "rating:s"
-            Rating.Questionable.value -> "rating:q"
-            Rating.Explicit.value -> "rating:e"
-            Rating.Safe.value or Rating.Questionable.value -> "-rating:e"
-            Rating.Safe.value or Rating.Explicit.value -> "-rating:q"
-            Rating.Questionable.value or Rating.Explicit.value -> "-rating:s"
-            else -> ""
-        }
     }
 
     private fun getRatingTag(ratings: List<Rating>): String {

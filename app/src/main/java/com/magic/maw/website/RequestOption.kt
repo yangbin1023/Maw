@@ -11,17 +11,13 @@ data class PopularOption(
 
 data class RequestOption(
     var page: Int = 1,
-    var poolId: Int = -1,
-    var ratings: Int = Rating.None.value,
+    var poolId: Int? = null,
+    var ratingFlag: Int = Rating.None.value,
+    val ratings: List<Rating> = emptyList(),
     var popularOption: PopularOption? = null,
-    val ratingSet: List<Rating> = emptyList(),
-    internal val tags: MutableSet<String> = mutableSetOf(),
+    val tags: Set<String> = emptySet(),
 ) {
-    fun addTag(tag: String) = apply { if (tag.isNotEmpty()) tags.add(tag) }
-
-    fun addTags(tags: Set<String>) = apply { for (item in tags) addTag(item) }
-
-    fun clearTags() = apply { tags.clear() }
-
-    fun hasTags(): Boolean = tags.isNotEmpty()
+    override fun toString(): String {
+        return "{page:$page,poolId:$poolId,ratingFlag:$ratingFlag,ratings:$ratings,popularOption:$popularOption,tags:$tags}"
+    }
 }

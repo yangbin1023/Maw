@@ -1,6 +1,5 @@
 package com.magic.maw.ui.popular
 
-import androidx.collection.mutableIntIntMapOf
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -8,8 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -54,6 +51,7 @@ import com.magic.maw.ui.main.AppRoute
 import com.magic.maw.ui.post.PostDefaults
 import com.magic.maw.ui.post.PostRefreshBody
 import com.magic.maw.ui.post.RefreshScrollToTopChecker
+import com.magic.maw.ui.post.ReturnedIndexChecker
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import com.magic.maw.website.parser.BaseParser
@@ -67,6 +65,7 @@ fun PopularScreen(
     modifier: Modifier = Modifier,
     viewModel: PopularViewModel2 = viewModel(),
     navController: NavController = rememberNavController(),
+    postIndex: Int? = null,
     onNegative: (() -> Unit)? = null,
 ) {
     val staggeredState = remember { mutableStateOf(false) }
@@ -78,6 +77,7 @@ fun PopularScreen(
         topBar = {
             PopularTopBar(
                 staggeredState = staggeredState,
+                scrollToTop = { viewModel.itemScrollToTop() },
                 onNegative = onNegative,
                 scrollBehavior = scrollBehavior,
             )
@@ -91,6 +91,7 @@ fun PopularScreen(
             viewModel = viewModel,
             navController = navController,
             staggeredState = staggeredState,
+            postIndex = postIndex
         )
     }
 }
@@ -152,20 +153,11 @@ private fun PopularBody(
     pagerState: PagerState = rememberPopularPagerState(),
     navController: NavController = rememberNavController(),
     staggeredState: MutableState<Boolean>? = null,
+    postIndex: Int? = null,
 ) {
-    val scope = rememberCoroutineScope()
-    val supportedPopularDateTypes = getSupportedPopularDateTypes()
-    val popularType by remember {
-        derivedStateOf {
-            try {
-                supportedPopularDateTypes[pagerState.currentPage]
-            } catch (_: okio.ArrayIndexOutOfBoundsException) {
-                scope.launch { pagerState.scrollToPage(0) }
-                supportedPopularDateTypes[0]
-            }
-        }
-    }
-    val currentDate by viewModel.getPopularDate(popularType).collectAsStateWithLifecycle()
+    val popularType = getCurrentPopularDateType(pagerState)
+    val currentData = viewModel.getItemData(popularType)
+    val currentDate by currentData.localDateFlow.collectAsStateWithLifecycle()
 
     LaunchedEffect(popularType) {
         viewModel.setCurrentPopularType(popularType)
@@ -180,42 +172,13 @@ private fun PopularBody(
                 state = pagerState,
                 beyondViewportPageCount = 1,
             ) { index ->
-                val popularType = try {
-                    supportedPopularDateTypes[index]
-                } catch (_: ArrayIndexOutOfBoundsException) {
-                    LaunchedEffect(Unit) {
-                        pagerState.scrollToPage(page = 0)
-                    }
-                    return@HorizontalPager
-                }
-                val loader = viewModel.getLoader(popularType)
-                Logger.d(TAG) { "popularOption: ${loader.popularOption}" }
-                val uiState by loader.uiState.collectAsStateWithLifecycle()
-                val lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState()
-                val itemHeights = remember { mutableIntIntMapOf() }
-
-                LaunchedEffect(staggeredState) {
-                    lazyState.scrollToItem(0, 0)
-                }
-
-                RefreshScrollToTopChecker(items = uiState.items) {
-                    lazyState.scrollToItem(0, 0)
-                }
-
-                PostRefreshBody(
-                    modifier = Modifier.fillMaxSize(),
-                    uiState = uiState,
-                    refreshState = rememberPullToRefreshState(),
-                    lazyState = lazyState,
+                PopularPagerItemBody(
+                    index = index,
+                    viewModel = viewModel,
+                    navController = navController,
+                    pagerState = pagerState,
                     staggeredState = staggeredState,
-                    onRefresh = { loader.refresh(true) },
-                    onLoadMore = { loader.loadMore() },
-                    onGloballyPositioned = { index, height -> itemHeights[index] = height },
-                    onItemClick = {
-                        Logger.d(TAG) { "onItemClick $it" }
-                        loader.setViewIndex(it)
-                        navController.navigate(route = AppRoute.PopularView(postId = it))
-                    }
+                    postIndex = postIndex
                 )
             }
         }
@@ -224,9 +187,64 @@ private fun PopularBody(
             modifier = Modifier.align(Alignment.BottomCenter),
             popularType = popularType,
             focusDate = currentDate,
-            onDateChanged = { viewModel.setPopularDate(popularType, date = it) }
+            onDateChanged = { currentData.setPopularDate(it) }
         )
     }
+}
+
+@Composable
+private fun PopularPagerItemBody(
+    index: Int,
+    viewModel: PopularViewModel2,
+    navController: NavController,
+    pagerState: PagerState,
+    staggeredState: MutableState<Boolean>? = null,
+    postIndex: Int? = null,
+) {
+    val supportedPopularDateTypes = getSupportedPopularDateTypes()
+    val popularType = try {
+        supportedPopularDateTypes[index]
+    } catch (_: ArrayIndexOutOfBoundsException) {
+        LaunchedEffect(Unit) {
+            pagerState.scrollToPage(page = 0)
+        }
+        return
+    }
+    val itemData = viewModel.getItemData(popularType)
+    val loader = itemData.loader
+
+    Logger.d(TAG) { "popularOption: ${loader.popularOption}" }
+    val uiState by loader.uiState.collectAsStateWithLifecycle()
+
+    if (index == pagerState.currentPage) {
+        ReturnedIndexChecker(
+            loader = loader,
+            lazyState = itemData.lazyState,
+            itemHeights = itemData.itemHeights,
+            postIndex = postIndex
+        )
+    }
+
+    RefreshScrollToTopChecker(items = uiState.items) {
+        Logger.d(TAG) { "RefreshScrollToTopChecker scroll to top!!" }
+        itemData.lazyState.scrollToItem(0, 0)
+    }
+
+    PostRefreshBody(
+        modifier = Modifier.fillMaxSize(),
+        uiState = uiState,
+        refreshState = rememberPullToRefreshState(),
+        lazyState = itemData.lazyState,
+        staggeredState = staggeredState,
+        onRefresh = { loader.refresh(true) },
+        onLoadMore = { loader.loadMore() },
+        onGloballyPositioned = { index, height -> itemData.itemHeights[index] = height },
+        onItemClick = {
+            Logger.d(TAG) { "onItemClick $it" }
+            loader.setViewIndex(it)
+            navController.navigate(route = AppRoute.PopularView(postId = it))
+        }
+    )
 }
 
 @Composable
@@ -243,4 +261,21 @@ fun getSupportedPopularDateTypes(): List<PopularType> {
         }
     }
     return types
+}
+
+@Composable
+fun getCurrentPopularDateType(pagerState: PagerState): PopularType {
+    val scope = rememberCoroutineScope()
+    val supportedPopularDateTypes = getSupportedPopularDateTypes()
+    val popularType by remember {
+        derivedStateOf {
+            try {
+                supportedPopularDateTypes[pagerState.currentPage]
+            } catch (_: okio.ArrayIndexOutOfBoundsException) {
+                scope.launch { pagerState.scrollToPage(0) }
+                supportedPopularDateTypes[0]
+            }
+        }
+    }
+    return popularType
 }

@@ -1,5 +1,8 @@
 package com.magic.maw.ui.popular
 
+import androidx.collection.MutableIntIntMap
+import androidx.collection.mutableIntIntMapOf
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.magic.maw.data.PopularType
@@ -13,6 +16,7 @@ import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -25,7 +29,7 @@ class PopularViewModel : ViewModel() {
     )
     val postViewModel2: PostViewModel2 by lazy {
         val requestOption = RequestOption(
-            ratings = configFlow.value.websiteConfig.rating,
+            ratingFlag = configFlow.value.websiteConfig.rating,
             popularOption = viewModelState.value
         )
         PostViewModel2(requestOption)
@@ -50,15 +54,28 @@ class PopularViewModel : ViewModel() {
     }
 }
 
+data class PopularItemData(
+    val loader: PostDataLoader,
+    private val _localDateFlow: MutableStateFlow<LocalDate> = MutableStateFlow(
+        LocalDate.now().minusDays(1)
+    ),
+    val localDateFlow: StateFlow<LocalDate> = _localDateFlow.asStateFlow(),
+    val lazyState: LazyStaggeredGridState = LazyStaggeredGridState(0, 0),
+    val itemHeights: MutableIntIntMap = mutableIntIntMapOf(),
+) {
+    fun setPopularDate(date: LocalDate) = synchronized(this) {
+        _localDateFlow.update { date }
+        loader.setPopularDate(date)
+    }
+}
+
 class PopularViewModel2 : ViewModel() {
     private var website: WebsiteOption = SettingsService.settings.website
     private var parser = BaseParser.get(website)
-    private val loaderMap: MutableMap<PopularType, PostDataLoader> = mutableMapOf()
-    private var localDateFlowMap: MutableMap<PopularType, MutableStateFlow<LocalDate>> =
-        mutableMapOf()
-    private var _currentLoader = MutableStateFlow(value = getLoader(type = PopularType.Day))
+    private val itemDataMap: MutableMap<PopularType, PopularItemData> = mutableMapOf()
+    private var _currentItemData = MutableStateFlow(value = getItemData(type = PopularType.Day))
 
-    val currentLoader = _currentLoader.asStateFlow()
+    val currentData = _currentItemData.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -66,9 +83,9 @@ class PopularViewModel2 : ViewModel() {
                 if (settingsState.website != website) {
                     website = settingsState.website
                     parser = BaseParser.get(website)
-                    loaderMap.clear()
-                    _currentLoader.update {
-                        getLoader(type = PopularType.Day)
+                    itemDataMap.clear()
+                    _currentItemData.update {
+                        getItemData(type = PopularType.Day)
                     }
                 }
             }
@@ -76,39 +93,36 @@ class PopularViewModel2 : ViewModel() {
     }
 
     fun setCurrentPopularType(type: PopularType) {
-        _currentLoader.update {
-            getLoader(type)
+        _currentItemData.update {
+            getItemData(type)
         }
     }
 
-    fun getLoader(type: PopularType): PostDataLoader {
+    fun getItemData(type: PopularType): PopularItemData {
         synchronized(this) {
-            return loaderMap[type] ?: let {
-                val loader = PostDataLoader(
-                    scope = viewModelScope,
-                    popularOption = PopularOption(
-                        type = type,
-                        date = LocalDate.now().minusDays(1)
+            return itemDataMap[type] ?: let {
+                val data = PopularItemData(
+                    loader = PostDataLoader(
+                        scope = viewModelScope,
+                        popularOption = PopularOption(
+                            type = type,
+                            date = LocalDate.now().minusDays(1)
+                        )
                     )
                 )
-                loaderMap[type] = loader
-                loader
+                itemDataMap[type] = data
+                data
             }
         }
     }
 
-    fun getPopularDate(type: PopularType): MutableStateFlow<LocalDate> = synchronized(this) {
-        localDateFlowMap[type] ?: MutableStateFlow(LocalDate.now().minusDays(1)).apply {
-            localDateFlowMap[type] = this
+    fun itemScrollToTop() {
+        synchronized(this) {
+            for ((_, v) in itemDataMap) {
+                viewModelScope.launch {
+                    v.lazyState.scrollToItem(0, 0)
+                }
+            }
         }
-    }
-
-    fun setPopularDate(type: PopularType, date: LocalDate) = synchronized(this) {
-        getPopularDate(type).update { date }
-        getLoader(type).setPopularOption(PopularOption(type = type, date = date))
-    }
-
-    fun getDefaultPopularDate(): LocalDate {
-        return LocalDate.now().minusDays(1)
     }
 }

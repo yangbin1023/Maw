@@ -228,6 +228,10 @@ fun NavGraphBuilder.poolGraph(
                 searchEnable = false,
                 negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNegative = { navController.popBackStack() },
+                onItemClick = {
+                    postLoader.setViewIndex(it)
+                    navController.navigate(route = AppRoute.PoolView(poolId = route.poolId, postId = it))
+                }
             )
         }
         composable<AppRoute.PoolView> { backStackEntry ->
@@ -262,6 +266,10 @@ fun NavGraphBuilder.popularGraph(
             val parentEntry = remember(backStackEntry) {
                 navController.getBackStackEntry<AppRoute.Popular>()
             }
+            val postIndex = backStackEntry.savedStateHandle.getLiveData<Int>(POST_INDEX).value
+            if (postIndex != null) {
+                backStackEntry.savedStateHandle.remove<String>(POST_INDEX)
+            }
             val viewModel: PopularViewModel2 = viewModel(parentEntry)
             Row(modifier = Modifier.fillMaxSize()) {
                 if (useNavRail()) {
@@ -270,6 +278,7 @@ fun NavGraphBuilder.popularGraph(
                 PopularScreen(
                     viewModel = viewModel,
                     navController = navController,
+                    postIndex = postIndex,
                     onNegative = onOpenDrawer
                 )
             }
@@ -281,9 +290,9 @@ fun NavGraphBuilder.popularGraph(
             }
             val viewModel: PopularViewModel2 = viewModel(parentEntry)
             val route = backStackEntry.toRoute<AppRoute.PopularView>()
-            val loader by viewModel.currentLoader.collectAsStateWithLifecycle()
+            val currentData by viewModel.currentData.collectAsStateWithLifecycle()
             ViewScreen(
-                loader = loader,
+                loader = currentData.loader,
                 navController = navController,
                 postIndex = route.postId,
                 route = route

@@ -30,8 +30,9 @@ typealias PostDataUiState = ListUiState<PostData>
 class PostDataLoader(
     initialList: PersistentList<PostData> = persistentListOf(),
     hasNoMore: Boolean = false,
-    poolId: Int = -1,
+    poolId: Int? = null,
     popularOption: PopularOption? = null,
+    tags: Set<String> = emptySet(),
     private val scope: CoroutineScope,
 ) : DataLoader<PostData> {
     private var _website: WebsiteOption = SettingsService.settings.website
@@ -63,13 +64,20 @@ class PostDataLoader(
     val tags: Set<String>
         get() = requestOption.tags
 
+    val poolId: Int?
+        get() = requestOption.poolId
+
     init {
         requestOption = RequestOption(
             page = parser.firstPageIndex,
             poolId = poolId,
             popularOption = popularOption,
-            ratingSet = SettingsService.settings.websiteSettings.ratings
+            ratings = SettingsService.settings.websiteSettings.ratings,
+            tags = tags,
         )
+        if (tags.isNotEmpty()) {
+            parser.tagManager.dealSearchTags(tags)
+        }
         for (item in initialList) {
             dataIdSet.add(item.id)
         }
@@ -83,11 +91,11 @@ class PostDataLoader(
                     parser = BaseParser.get(_website)
                     requestOption = RequestOption(
                         page = parser.firstPageIndex,
-                        ratingSet = settingsState.websiteSettings.ratings
+                        ratings = settingsState.websiteSettings.ratings
                     )
                     refresh(true)
-                } else if (requestOption.ratingSet.toSet() != settingsState.websiteSettings.ratings.toSet()) {
-                    requestOption = RequestOption(ratingSet = settingsState.websiteSettings.ratings)
+                } else if (requestOption.ratings.toSet() != settingsState.websiteSettings.ratings.toSet()) {
+                    requestOption = RequestOption(ratings = settingsState.websiteSettings.ratings)
                     refresh(true)
                 }
             }
@@ -95,13 +103,13 @@ class PostDataLoader(
     }
 
     override fun refresh(force: Boolean) {
-        Logger.d(TAG) { "refresh called. force: $force, popularOption: $popularOption" }
+        Logger.d(TAG) { "refresh called. force: $force, popularOption: $popularOption, tags: ${requestOption.tags}" }
         if (uiState.value.loadState == LoadState.Refreshing) return
         _uiState.update { it.copy(loadState = LoadState.Refreshing) }
         launch {
             try {
                 val newOption = requestOption.copy(page = parser.firstPageIndex)
-                Logger.d(TAG) { "ratings: ${newOption.ratingSet}" }
+                Logger.d(TAG) { "ratings: ${newOption.ratings}, tags: ${newOption.tags}" }
                 val list = parser.requestPostData(newOption)
                 if (force) {
                     replaceAllData(list)
@@ -144,8 +152,7 @@ class PostDataLoader(
     override fun search(text: String): Any = with(parser) {
         val tags = parseSearchText(text)
         if (tags.isNotEmpty() && tags != requestOption.tags) {
-            requestOption.clearTags()
-            requestOption.tags.addAll(tags)
+            requestOption = requestOption.copy(tags = tags)
             tagManager.dealSearchTags(tags)
             Logger.d(TAG) { "PostScreen start search tags: $tags" }
             refresh(true)
@@ -158,11 +165,6 @@ class PostDataLoader(
 
     fun resetViewIndex() {
         _viewIndex.update { null }
-    }
-
-    fun setPopularOption(option: PopularOption?) = launch {
-        requestOption = requestOption.copy(popularOption = option)
-        refresh(true)
     }
 
     fun setPopularDate(localDate: LocalDate) = launch {

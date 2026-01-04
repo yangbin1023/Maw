@@ -40,7 +40,7 @@ class PoolDataLoader(val scope: CoroutineScope) : DataLoader<PoolData> {
     init {
         requestOption = RequestOption(
             page = parser.firstPageIndex,
-            ratingSet = SettingsService.settings.websiteSettings.ratings
+            ratings = SettingsService.settings.websiteSettings.ratings
         )
         refresh()
         scope.launch {
@@ -50,11 +50,11 @@ class PoolDataLoader(val scope: CoroutineScope) : DataLoader<PoolData> {
                     parser = BaseParser.get(_website)
                     requestOption = RequestOption(
                         page = parser.firstPageIndex,
-                        ratingSet = settingsState.websiteSettings.ratings
+                        ratings = settingsState.websiteSettings.ratings
                     )
                     refresh(true)
-                } else if (requestOption.ratingSet.toSet() != settingsState.websiteSettings.ratings.toSet()) {
-                    requestOption = RequestOption(ratingSet = settingsState.websiteSettings.ratings)
+                } else if (requestOption.ratings.toSet() != settingsState.websiteSettings.ratings.toSet()) {
+                    requestOption = RequestOption(ratings = settingsState.websiteSettings.ratings)
                     refresh(true)
                 }
             }
@@ -68,7 +68,7 @@ class PoolDataLoader(val scope: CoroutineScope) : DataLoader<PoolData> {
         launch {
             try {
                 val newOption = requestOption.copy(page = parser.firstPageIndex)
-                Logger.d(TAG) { "ratings: ${newOption.ratingSet}" }
+                Logger.d(TAG) { "ratings: ${newOption.ratings}" }
                 val list = parser.requestPoolData(newOption)
                 if (force) {
                     replaceAllData(list)

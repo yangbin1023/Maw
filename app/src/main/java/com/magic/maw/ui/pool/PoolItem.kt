@@ -125,7 +125,7 @@ private fun ItemImageView(modifier: Modifier = Modifier, poolData: PoolData) {
                     val option = RequestOption(
                         page = parser.firstPageIndex,
                         poolId = poolData.id,
-                        ratingSet = SettingsService.settings.websiteSettings.ratings
+                        ratings = SettingsService.settings.websiteSettings.ratings
                     )
                     parser.requestPostData(option)
                 } catch (_: Exception) {

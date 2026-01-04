@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
 import com.magic.maw.data.PostData
+import com.magic.maw.data.SettingsService
 import com.magic.maw.data.loader.PostDataLoader
 import com.magic.maw.util.configFlow
 import com.magic.maw.website.PopularOption
@@ -137,7 +138,7 @@ class PostViewModel2(
 
     init {
         requestOption.page = getParser().firstPageIndex
-        requestOption.ratings = configFlow.value.websiteConfig.rating
+        requestOption.ratingFlag = configFlow.value.websiteConfig.rating
         if (dataList.isEmpty()) {
             refresh(true)
         }
@@ -172,7 +173,7 @@ class PostViewModel2(
             try {
                 val option = viewModelState.value.requestOption
                 val parser = getParser()
-                option.ratings = configFlow.value.websiteConfig.rating
+                option.ratingFlag = configFlow.value.websiteConfig.rating
                 val list = parser.requestPostData(option.copy(page = parser.firstPageIndex))
                 viewModelState.update {
                     if (force) {
@@ -218,8 +219,7 @@ class PostViewModel2(
     fun search(text: String) = with(getParser()) {
         val list = parseSearchText(text)
         if (list.isNotEmpty() && list != viewModelState.value.requestOption.tags.toList()) {
-            viewModelState.value.requestOption.clearTags()
-            viewModelState.value.requestOption.addTags(list)
+            viewModelState.update { it.copy(requestOption = it.requestOption.copy(tags = list)) }
             tagManager.dealSearchTags(list)
             refresh(true)
         }
@@ -227,7 +227,9 @@ class PostViewModel2(
 
     fun clearTags(): Boolean {
         val notEmpty = viewModelState.value.requestOption.tags.isNotEmpty()
-        viewModelState.value.requestOption.clearTags()
+        if (notEmpty) {
+            viewModelState.update { it.copy(requestOption = it.requestOption.copy(tags = emptySet())) }
+        }
         return notEmpty
     }
 
@@ -257,7 +259,7 @@ class PostViewModel2(
     }
 
     private fun checkForceRefresh(): Boolean {
-        return configFlow.value.websiteConfig.rating != viewModelState.value.requestOption.ratings
+        return configFlow.value.websiteConfig.rating != viewModelState.value.requestOption.ratingFlag
     }
 
     companion object {
@@ -277,12 +279,16 @@ class PostViewModel(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val searchQuery = savedStateHandle.get<String>("searchQuery")
-    val loader = PostDataLoader(scope = viewModelScope)
+    val loader: PostDataLoader
 
     init {
         if (!searchQuery.isNullOrEmpty()) {
-            Logger.d(TAG) { "PostScreen searchQuery: $searchQuery" }
-            loader.search(searchQuery)
+            val parser = BaseParser.get(SettingsService.settings.website)
+            val tags = parser.parseSearchText(searchQuery)
+            Logger.d(TAG) { "PostScreen searchQuery: $searchQuery, tags: $tags" }
+            loader = PostDataLoader(scope = viewModelScope, tags = tags)
+        } else {
+            loader = PostDataLoader(scope = viewModelScope)
         }
     }
 }

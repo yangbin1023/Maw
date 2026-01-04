@@ -1,6 +1,8 @@
 package com.magic.maw.website.parser
 
 import co.touchlab.kermit.Logger
+import com.hjq.toast.Toaster
+import com.magic.maw.MyApp
 import com.magic.maw.data.PoolData
 import com.magic.maw.data.PopularType
 import com.magic.maw.data.PostData
@@ -15,10 +17,15 @@ import com.magic.maw.data.danbooru.DanbooruUser
 import com.magic.maw.util.TimeUtils
 import com.magic.maw.util.client
 import com.magic.maw.util.get
+import com.magic.maw.util.isHtml
 import com.magic.maw.util.json
 import com.magic.maw.website.RequestOption
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -42,11 +49,25 @@ object DanbooruParser : BaseParser() {
 
     override suspend fun requestPostData(option: RequestOption): List<PostData> {
         val url = getPostUrl(option)
-        val resultStr:String = client.get(url)
+        val resultStr: String = client.get(url)
         val danbooruList: List<DanbooruData> = try {
             json.decodeFromString(resultStr)
         } catch (e: Exception) {
             Logger.e(TAG) { "request failed, url: $url, resultStr: \n$resultStr" }
+            if (resultStr.isHtml()) {
+                try {
+                    val logDir = MyApp.app.getExternalFilesDir("log")
+                    val fileName = TimeUtils.getCurrentTimeStr(TimeUtils.FORMAT_3) + ".log"
+                    withContext(Dispatchers.IO) {
+                        val fWriter = FileWriter(File(logDir, fileName))
+                        fWriter.write(resultStr)
+                        fWriter.close()
+                    }
+                    Toaster.show("写入日志：$fileName")
+                } catch (e: Exception) {
+                    Logger.e(TAG) { """write log failed: ${e.message}""" }
+                }
+            }
             throw e
         }
         val list = ArrayList<PostData>()
@@ -155,6 +176,7 @@ object DanbooruParser : BaseParser() {
 
     override fun getPostUrl(option: RequestOption): String {
         val builder = URLBuilder(baseUrl)
+        val tags = ArrayList<String>()
         option.popularOption?.let {
             val dateStr = it.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
             val scale = when (it.type) {
@@ -166,7 +188,7 @@ object DanbooruParser : BaseParser() {
             }
             if (scale.isEmpty()) {
                 builder.path("posts.json")
-                option.tags.add("order:rank")
+                tags.add("order:rank")
             } else {
                 builder.path("explore/posts/popular.json")
                 builder.encodedParameters.apply {
@@ -177,23 +199,22 @@ object DanbooruParser : BaseParser() {
         } ?: let {
             builder.path("posts.json")
         }
-        val tags = ArrayList<String>()
         for (item in option.tags) {
             val tag = if (item.startsWith("-")) item.substring(1).decode() else item.decode()
             if (tag.startsWith("rating:") or tag.startsWith("pool:"))
                 continue
             tags.add(item.encode())
         }
-        getRatingTag(option.ratingSet).let { if (it.isNotEmpty()) tags.add(it.encode()) }
-        if (option.poolId >= 0) {
-            tags.add("pool:${option.poolId}".encode())
+        getRatingTag(option.ratings).let { if (it.isNotEmpty()) tags.add(it.encode()) }
+        option.poolId?.let {
+            tags.add("pool:${it}".encode())
         }
         builder.encodedParameters.apply {
             append("page", option.page.toString())
             append("limit", "40")
             append("tags", tags.joinToString("+"))
         }
-        return builder.build().toString().apply { Logger.d(TAG) { "post url: $this" } }
+        return builder.build().toString().apply { Logger.d(TAG) { "post url: $this, tags: $tags, option: ${option.tags}" } }
     }
 
     override fun getPoolUrl(option: RequestOption): String {
