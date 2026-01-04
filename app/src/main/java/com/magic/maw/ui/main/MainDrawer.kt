@@ -173,7 +173,7 @@ private fun <T : Any> NavController.navigateAndCloseDrawer(
     closeDrawer: () -> Unit,
     builder: NavOptionsBuilder.() -> Unit = {}
 ) {
-    if (currentBackStackEntry?.currentRoute?.rootRoute != route) {
+    if (currentBackStackEntry?.appRoute?.rootRoute != route) {
         navigate(route, builder)
         closeDrawer()
     }

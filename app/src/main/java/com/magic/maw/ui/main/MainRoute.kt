@@ -15,7 +15,6 @@ import co.touchlab.kermit.Logger
 import kotlinx.serialization.Serializable
 
 const val POST_INDEX = "postIndex"
-const val POOL_INDEX = "poolIndex"
 
 @Serializable
 sealed class AppRoute {
@@ -74,7 +73,8 @@ val AppRoute.rootRoute: AppRoute
 
 val AppRoute.isRootRoute: Boolean
     get() = when (this) {
-        is AppRoute.Post, is AppRoute.PostList,
+        is AppRoute.Post -> searchQuery.isNullOrEmpty()
+        is AppRoute.PostList -> searchQuery.isNullOrEmpty()
         AppRoute.Pool, AppRoute.PoolList,
         AppRoute.Popular, AppRoute.PopularList,
         AppRoute.Favorite -> true
@@ -88,13 +88,13 @@ val NavController.topRoute: AppRoute
         val backStackEntry by this.currentBackStackEntryAsState()
         val route by remember {
             derivedStateOf {
-                backStackEntry?.currentRoute?.rootRoute ?: AppRoute.Post()
+                backStackEntry?.appRoute?.rootRoute ?: AppRoute.Post()
             }
         }
         return route
     }
 
-val NavBackStackEntry.currentRoute: AppRoute
+val NavBackStackEntry.appRoute: AppRoute
     get() {
         arguments?.let { arguments ->
             val intent: Intent? =

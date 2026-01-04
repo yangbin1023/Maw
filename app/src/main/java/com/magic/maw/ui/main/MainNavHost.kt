@@ -1,5 +1,11 @@
 package com.magic.maw.ui.main
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -69,7 +76,11 @@ fun MainNavHost(
     NavHost(
         modifier = modifier,
         navController = navController,
-        startDestination = startDestination
+        startDestination = startDestination,
+        enterTransition = defaultEnter,
+        exitTransition = defaultExit,
+        popEnterTransition = defaultPopEnter,
+        popExitTransition = defaultPopExit,
     ) {
         Logger.d(TAG) { "MainNavHost item recompose" }
 
@@ -118,7 +129,7 @@ fun MainNavHost(
                 onSuccess = { text ->
                     VerifyRequester.onVerifyResult(VerifyResult.Success(route.url, text))
                     scope.launch {
-                        if (navController.currentBackStackEntry?.currentRoute is AppRoute.Verify) {
+                        if (navController.currentBackStackEntry?.appRoute is AppRoute.Verify) {
                             navController.popBackStack()
                         }
                     }
@@ -126,7 +137,7 @@ fun MainNavHost(
                 onCancel = {
                     VerifyRequester.onVerifyResult(VerifyResult.Failure(route.url))
                     scope.launch {
-                        if (navController.currentBackStackEntry?.currentRoute is AppRoute.Verify) {
+                        if (navController.currentBackStackEntry?.appRoute is AppRoute.Verify) {
                             navController.popBackStack()
                         }
                     }
@@ -298,6 +309,55 @@ fun NavGraphBuilder.popularGraph(
                 route = route
             )
         }
+    }
+}
+
+private const val AnimatedDurationMillis = 500
+
+private val AnimatedContentTransitionScope<NavBackStackEntry>.isRootRouteTransition: Boolean
+    get() = targetState.appRoute.isRootRoute && initialState.appRoute.isRootRoute
+
+private val defaultEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+    if (isRootRouteTransition) {
+        fadeIn(animationSpec = tween(0))
+    } else {
+        slideIntoContainer(
+            towards = AnimatedContentTransitionScope.SlideDirection.Left,
+            animationSpec = tween(AnimatedDurationMillis)
+        )
+    }
+}
+
+private val defaultExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+    if (isRootRouteTransition) {
+        fadeOut(animationSpec = tween(0))
+    } else {
+        slideOutOfContainer(
+            towards = AnimatedContentTransitionScope.SlideDirection.Left,
+            animationSpec = tween(AnimatedDurationMillis)
+        )
+    }
+}
+
+private val defaultPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+    if (isRootRouteTransition) {
+        fadeIn(animationSpec = tween(0))
+    } else {
+        slideIntoContainer(
+            towards = AnimatedContentTransitionScope.SlideDirection.Right,
+            animationSpec = tween(AnimatedDurationMillis)
+        )
+    }
+}
+
+private val defaultPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+    if (isRootRouteTransition) {
+        fadeOut(animationSpec = tween(0))
+    } else {
+        slideOutOfContainer(
+            towards = AnimatedContentTransitionScope.SlideDirection.Right,
+            animationSpec = tween(AnimatedDurationMillis)
+        )
     }
 }
 

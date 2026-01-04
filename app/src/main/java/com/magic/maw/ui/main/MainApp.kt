@@ -86,13 +86,7 @@ private fun isDrawerGesturesEnabled(navController: NavController): Boolean {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val enabled by remember {
         derivedStateOf {
-            backStackEntry?.currentRoute?.let {
-                if (it is AppRoute.Post) {
-                    it.searchQuery.isNullOrEmpty()
-                } else {
-                    it.isRootRoute
-                }
-            } ?: true
+            backStackEntry?.appRoute?.isRootRoute ?: true
         }
     }
     return enabled

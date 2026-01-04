@@ -1,6 +1,7 @@
 package com.magic.maw.ui.main
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
@@ -8,6 +9,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationRail
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
 import co.touchlab.kermit.Logger
@@ -30,7 +32,8 @@ fun MainNavRail(
                 imageVector = Icons.Default.Menu,
                 contentDescription = "",
             )
-        }
+        },
+        windowInsets = WindowInsets(top = 32.dp)
     ) {
         Logger.d(TAG) { "MainNavRail item recompose" }
         RailItem(
@@ -76,7 +79,7 @@ private fun <T : Any> NavController.navigateTo(
     route: T,
     builder: NavOptionsBuilder.() -> Unit = {}
 ) {
-    if (currentBackStackEntry?.currentRoute?.rootRoute != route) {
+    if (currentBackStackEntry?.appRoute?.rootRoute != route) {
         navigate(route) {
             builder()
             launchSingleTop = true
