@@ -20,6 +20,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -31,8 +33,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.data.PostData
+import com.magic.maw.data.SettingsService
+import com.magic.maw.ui.components.UgoiraPlayer
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.util.DisableHapticLocalProvider
 import com.magic.maw.util.imageLoader
@@ -46,6 +51,8 @@ import me.saket.telephoto.zoomable.rememberZoomableImageState
 import me.saket.telephoto.zoomable.rememberZoomableState
 import java.io.File
 import kotlin.math.abs
+
+private const val TAG = "ViewContent"
 
 @Composable
 fun ViewContent(
@@ -94,11 +101,13 @@ private fun ViewScreenItem(
     val progress = remember { mutableFloatStateOf(0f) }
     val model = remember { mutableStateOf<Any?>(null) }
     var retryCount by remember { mutableIntStateOf(0) }
+    val info = data.getInfo(quality) ?: data.originalInfo
     LaunchedEffect(data, quality, retryCount) {
         type.value = LoadType.Waiting
         withContext(Dispatchers.IO) {
             loadDLFile(data, quality)
         }.collect {
+            Logger.d(TAG) { "load status: $it" }
             // 下载失败后重试，若重试三次仍然失败则显示错误
             if (it == LoadStatus.Waiting) {
                 type.value = LoadType.Waiting
@@ -114,16 +123,13 @@ private fun ViewScreenItem(
                 type.value = LoadType.Loading
                 progress.floatValue = it.progress
             } else if (it is LoadStatus.Success) {
-                if (data.fileType.isVideo || data.fileType.isPicture) {
-                    type.value = LoadType.Success
-                    model.value = it.result
-                    return@collect
-                }
+                type.value = LoadType.Success
+                model.value = it.result
             }
         }
     }
     if (focusOn) {
-        playerState.isEnable.value = data.fileType.isVideo
+        playerState.isEnable.value = info.type.isVideo
         if (!playerState.isEnable.value && playerState.isPlaying.value) {
             playerState.togglePlayPause()
         }
@@ -134,7 +140,8 @@ private fun ViewScreenItem(
         LoadType.Loading -> LoadingView(progress = { progress.floatValue }, onTab = onTab)
         LoadType.Error -> ErrorPlaceHolder { retryCount++ }
         LoadType.Success -> {
-            if (data.fileType.isVideo) {
+            Logger.d(TAG) { "load success file type: ${info.type}" }
+            if (info.type.isVideo) {
                 if (!focusOn) return
                 val file = (model.value as? File) ?: return
                 VideoPlayerView(
@@ -142,7 +149,7 @@ private fun ViewScreenItem(
                     state = playerState,
                     onTab = onTab
                 )
-            } else if (data.fileType.isPicture) {
+            } else if (info.type.isPicture) {
                 val zoomableState = rememberZoomableState()
                 val state = rememberZoomableImageState(zoomableState)
                 LaunchedEffect(focusOn) { if (!focusOn) zoomableState.resetZoom() }
@@ -157,10 +164,22 @@ private fun ViewScreenItem(
                         onClick = { onTab() }
                     )
                 }
+            } else if (info.type.isUgoira) {
+                val file = (model.value as? File) ?: return
+                val settingsState by SettingsService.settingsState.collectAsState()
+                val frameRate by remember {
+                    derivedStateOf {
+                        settingsState.websiteSettings.ugoiraFrameRate
+                    }
+                }
+                UgoiraPlayer(
+                    zipFile = file,
+                    frameRate = frameRate
+                )
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Text(
-                        text = stringResource(R.string.unknown) + " " + stringResource(R.string.file_type) + " " + data.fileType.name,
+                        text = stringResource(R.string.unknown) + " " + stringResource(R.string.file_type) + " " + info.type.name,
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }

@@ -89,7 +89,12 @@ class DanbooruData {
 
         fun toInfo(): PostData.Info? {
             if (valid()) {
-                return PostData.Info(width!!, height!!, url = url!!)
+                return PostData.Info(
+                    width = width!!,
+                    height = height!!,
+                    url = url!!,
+                    type = fileExtToFileType(file_ext) ?: FileType.Jpeg
+                )
             }
             return null
         }
@@ -161,14 +166,7 @@ class DanbooruData {
             tagList.sort()
             data.tags = tagList
         }
-        when (file_ext) {
-            "png" -> data.fileType = FileType.Png
-            "gif" -> data.fileType = FileType.Gif
-            "mp4" -> data.fileType = FileType.Mp4
-            "webm" -> data.fileType = FileType.Webm
-            "swf" -> data.fileType = FileType.Swf
-            "zip" -> data.fileType = FileType.Ugoira
-        }
+        data.fileType = fileExtToFileType(file_ext) ?: FileType.Jpeg
         var variant180: Variant? = null
         var variant360: Variant? = null
         var variant720: Variant? = null
@@ -206,5 +204,19 @@ class DanbooruData {
             }
         }
         return null
+    }
+
+    companion object {
+        fun fileExtToFileType(file_ext: String?): FileType? {
+            return when (file_ext) {
+                "png" -> FileType.Png
+                "gif" -> FileType.Gif
+                "mp4" -> FileType.Mp4
+                "webm" -> FileType.Webm
+                "swf" -> FileType.Swf
+                "zip" -> FileType.Ugoira
+                else -> null
+            }
+        }
     }
 }

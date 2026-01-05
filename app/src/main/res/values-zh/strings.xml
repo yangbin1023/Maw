@@ -62,4 +62,5 @@
     <string name="mute">静音</string>
     <string name="video_speedup">视频加速倍率</string>
     <string name="favorite">收藏</string>
+    <string name="ugoira_default_frame_rate">Ugoira默认帧率</string>
 </resources>

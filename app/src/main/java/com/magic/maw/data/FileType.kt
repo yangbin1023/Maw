@@ -19,6 +19,9 @@ enum class FileType(val value: Int) {
     val isText: Boolean
         get() = false
 
+    val isUgoira: Boolean
+        get() = this == Ugoira
+
     fun getPrefixName(): String {
         return when (this) {
             Jpeg -> "jpg"

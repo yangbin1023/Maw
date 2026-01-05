@@ -113,6 +113,7 @@ private fun SettingsScreenContent(
             RatingsSettingItem(viewModel = viewModel)
             ShowQualitySettingItem(viewModel = viewModel)
             SaveQualitySettingItem(viewModel = viewModel)
+            UgoiraPlayerFrameRateSettingItem(viewModel = viewModel)
 
             SettingsGroupTitle(text = stringResource(R.string.video))
             VideoAutoPlaySettingItem(viewModel = viewModel)
@@ -252,6 +253,34 @@ private fun SaveQualitySettingItem(
             }
         )
     }
+}
+
+@Composable
+private fun UgoiraPlayerFrameRateSettingItem(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = settingsViewModel()
+) {
+    val settingsState by viewModel.settingsState.collectAsState()
+    if (settingsState.website != WebsiteOption.Danbooru)
+        return
+
+    val ugoiraFrameRate by remember {
+        derivedStateOf {
+            settingsState.websiteSettings.ugoiraFrameRate
+        }
+    }
+    val ugoiraFrameRateList = listOf(5, 10, 15, 20, 25, 30)
+    MenuSettingItem(
+        modifier = modifier,
+        title = stringResource(R.string.ugoira_default_frame_rate),
+        options = ugoiraFrameRateList,
+        selectOption = ugoiraFrameRate,
+        onOptionSelected = { frameRate ->
+            viewModel.updateWebSettings {
+                copy(ugoiraFrameRate = frameRate)
+            }
+        }
+    )
 }
 
 @Composable

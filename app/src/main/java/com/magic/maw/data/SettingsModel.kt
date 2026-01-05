@@ -10,7 +10,8 @@ data class WebsiteSettings(
     val ratings: List<Rating> = listOf(Rating.Safe),
     val showQuality: Quality = Quality.Sample,
     val saveQuality: Quality = Quality.File,
-    val showSaveDialog: Boolean = true
+    val showSaveDialog: Boolean = true,
+    val ugoiraFrameRate: Int = 30
 )
 
 /**
