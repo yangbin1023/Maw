@@ -2,6 +2,7 @@ package com.magic.maw.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -52,7 +53,8 @@ fun SettingItem(
     showIcon: Boolean = true,
     imageVector: ImageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
     onClickWidthThrottle: Boolean = true,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onLongClick: (() -> Unit)? = null
 ) {
     val paddingModifier = if (modifier == Modifier) Modifier.itemPadding() else modifier
     val semantics = if (contentDescription != null) {
@@ -66,7 +68,7 @@ fun SettingItem(
     val targetOnClick = if (onClickWidthThrottle) throttle(func = onClick) else onClick
     Row(
         modifier = Modifier
-            .clickable(enabled = enable, onClick = targetOnClick)
+            .combinedClickable(enabled = enable, onClick = targetOnClick, onLongClick = onLongClick)
             .fillMaxWidth()
             .defaultMinSize(minHeight = SettingItemDefaults.defaultMinHeight)
             .then(paddingModifier)
@@ -138,10 +140,9 @@ fun DialogSettingItem(
         contentDescription = contentDescription,
         enable = enable,
         showIcon = showIcon,
-        imageVector = imageVector
-    ) {
-        showDialog = true
-    }
+        imageVector = imageVector,
+        onClick = { showDialog = true }
+    )
     val onDismiss = {
         showDialog = false
     }

@@ -17,6 +17,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.runtime.Composable
@@ -69,6 +71,7 @@ fun ViewScreen(
     val offsetValue = if (showTopBar) topBarMaxHeight else 0.dp
     val onTap: () -> Unit = { showTopBar = !showTopBar }
     val playerState = remember { VideoPlayerState(context = context) }
+    val snackbarHostState = remember { SnackbarHostState() }
     val topAppBarOffset by animateDpAsState(
         targetValue = offsetValue - topBarMaxHeight,
         label = "showTopAppBar"
@@ -121,8 +124,14 @@ fun ViewScreen(
             postData = postData,
             isScrollInProgress = pagerState.isScrollInProgress,
             playerState = playerState,
+            hostState = snackbarHostState,
             maxDraggableHeight = draggableHeight,
             onTagClick = onTagClick
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 }
@@ -139,6 +148,7 @@ fun ViewScreen(
     val pagerState = rememberPagerState(initialPage = postIndex) { uiState.items.size }
     val context = LocalContext.current
     val playerState = remember { VideoPlayerState(context = context) }
+    val snackbarHostState = remember { SnackbarHostState() }
     val onExit: () -> Unit = {
         navController.previousBackStackEntry
             ?.savedStateHandle
@@ -201,6 +211,7 @@ fun ViewScreen(
             postData = postData,
             isScrollInProgress = pagerState.isScrollInProgress,
             playerState = playerState,
+            hostState = snackbarHostState,
             maxDraggableHeight = draggableHeight,
             onTagClick = { navController.navigate(route = AppRoute.PostSearch(text = it.name)) },
             onSearchTag = {
@@ -210,6 +221,11 @@ fun ViewScreen(
                     }
                 }
             }
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 

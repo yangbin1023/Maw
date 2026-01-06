@@ -3,30 +3,29 @@ package com.magic.maw.ui.components
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.os.Build
-import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.collection.LruCache
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.viewinterop.AndroidView
 import co.touchlab.kermit.Logger
 import com.magic.maw.data.UgoiraAnimationInfo
 import com.magic.maw.util.json
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -35,12 +34,12 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeFromStream
 import java.io.File
-import java.nio.ByteBuffer
+import java.lang.ref.SoftReference
+import java.util.Collections
 import java.util.zip.ZipEntry
 import java.util.zip.ZipException
 import java.util.zip.ZipFile
 import kotlin.coroutines.coroutineContext
-import kotlin.math.min
 
 private const val TAG = "UgoiraPlayer"
 
@@ -48,15 +47,20 @@ private const val TAG = "UgoiraPlayer"
 fun UgoiraPlayer(
     modifier: Modifier = Modifier,
     zipFile: File,
-    frameRate: Int = 30
+    frameRate: Int = 30,
+    onTab: () -> Unit = {}
 ) {
-    val density = LocalDensity.current
-
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val boxSize = with(density) {
-            Size(maxWidth.toPx(), maxHeight.toPx())
-        }
-        var itemModifier by remember { mutableStateOf(Modifier.fillMaxSize()) }
+    val scope = rememberCoroutineScope()
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = throttle(func = onTab)
+            )
+    ) {
+        var ugoiraSize by remember { mutableStateOf<Size?>(null) }
         AndroidView(
             factory = { context ->
                 SurfaceView(context).apply {
@@ -64,28 +68,16 @@ fun UgoiraPlayer(
                         private var playbackJob: Job? = null
 
                         override fun surfaceCreated(holder: SurfaceHolder) {
-                            playbackJob = CoroutineScope(Dispatchers.IO).launch {
-
-                                val ugoiraSize = getUgoiraSize(zipFile) ?: return@launch
-                                val scale = min(
-                                    boxSize.width / ugoiraSize.width,
-                                    boxSize.height / ugoiraSize.height
-                                )
-                                val targetSize =
-                                    Size(ugoiraSize.width * scale, ugoiraSize.height * scale)
-                                Log.d(
-                                    TAG,
-                                    "boxSize: $boxSize, ugoiraSize: $ugoiraSize, targetSize: $targetSize, scale: $scale"
-                                )
-
-                                val widthDp = with(density) { targetSize.width.toDp() }
-                                val heightDp = with(density) { targetSize.height.toDp() }
-                                itemModifier = Modifier
-                                    .width(widthDp)
-                                    .height(heightDp)
-                                    .align(Alignment.Center)
-
-                                renderLoop(holder, zipFile, frameRate)
+                            playbackJob = scope.launch(Dispatchers.IO) {
+                                val size = getUgoiraSize(zipFile) ?: return@launch
+                                ugoiraSize = size
+                                try {
+                                    renderLoop(holder, zipFile, frameRate, size)
+                                } catch (e: ZipException) {
+                                    Logger.e(TAG) { "zip file exception: ${e.message}" }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
                             }
                         }
 
@@ -103,68 +95,80 @@ fun UgoiraPlayer(
                     })
                 }
             },
-            modifier = itemModifier
+            modifier = Modifier
+                .ugoiraPlayerSize(ugoiraSize)
+                .align(Alignment.Center)
         )
     }
 }
 
-@OptIn(ExperimentalSerializationApi::class)
-private suspend fun renderLoop(holder: SurfaceHolder, zipFile: File, frameRate: Int) {
-    val zip = ZipFile(zipFile)
-    var entries = zip.entries().asSequence()
-        .filter { it.name.endsWith(".jpg") || it.name.endsWith(".png") }
-        .sortedBy { it.name }
-        .toList()
+private data class Frame(val entry: ZipEntry, val delay: Long)
 
-    val delayMap = mutableMapOf<String, Long>()
-    zip.entries().asSequence().find { it.name == "animation.json" }?.let { entry ->
-        zip.getInputStream(entry).use { stream ->
-            try {
-                json.decodeFromStream<UgoiraAnimationInfo>(stream).apply {
-                    val list = mutableListOf<ZipEntry>()
-                    for (item in frames) {
-                        val entry = zip.entries().asSequence()
-                            .find { it.name == item.file } ?: continue
-                        delayMap[item.file] = item.delay.toLong()
-                        list.add(entry)
-                    }
-                    Logger.d(TAG) { "delayMap: $delayMap" }
-                    entries = list
+@OptIn(ExperimentalSerializationApi::class)
+private suspend fun renderLoop(holder: SurfaceHolder, zipFile: File, frameRate: Int, size: Size) {
+    val zip = ZipFile(zipFile)
+
+    val frames = mutableListOf<Frame>()
+
+    val ugoiraAnimationInfo: UgoiraAnimationInfo? = zip.entries().asSequence()
+        .find { it.name == "animation.json" }?.let { entry ->
+            zip.getInputStream(entry).use { stream ->
+                try {
+                    json.decodeFromStream<UgoiraAnimationInfo>(stream)
+                } catch (e: Exception) {
+                    Logger.e(TAG) { "decode to ugoira animation info failed: ${e.message}" }
+                    null
                 }
-            } catch (e: Exception) {
-                Logger.e(TAG) { "decode to ugoira animation info failed: ${e.message}" }
             }
         }
+
+    if (ugoiraAnimationInfo != null) {
+        for (item in ugoiraAnimationInfo.frames) {
+            val entry = zip.entries().asSequence().find { it.name == item.file } ?: continue
+            frames.add(Frame(entry, item.delay.toLong()))
+        }
+    } else {
+        val frameTime = 1000L / frameRate
+        val entries = zip.entries().asSequence()
+            .filter { it.name.endsWith(".jpg") || it.name.endsWith(".png") }
+            .sortedBy { it.name }
+            .toList()
+        for (entry in entries) {
+            frames.add(Frame(entry, frameTime))
+        }
+    }
+    if (frames.isEmpty()) {
+        return
     }
 
-    val frameTime = 1000L / frameRate
     val drawMatrix = Matrix()
-
-    // API 21 兼容性 BitmapFactory 选项
+    val reuseManager = BitmapReusabilityManager()
     val options = BitmapFactory.Options().apply {
         inMutable = true
         inPreferredConfig = Bitmap.Config.RGB_565 // 减少内存消耗
     }
-    var reusableBitmap: Bitmap? = null
 
     while (coroutineContext.isActive) {
-        for (entry in entries) {
+        for (frame in frames) {
             val startTime = System.currentTimeMillis()
 
             // 1. 获取位图 (根据版本选择解码器)
-            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                // API 28+ 使用 ImageDecoder (硬件辅助)
-                val bytes = zip.getInputStream(entry).use { it.readBytes() }
-                ImageDecoder.decodeBitmap(ImageDecoder.createSource(ByteBuffer.wrap(bytes))) { decoder, _, _ ->
-                    decoder.allocator = ImageDecoder.ALLOCATOR_HARDWARE
-                }
-            } else {
-                // API 21+ 使用 BitmapFactory (内存复用)
-                zip.getInputStream(entry).buffered().use { stream ->
-                    options.inBitmap = reusableBitmap
+            var bitmap = reuseManager.getFromCache(frame.entry.name)
+            if (bitmap == null) {
+                zip.getInputStream(frame.entry).buffered().use { stream ->
+                    // 核心：尝试寻找一个软引用池里的旧 Bitmap 进行复用
+                    // 注意：这里需要先通过 options.inJustDecodeBounds 获取宽高等信息，或者你有预知宽高
+                    options.inBitmap = reuseManager.getReusableBitmap(
+                        size.width.toInt(),
+                        size.height.toInt(),
+                        options.inPreferredConfig
+                    )
+
                     val decoded = BitmapFactory.decodeStream(stream, null, options)
-                    reusableBitmap = decoded
-                    decoded
+                    if (decoded != null) {
+                        reuseManager.putToCache(frame.entry.name, decoded)
+                        bitmap = decoded
+                    }
                 }
             }
 
@@ -198,8 +202,7 @@ private suspend fun renderLoop(holder: SurfaceHolder, zipFile: File, frameRate: 
             }
 
             val cost = System.currentTimeMillis() - startTime
-            val frameTime = delayMap[entry.name] ?: frameTime
-            delay((frameTime - cost).coerceAtLeast(0))
+            delay((frame.delay - cost).coerceAtLeast(0))
         }
     }
     zip.close()
@@ -210,6 +213,75 @@ private fun calculateScale(srcW: Int, srcH: Int, dstW: Int, dstH: Int): Float {
     val widthScale = dstW.toFloat() / srcW
     val heightScale = dstH.toFloat() / srcH
     return minOf(widthScale, heightScale)
+}
+
+private fun Modifier.ugoiraPlayerSize(size: Size?): Modifier = this.then(
+    if (size == null || size.width <= 0 || size.height <= 0) {
+        Modifier.fillMaxSize()
+    } else {
+        Modifier.aspectRatio(ratio = size.width / size.height, matchHeightConstraintsFirst = true)
+    }
+)
+
+class BitmapReusabilityManager(maxSize: Int = 20) {
+    // 1. 强引用缓存：存储最近使用的 Bitmap，防止被回收
+    private val memoryCache = object : LruCache<String, Bitmap>(maxSize) { // 缓存最近20帧
+        override fun entryRemoved(
+            evicted: Boolean,
+            key: String,
+            oldValue: Bitmap,
+            newValue: Bitmap?
+        ) {
+            // 当图片从 LruCache 移除时，放入软引用池，等待复用
+            softReferencePool.add(SoftReference(oldValue))
+        }
+    }
+
+    // 2. 软引用池：存储不再使用但尚未被 GC 的 Bitmap 内存块
+    private val softReferencePool: MutableSet<SoftReference<Bitmap>> =
+        Collections.synchronizedSet(HashSet<SoftReference<Bitmap>>())
+
+    /**
+     * 获取一个可以复用的位图（用于 BitmapFactory.Options.inBitmap）
+     */
+    fun getReusableBitmap(width: Int, height: Int, config: Bitmap.Config): Bitmap? {
+        val iterator = softReferencePool.iterator()
+        while (iterator.hasNext()) {
+            val bitmap = iterator.next().get()
+            if (bitmap != null && bitmap.isMutable) {
+                // 检查位图是否可以复用（尺寸需一致，或在 API 19+ 尺寸大于等于所需尺寸）
+                if (canUseForInBitmap(bitmap, width, height, config)) {
+                    iterator.remove()
+                    return bitmap
+                }
+            } else {
+                iterator.remove() // 清理已经失效的软引用
+            }
+        }
+        return null
+    }
+
+    private fun canUseForInBitmap(
+        candidate: Bitmap,
+        targetWidth: Int,
+        targetHeight: Int,
+        config: Bitmap.Config
+    ): Boolean {
+        // API 19+ 允许复用大于等于目标尺寸的 Bitmap
+        val byteCount = targetWidth * targetHeight * getBytesPerPixel(config)
+        return candidate.allocationByteCount >= byteCount
+    }
+
+    private fun getBytesPerPixel(config: Bitmap.Config): Int {
+        return when (config) {
+            Bitmap.Config.ARGB_8888 -> 4
+            Bitmap.Config.RGB_565 -> 2
+            else -> 4
+        }
+    }
+
+    fun getFromCache(key: String) = memoryCache.get(key)
+    fun putToCache(key: String, bitmap: Bitmap) = memoryCache.put(key, bitmap)
 }
 
 /**

@@ -13,7 +13,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
@@ -28,7 +27,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -37,8 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -54,7 +54,6 @@ import com.magic.maw.ui.components.ThumbSizeSlider
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.ui.theme.PreviewTheme
 import com.magic.maw.util.TimeUtils.formatTimeStr
-import com.magic.maw.util.configFlow
 import kotlinx.coroutines.delay
 
 private const val TAG = "VideoPlayer"
@@ -64,6 +63,8 @@ fun VideoPlayerView(
     modifier: Modifier = Modifier,
     state: VideoPlayerState,
     videoUri: Uri,
+    width: Int = 0,
+    height: Int = 0,
     onTab: () -> Unit = {},
 ) {
     LaunchedEffect(videoUri) {
@@ -101,7 +102,7 @@ fun VideoPlayerView(
                     }
                 },
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .videoViewSize(width, height)
                     .align(Alignment.Center)
                     .background(color = MaterialTheme.colorScheme.surface)
                     .pointerInput(Unit) {
@@ -195,6 +196,34 @@ fun VideoPlayerControllerBar(
         }
     }
 }
+
+fun Modifier.videoViewSize(
+    width: Int,
+    height: Int
+): Modifier = this.then(
+    if (width <= 0 || height <= 0) {
+        Modifier.fillMaxSize()
+    } else {
+        Modifier.layout { measurable, constraints ->
+            // 计算缩放比例 (等同于 ContentScale.Fit)
+            val scale = minOf(
+                constraints.maxWidth.toFloat() / width,
+                constraints.maxHeight.toFloat() / height
+            )
+
+            val finalWidth = (width * scale).toInt()
+            val finalHeight = (height * scale).toInt()
+
+            val placeable = measurable.measure(
+                Constraints.fixed(finalWidth, finalHeight)
+            )
+
+            layout(finalWidth, finalHeight) {
+                placeable.placeRelative(0, 0)
+            }
+        }
+    }
+)
 
 @Composable
 @Preview(heightDp = 360)

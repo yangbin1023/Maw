@@ -147,6 +147,8 @@ private fun ViewScreenItem(
                 VideoPlayerView(
                     videoUri = file.toUri(),
                     state = playerState,
+                    width = info.width,
+                    height = info.height,
                     onTab = onTab
                 )
             } else if (info.type.isPicture) {
@@ -174,7 +176,8 @@ private fun ViewScreenItem(
                 }
                 UgoiraPlayer(
                     zipFile = file,
-                    frameRate = frameRate
+                    frameRate = frameRate,
+                    onTab = onTab
                 )
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {

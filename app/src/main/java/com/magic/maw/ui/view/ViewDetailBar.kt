@@ -2,6 +2,7 @@ package com.magic.maw.ui.view
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,6 +51,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -103,6 +107,7 @@ fun ViewDetailBar(
     postData: PostData,
     isScrollInProgress: Boolean,
     playerState: VideoPlayerState,
+    hostState: SnackbarHostState,
     maxDraggableHeight: Dp,
     onTagClick: (TagInfo, Boolean) -> Unit
 ) {
@@ -187,6 +192,7 @@ fun ViewDetailBar(
             DetailContent(
                 modifier = Modifier.align(Alignment.TopCenter),
                 postData = currentPostData,
+                hostState = hostState,
                 qualityItems = qualityItems,
                 qualityList = qualityList,
                 onTagClick = onTagClick
@@ -207,6 +213,7 @@ fun ViewDetailBar(
     postData: PostData,
     isScrollInProgress: Boolean,
     playerState: VideoPlayerState,
+    hostState: SnackbarHostState,
     maxDraggableHeight: Dp,
     onTagClick: (TagInfo) -> Unit = {},
     onSearchTag: (TagInfo) -> Unit = {}
@@ -241,11 +248,12 @@ fun ViewDetailBar(
         val sizeStr = if (it.size > 0) " " + it.size.toSizeString() else ""
         qualityItems.add("$resolutionStr$sizeStr")
     }
+    val info = currentPostData.getInfo(currentPostData.quality) ?: currentPostData.originalInfo
 
-    LaunchedEffect(maxDraggableHeight, currentPostData.fileType) {
+    LaunchedEffect(maxDraggableHeight, info.type) {
         val changed = scrollableViewState.updateData(
             density = density,
-            showVideoControllerBar = currentPostData.fileType.isVideo,
+            showVideoControllerBar = info.type.isVideo,
             maxDraggableHeight = maxDraggableHeight
         )
         if (changed) {
@@ -292,6 +300,7 @@ fun ViewDetailBar(
             DetailContent(
                 modifier = Modifier.align(Alignment.TopCenter),
                 postData = currentPostData,
+                hostState = hostState,
                 qualityItems = qualityItems,
                 qualityList = qualityList,
                 onTagClick = { tagInfo, directSearch ->
@@ -407,6 +416,7 @@ private fun DetailBar(
 private fun DetailContent(
     modifier: Modifier = Modifier,
     postData: PostData,
+    hostState: SnackbarHostState,
     qualityList: List<Quality>,
     qualityItems: List<String>,
     onTagClick: (TagInfo, Boolean) -> Unit
@@ -444,15 +454,9 @@ private fun DetailContent(
         ContentHeader(stringResource(R.string.others))
 
         // Quality
-        var qualityIndex by remember { mutableIntStateOf(qualityList.indexOf(postData.quality)) }
-        val localDataState = remember { mutableStateOf(postData) }
-        if (localDataState.value != postData) {
-            qualityIndex = qualityList.indexOf(postData.quality)
-            if (qualityIndex < 0) {
-                qualityIndex = 0
-            } else if (qualityIndex >= qualityItems.size) {
-                qualityIndex = 0
-            }
+        var qualityIndex by remember(qualityList, postData) {
+            val value = qualityList.indexOf(postData.quality).coerceIn(0, qualityList.size)
+            mutableIntStateOf(value)
         }
         MenuSettingItem(
             title = stringResource(R.string.quality),
@@ -499,14 +503,24 @@ private fun DetailContent(
             showIcon = false
         )
         // source
-        val srcUrl = postData.srcUrl ?: ""
+        val srcUrl = getSourceUrl(postData.srcUrl)
         if (srcUrl.isNotEmpty()) {
+            val clipboard = LocalClipboard.current
+            val message = stringResource(R.string.copied_to_clipboard)
             SettingItem(
                 title = stringResource(R.string.source),
                 tips = srcUrl,
                 contentDescription = srcUrl,
                 showIcon = false,
-                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, srcUrl.toUri())) }
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, srcUrl.toUri())) },
+                onLongClick = {
+                    scope.launch {
+                        val clipData = ClipData.newPlainText("plain text", srcUrl)
+                        val clipEntry = ClipEntry(clipData)
+                        clipboard.setClipEntry(clipEntry)
+                        hostState.showSnackbar(message)
+                    }
+                }
             )
         }
         // score
@@ -616,6 +630,18 @@ private fun getOnSaveCallback(): (PostData, Quality) -> Unit {
                 }
             }
         }
+    }
+}
+
+private fun getSourceUrl(srcUrl: String?): String {
+    if (srcUrl.isNullOrBlank())
+        return ""
+    val url = srcUrl
+    return if (url.startsWith("https://i.pximg.net")) {
+        Logger.d(TAG) { "source url: $srcUrl" }
+        url.replaceFirst("i.pximg.net", "i.pixiv.cat")
+    } else {
+        url
     }
 }
 
