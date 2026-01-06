@@ -193,6 +193,11 @@ class DanbooruData {
         data.originalInfo = variantOriginal?.toInfo() ?: return null
         data.originalInfo.size = media_asset?.file_size ?: return null
         data.quality = data.getDefaultQuality()
+        if (data.fileType == FileType.Ugoira) {
+            // Danbooru的Ugoira的sample大都是vp9 yuv444p格式的webm文件，
+            // 大多数Android设备都不支持解码此格式，只能屏蔽
+            data.sampleInfo = null
+        }
         return data
     }
 
