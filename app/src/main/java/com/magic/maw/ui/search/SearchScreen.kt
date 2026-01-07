@@ -64,7 +64,6 @@ import com.magic.maw.R
 import com.magic.maw.data.SettingsService
 import com.magic.maw.data.TagInfo
 import com.magic.maw.data.TagType
-import com.magic.maw.ui.components.RegisterView
 import com.magic.maw.ui.components.TagItem
 import com.magic.maw.ui.theme.PreviewTheme
 import com.magic.maw.website.TagManager
@@ -72,7 +71,6 @@ import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.delay
 
 private const val TAG = "SearchScreen"
-private const val viewName = "Search"
 
 @Composable
 fun SearchScreen(
@@ -87,7 +85,6 @@ fun SearchScreen(
         val text = initText.toSearchTagText()
         mutableStateOf(TextFieldValue(text = text, selection = TextRange(text.length)))
     }
-    RegisterView(name = viewName)
     Scaffold(
         topBar = {
             SearchTopBar(

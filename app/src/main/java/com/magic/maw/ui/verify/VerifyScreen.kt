@@ -44,13 +44,10 @@ import androidx.core.net.toUri
 import co.touchlab.kermit.Logger
 import com.magic.maw.MyApp
 import com.magic.maw.R
-import com.magic.maw.ui.components.RegisterView
-import com.magic.maw.ui.components.SourceChangeChecker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val viewName = "VerifyView"
-private const val TAG = viewName
+private const val TAG = "VerifyView"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,7 +59,6 @@ fun VerifyScreen(
 ) {
     val defaultTitle = stringResource(R.string.verification)
     val title = remember { mutableStateOf(defaultTitle) }
-    RegisterView(name = viewName)
     Scaffold(
         modifier = modifier,
         topBar = {

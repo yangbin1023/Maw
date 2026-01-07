@@ -32,7 +32,6 @@ import com.magic.maw.R
 import com.magic.maw.data.PoolData
 import com.magic.maw.data.Quality
 import com.magic.maw.data.SettingsService
-import com.magic.maw.ui.components.ConfigChangeChecker
 import com.magic.maw.util.TimeUtils
 import com.magic.maw.website.LoadStatus
 import com.magic.maw.website.LoadType
@@ -112,11 +111,6 @@ private fun ItemImageView(modifier: Modifier = Modifier, poolData: PoolData) {
     val noMore = rememberSaveable { mutableStateOf(false) }
     val model = remember { mutableStateOf<Any?>(null) }
     val context = LocalContext.current
-    if (noMore.value) {
-        ConfigChangeChecker {
-            noMore.value = false
-        }
-    }
     LaunchedEffect(poolData, noMore.value) {
         if (poolData.posts.isEmpty() && !noMore.value) {
             val list = withContext(Dispatchers.IO) {

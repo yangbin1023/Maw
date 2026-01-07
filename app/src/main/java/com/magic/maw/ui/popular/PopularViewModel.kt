@@ -9,50 +9,14 @@ import com.magic.maw.data.PopularType
 import com.magic.maw.data.SettingsService
 import com.magic.maw.data.WebsiteOption
 import com.magic.maw.data.loader.PostDataLoader
-import com.magic.maw.ui.post.PostViewModel2
-import com.magic.maw.util.configFlow
 import com.magic.maw.website.PopularOption
-import com.magic.maw.website.RequestOption
 import com.magic.maw.website.parser.BaseParser
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-
-class PopularViewModel : ViewModel() {
-    private val viewModelState = MutableStateFlow(
-        PopularOption(date = LocalDate.now().minusDays(1))
-    )
-    val postViewModel2: PostViewModel2 by lazy {
-        val requestOption = RequestOption(
-            ratingFlag = configFlow.value.websiteConfig.rating,
-            popularOption = viewModelState.value
-        )
-        PostViewModel2(requestOption)
-    }
-
-    val uiState = viewModelState.stateIn(
-        viewModelScope,
-        SharingStarted.Eagerly,
-        viewModelState.value
-    )
-
-    fun update(date: LocalDate) {
-        viewModelState.update { it.copy(date = date) }
-    }
-
-    fun update(popularType: PopularType) {
-        viewModelState.update { it.copy(type = popularType) }
-    }
-
-    fun clearData() {
-        postViewModel2.clearData()
-    }
-}
 
 data class PopularItemData(
     val loader: PostDataLoader,
@@ -69,7 +33,7 @@ data class PopularItemData(
     }
 }
 
-class PopularViewModel2 : ViewModel() {
+class PopularViewModel : ViewModel() {
     private var website: WebsiteOption = SettingsService.settings.website
     private var parser = BaseParser.get(website)
     private val itemDataMap: MutableMap<PopularType, PopularItemData> = mutableMapOf()

@@ -1,7 +1,6 @@
 package com.magic.maw.ui.post
 
 import androidx.activity.compose.BackHandler
-import androidx.collection.MutableIntIntMap
 import androidx.collection.mutableIntIntMapOf
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,14 +34,12 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -68,9 +65,8 @@ import com.magic.maw.data.loader.PostDataLoader
 import com.magic.maw.data.loader.PostDataUiState
 import com.magic.maw.ui.components.EmptyView
 import com.magic.maw.ui.components.LoadMoreChecker
-import com.magic.maw.ui.components.NestedScaffold
-import com.magic.maw.ui.components.NestedScaffoldState
-import com.magic.maw.ui.components.rememberNestedScaffoldState
+import com.magic.maw.ui.components.RefreshScrollToTopChecker
+import com.magic.maw.ui.components.ReturnedIndexChecker
 import com.magic.maw.ui.main.AppRoute
 import com.magic.maw.ui.main.MainNavRail
 import com.magic.maw.ui.main.POST_INDEX
@@ -197,74 +193,6 @@ fun PostScreen(
             onRefresh = { loader.refresh() },
             onLoadMore = { loader.loadMore() },
             onGloballyPositioned = { index, height -> itemHeights[index] = height },
-            onItemClick = onItemClick
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun NestedScaffoldBody(
-    uiState: PostDataUiState,
-    lazyState: LazyStaggeredGridState,
-    refreshState: PullToRefreshState,
-    scaffoldState: NestedScaffoldState = rememberNestedScaffoldState(),
-    titleText: String = stringResource(R.string.post),
-    shadowEnable: Boolean = true,
-    searchEnable: Boolean = true,
-    negativeIcon: ImageVector = Icons.Default.Menu,
-    staggeredState: MutableState<Boolean>? = null,
-    enhancedBar: (@Composable (Modifier) -> Unit)? = null,
-    onNegative: () -> Unit = {},
-    onSearch: () -> Unit = {},
-    onRefresh: () -> Unit,
-    onLoadMore: () -> Unit,
-    onShowSystemBar: (Boolean) -> Unit,
-    onGloballyPositioned: (Int, Int) -> Unit,
-    onItemClick: (Int) -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    val scrollToTop: () -> Unit = { scope.launch { lazyState.scrollToItem(0, 0) } }
-    LaunchedEffect(scaffoldState) {
-        if (scaffoldState.scrollValue == scaffoldState.minPx) {
-            onShowSystemBar(false)
-        } else if (scaffoldState.scrollValue == scaffoldState.maxPx) {
-            onShowSystemBar(true)
-        }
-    }
-    val canScroll by remember(refreshState.distanceFraction, uiState.items) {
-        derivedStateOf { refreshState.distanceFraction <= 0 && uiState.items.isNotEmpty() }
-    }
-    NestedScaffold(
-        topBar = {
-            PostTopBar(
-                titleText = titleText,
-                negativeIcon = negativeIcon,
-                shadowEnable = shadowEnable,
-                searchEnable = searchEnable,
-                staggeredState = staggeredState,
-                scrollToTop = scrollToTop,
-                onNegative = onNegative,
-                onSearch = onSearch
-            )
-        },
-        enhancedBar = enhancedBar,
-        state = scaffoldState,
-        canScroll = { canScroll },
-        onScrollToTop = { onShowSystemBar(false) },
-        onScrollToBottom = { onShowSystemBar(true) },
-    ) { innerPadding ->
-        PostRefreshBody(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            uiState = uiState,
-            refreshState = refreshState,
-            lazyState = lazyState,
-            staggeredState = staggeredState,
-            onRefresh = onRefresh,
-            onLoadMore = onLoadMore,
-            onGloballyPositioned = onGloballyPositioned,
             onItemClick = onItemClick
         )
     }
@@ -459,50 +387,8 @@ fun NavBackStackEntry.getPostIndex(): Int? {
     return postIndex
 }
 
-/**
- * 用于刷新时，若为增量刷新，则滚动到顶部
- */
-@Composable
-fun RefreshScrollToTopChecker(
-    items: PersistentList<PostData>,
-    scrollToTop: suspend () -> Unit
-) {
-    val topItemId by remember(items) {
-        derivedStateOf { items.firstOrNull()?.id }
-    }
-    var isFirstTime by remember { mutableStateOf(true) }
-
-    LaunchedEffect(topItemId) {
-        if (isFirstTime) {
-            isFirstTime = false
-        } else if (topItemId != null) {
-            Logger.w(TAG) { "RefreshScrollToTopChecker. $topItemId" }
-            scrollToTop()
-        }
-    }
-}
-
-/**
- * 用于从View界面返回Post界面时，若查看项的索引发生变化时，将对应索引滚动到中央
- */
-@Composable
-fun ReturnedIndexChecker(
-    loader: PostDataLoader,
-    lazyState: LazyStaggeredGridState,
-    itemHeights: MutableIntIntMap,
-    postIndex: Int? = null
-) {
-    val viewIndex by loader.viewIndex.collectAsStateWithLifecycle()
-    LaunchedEffect(postIndex, viewIndex) {
-        if (viewIndex == null || postIndex == viewIndex || postIndex == null) {
-            return@LaunchedEffect
-        }
-        val index: Int = postIndex
-        val itemHeight = itemHeights.getOrDefault(index, 0)
-        val viewportHeight = lazyState.layoutInfo.viewportSize.height
-        val offset = -(viewportHeight - itemHeight) / 2
-        loader.resetViewIndex()
-        lazyState.scrollToItem(index, offset)
-        Logger.d(TAG) { "scroll to postIndex: $index" }
-    }
+object PostDefaults {
+    val ContentPadding: Dp = 3.5.dp
+    val ActionsIconWidth: Dp = 40.dp
+    val NoMoreItemHeight: Dp = 36.dp
 }

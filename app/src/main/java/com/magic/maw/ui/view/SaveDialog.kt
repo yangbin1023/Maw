@@ -28,7 +28,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.magic.maw.R
 import com.magic.maw.data.Quality
 import com.magic.maw.ui.components.AlertPaddingDialog
-import com.magic.maw.ui.components.SourceChangeChecker
 import com.magic.maw.ui.components.throttle
 import com.magic.maw.util.configFlow
 import com.magic.maw.util.updateWebConfig
@@ -112,7 +111,6 @@ private fun SaveDialog(
     initialIndex: Int = 0,
     onConfirm: (Int, Boolean) -> Unit
 ) {
-    SourceChangeChecker { onDismiss() }
     val config = configFlow.collectAsStateWithLifecycle().value
     val websiteConfig = config.websiteConfig
     val selectedIndex = remember { mutableIntStateOf(initialIndex) }

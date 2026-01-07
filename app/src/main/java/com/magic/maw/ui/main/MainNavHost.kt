@@ -42,9 +42,9 @@ import androidx.navigation.toRoute
 import co.touchlab.kermit.Logger
 import com.magic.maw.data.loader.PostDataLoader
 import com.magic.maw.ui.pool.PoolScreen
-import com.magic.maw.ui.pool.PoolViewModel2
+import com.magic.maw.ui.pool.PoolViewModel
 import com.magic.maw.ui.popular.PopularScreen
-import com.magic.maw.ui.popular.PopularViewModel2
+import com.magic.maw.ui.popular.PopularViewModel
 import com.magic.maw.ui.post.PostScreen
 import com.magic.maw.ui.post.PostViewModel
 import com.magic.maw.ui.search.SearchScreen
@@ -203,7 +203,7 @@ fun NavGraphBuilder.poolGraph(
             val parentEntry = remember(backStackEntry) {
                 navController.getBackStackEntry<AppRoute.Pool>()
             }
-            val viewModel: PoolViewModel2 = viewModel(parentEntry)
+            val viewModel: PoolViewModel = viewModel(parentEntry)
             Row(modifier = Modifier.fillMaxSize()) {
                 if (useNavRail()) {
                     MainNavRail(navController = navController, topRoute = AppRoute.Pool)
@@ -220,7 +220,7 @@ fun NavGraphBuilder.poolGraph(
             val parentEntry = remember(backStackEntry) {
                 navController.getBackStackEntry<AppRoute.Pool>()
             }
-            val viewModel: PoolViewModel2 = viewModel(parentEntry)
+            val viewModel: PoolViewModel = viewModel(parentEntry)
             val route = backStackEntry.toRoute<AppRoute.PoolPost>()
             val postIndex = backStackEntry.savedStateHandle.getLiveData<Int>(POST_INDEX).value
             if (postIndex != null) {
@@ -250,7 +250,7 @@ fun NavGraphBuilder.poolGraph(
             val parentEntry = remember(backStackEntry) {
                 navController.getBackStackEntry<AppRoute.Pool>()
             }
-            val viewModel: PoolViewModel2 = viewModel(parentEntry)
+            val viewModel: PoolViewModel = viewModel(parentEntry)
             val route = backStackEntry.toRoute<AppRoute.PoolView>()
             val loader by viewModel.postLoader.collectAsStateWithLifecycle()
             val postLoader = loader ?: PostDataLoader(
@@ -281,7 +281,7 @@ fun NavGraphBuilder.popularGraph(
             if (postIndex != null) {
                 backStackEntry.savedStateHandle.remove<String>(POST_INDEX)
             }
-            val viewModel: PopularViewModel2 = viewModel(parentEntry)
+            val viewModel: PopularViewModel = viewModel(parentEntry)
             Row(modifier = Modifier.fillMaxSize()) {
                 if (useNavRail()) {
                     MainNavRail(navController = navController, topRoute = AppRoute.Popular)
@@ -299,7 +299,7 @@ fun NavGraphBuilder.popularGraph(
             val parentEntry = remember(backStackEntry) {
                 navController.getBackStackEntry<AppRoute.Popular>()
             }
-            val viewModel: PopularViewModel2 = viewModel(parentEntry)
+            val viewModel: PopularViewModel = viewModel(parentEntry)
             val route = backStackEntry.toRoute<AppRoute.PopularView>()
             val currentData by viewModel.currentData.collectAsStateWithLifecycle()
             ViewScreen(

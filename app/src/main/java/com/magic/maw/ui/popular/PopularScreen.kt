@@ -47,11 +47,11 @@ import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.data.PopularType
 import com.magic.maw.data.SettingsService
+import com.magic.maw.ui.components.RefreshScrollToTopChecker
+import com.magic.maw.ui.components.ReturnedIndexChecker
 import com.magic.maw.ui.main.AppRoute
 import com.magic.maw.ui.post.PostDefaults
 import com.magic.maw.ui.post.PostRefreshBody
-import com.magic.maw.ui.post.RefreshScrollToTopChecker
-import com.magic.maw.ui.post.ReturnedIndexChecker
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import com.magic.maw.website.parser.BaseParser
@@ -63,7 +63,7 @@ private const val TAG = "PopularScreen"
 @Composable
 fun PopularScreen(
     modifier: Modifier = Modifier,
-    viewModel: PopularViewModel2 = viewModel(),
+    viewModel: PopularViewModel = viewModel(),
     navController: NavController = rememberNavController(),
     postIndex: Int? = null,
     onNegative: (() -> Unit)? = null,
@@ -149,7 +149,7 @@ private fun PopularTopBar(
 @Composable
 private fun PopularBody(
     modifier: Modifier = Modifier,
-    viewModel: PopularViewModel2,
+    viewModel: PopularViewModel,
     pagerState: PagerState = rememberPopularPagerState(),
     navController: NavController = rememberNavController(),
     staggeredState: MutableState<Boolean>? = null,
@@ -195,7 +195,7 @@ private fun PopularBody(
 @Composable
 private fun PopularPagerItemBody(
     index: Int,
-    viewModel: PopularViewModel2,
+    viewModel: PopularViewModel,
     navController: NavController,
     pagerState: PagerState,
     staggeredState: MutableState<Boolean>? = null,
