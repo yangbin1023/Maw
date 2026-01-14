@@ -19,7 +19,8 @@ object TimeUtils {
     private fun getFormat(formatStr: String): SimpleDateFormat {
         dateFormatMap[formatStr]?.let {
             return it
-        } ?: synchronized(dateFormatMap) {
+        }
+        synchronized(dateFormatMap) {
             dateFormatMap[formatStr]?.let { return it }
             val format = SimpleDateFormat(formatStr, Locale.getDefault())
             dateFormatMap[formatStr] = format
@@ -40,6 +41,16 @@ object TimeUtils {
     fun getTimeStr(formatStr: String, time: Long): String {
         val simpleDateFormat = getFormat(formatStr)
         return simpleDateFormat.format(Date(time))
+    }
+
+    fun getTimeStr(formatStr: String, date: Date): String {
+        val simpleDateFormat = getFormat(formatStr)
+        return simpleDateFormat.format(date)
+    }
+
+    fun getDate(formatStr: String, timeStr: String): Date {
+        val simpleDateFormat = getFormat(formatStr)
+        return simpleDateFormat.parse(timeStr)!!
     }
 
     fun getCurrentTimeStr(formatStr: String): String {

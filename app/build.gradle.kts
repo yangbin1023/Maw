@@ -120,6 +120,7 @@ dependencies {
     implementation(libs.jsoup)
     implementation(libs.androidx.datastore)
     implementation(libs.kotlinx.collections.immutable.jvm)
+    implementation(libs.kotlinx.datetime)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)

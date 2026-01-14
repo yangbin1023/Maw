@@ -4,7 +4,7 @@ import co.touchlab.kermit.Logger
 import com.hjq.toast.Toaster
 import com.magic.maw.MyApp
 import com.magic.maw.util.VerifyRequester.callback
-import com.magic.maw.website.DLTask
+import com.magic.maw.data.api.manager.DLTask
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -23,7 +23,6 @@ import java.io.File
 import java.io.FileWriter
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.max
-
 
 sealed class VerifyResult(val url: String) {
     class Success(url: String, val text: String) : VerifyResult(url)

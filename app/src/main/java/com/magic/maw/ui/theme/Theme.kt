@@ -17,8 +17,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import co.touchlab.kermit.Logger
-import com.magic.maw.data.SettingsService
-import com.magic.maw.data.ThemeMode
+import com.magic.maw.data.local.store.SettingsStore
+import com.magic.maw.data.model.constant.ThemeMode
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.findActivity
 
@@ -28,7 +28,7 @@ val supportDynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
 @Composable
 fun MawTheme(content: @Composable () -> Unit) {
-    val settingState by SettingsService.settingsState.collectAsState()
+    val settingState by SettingsStore.settingsState.collectAsState()
     val themeMode by remember { derivedStateOf { settingState.themeSettings.themeMode } }
     val dynamicColor by remember { derivedStateOf { settingState.themeSettings.dynamicColor } }
 

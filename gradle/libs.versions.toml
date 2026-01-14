@@ -27,6 +27,7 @@ jsoup = "1.21.2"
 # 自1.2.0之后，datastore支持的最低SDK版本从API 21 升到了API 23
 datastore = "1.1.7"
 kotlinxCollectionsImmutableJvm = "0.4.0"
+kotlinxDatetime = "0.6.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -76,6 +77,7 @@ androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplaye
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 androidx-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
 kotlinx-collections-immutable-jvm = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable-jvm", version.ref = "kotlinxCollectionsImmutableJvm" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

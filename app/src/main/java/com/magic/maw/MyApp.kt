@@ -2,7 +2,7 @@ package com.magic.maw
 
 import android.app.Application
 import com.hjq.toast.Toaster
-import com.magic.maw.data.SettingsService
+import com.magic.maw.data.local.store.SettingsStore
 
 class MyApp : Application() {
     override fun onCreate() {
@@ -12,7 +12,7 @@ class MyApp : Application() {
 
     private fun init() {
         _app = this
-        SettingsService.init(this)
+        SettingsStore.init(this)
         Toaster.init(this)
     }
 

@@ -2,13 +2,12 @@ package com.magic.maw.util
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
-import com.magic.maw.data.Quality
-import com.magic.maw.data.Rating
-import com.magic.maw.util.WebsiteConfig
+import com.magic.maw.data.model.constant.Quality
+import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.ui.theme.supportDynamicColor
-import com.magic.maw.website.parser.DanbooruParser
-import com.magic.maw.website.parser.KonachanParser
-import com.magic.maw.website.parser.YandeParser
+import com.magic.maw.data.api.parser.DanbooruParser
+import com.magic.maw.data.api.parser.KonachanParser
+import com.magic.maw.data.api.parser.YandeParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.drop

@@ -13,8 +13,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.magic.maw.R
-import com.magic.maw.data.PostData
-import com.magic.maw.data.Quality
+import com.magic.maw.data.model.site.PostData
+import com.magic.maw.data.model.constant.Quality
 import kotlinx.atomicfu.atomic
 
 private var id = atomic(1)
@@ -24,7 +24,7 @@ fun newNotificationId(): Int {
 }
 
 fun getNotificationChannelId(context: Context, postData: PostData, quality: Quality): String {
-    return context.packageName + "@" + postData.source + ":" + quality.name
+    return context.packageName + "@" + postData.website + ":" + quality.name
 }
 
 @SuppressLint("MissingPermission")

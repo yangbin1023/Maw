@@ -8,14 +8,13 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import com.magic.maw.data.PostData
-import com.magic.maw.data.Quality
+import com.magic.maw.data.model.site.PostData
+import com.magic.maw.data.model.constant.Quality
 import java.io.File
 import java.io.FileInputStream
 
 fun saveToPicture(context: Context, postData: PostData, quality: Quality, file: File): Uri {
-    val source = postData.source
-    val name = "${source}_${postData.id}_${quality.name.lowercase()}"
+    val name = "${postData.website.label}_${postData.id}_${quality.name.lowercase()}"
     val extension = postData.fileType.getPrefixName()
     val fileName = "$name.$extension"
     val contentResolver = context.contentResolver

@@ -6,6 +6,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileReader
 import java.io.IOException
+import java.util.Locale
 
 const val FILE_SIZE_1MiB = 1L * 1024 * 1024
 
@@ -67,4 +68,18 @@ fun File.readString(charset: String? = null): String {
         }
     }
     return result
+}
+
+fun Long.toSizeString(): String {
+    val unitList = listOf("B", "KB", "MB", "GB", "TB")
+    var count = 0
+    var value = this.toDouble()
+    while (value / 1024 > 0.97) {
+        value /= 1024
+        count++
+        if (count >= unitList.size - 1) {
+            break
+        }
+    }
+    return String.format(Locale.getDefault(), "%.2f%s", value, unitList[count])
 }

@@ -9,7 +9,7 @@ import coil3.ImageLoader
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import com.magic.maw.MyApp.Companion.app
-import com.magic.maw.ui.verify.VerifyViewDefaults
+import com.magic.maw.ui.features.verify.VerifyViewDefaults
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.UserAgent
@@ -21,18 +21,43 @@ import io.ktor.client.request.header
 import io.ktor.http.ContentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.MainScope
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
 import java.io.File
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import java.util.Date
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
+
+object DateSerializer : KSerializer<Date> {
+    override val descriptor: SerialDescriptor =
+        kotlinx.serialization.descriptors.PrimitiveSerialDescriptor(
+            "Date",
+            kotlinx.serialization.descriptors.PrimitiveKind.STRING
+        )
+
+    override fun serialize(encoder: Encoder, value: Date) {
+        encoder.encodeString(TimeUtils.getTimeStr(TimeUtils.FORMAT_1, value))
+    }
+
+    override fun deserialize(decoder: Decoder): Date {
+        return TimeUtils.getDate(TimeUtils.FORMAT_1, decoder.decodeString())
+    }
+}
 
 val json by lazy {
     Json {
         ignoreUnknownKeys = true
         explicitNulls = true
         encodeDefaults = true
+        serializersModule = SerializersModule {
+            contextual(Date::class, DateSerializer)
+        }
     }
 }
 
