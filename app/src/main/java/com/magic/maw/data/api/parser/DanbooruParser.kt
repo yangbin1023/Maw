@@ -3,14 +3,14 @@ package com.magic.maw.data.api.parser
 import co.touchlab.kermit.Logger
 import com.hjq.toast.Toaster
 import com.magic.maw.MyApp
-import com.magic.maw.data.model.entity.TagInfo
-import com.magic.maw.data.model.entity.UserInfo
-import com.magic.maw.data.model.site.PoolData
-import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.model.RequestOption
 import com.magic.maw.data.model.constant.PopularType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.data.model.entity.TagInfo
+import com.magic.maw.data.model.entity.UserInfo
+import com.magic.maw.data.model.site.PoolData
+import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.model.site.danbooru.DanbooruData
 import com.magic.maw.data.model.site.danbooru.DanbooruPool
 import com.magic.maw.data.model.site.danbooru.DanbooruTag
@@ -22,6 +22,7 @@ import com.magic.maw.util.isHtml
 import com.magic.maw.util.json
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -119,6 +120,7 @@ object DanbooruParser : BaseParser() {
             if (tagMap.isNotEmpty()) {
                 tagManager.addAll(tagMap)
             }
+        } catch (_: CancellationException) {
         } catch (e: Exception) {
             Logger.e(TAG) { "request tag info failed. name[$name], error: $e" }
         }

@@ -3,8 +3,8 @@ package com.magic.maw.util
 import co.touchlab.kermit.Logger
 import com.hjq.toast.Toaster
 import com.magic.maw.MyApp
-import com.magic.maw.util.VerifyRequester.callback
 import com.magic.maw.data.api.manager.DLTask
+import com.magic.maw.util.VerifyRequester.callback
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -12,6 +12,7 @@ import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 import io.ktor.http.URLBuilder
 import io.ktor.http.takeFrom
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +22,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileWriter
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.max
 
 sealed class VerifyResult(val url: String) {

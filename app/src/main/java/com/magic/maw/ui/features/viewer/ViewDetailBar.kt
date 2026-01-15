@@ -70,12 +70,12 @@ import com.magic.maw.data.api.manager.loadDLFile
 import com.magic.maw.data.api.parser.BaseParser
 import com.magic.maw.data.local.store.SettingsStore
 import com.magic.maw.data.model.LoadStatus
-import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.model.constant.Quality
 import com.magic.maw.data.model.constant.TagType
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.data.model.entity.UserInfo
+import com.magic.maw.data.model.site.PostData
 import com.magic.maw.ui.common.MenuSettingItem
 import com.magic.maw.ui.common.ScrollableView
 import com.magic.maw.ui.common.ScrollableViewDefaults
@@ -385,7 +385,7 @@ private fun DetailContent(
             showIcon = false
         )
         // source
-        val srcUrl = getSourceUrl(postData.srcUrl)
+        val srcUrl by remember { derivedStateOf { getSourceUrl(postData.srcUrl) } }
         if (srcUrl.isNotEmpty()) {
             val clipboard = LocalClipboard.current
             val message = stringResource(R.string.copied_to_clipboard)
@@ -515,16 +515,20 @@ private fun getOnSaveCallback(): (PostData, Quality) -> Unit {
     }
 }
 
-private fun getSourceUrl(srcUrl: String?): String {
-    if (srcUrl.isNullOrBlank())
+private fun getSourceUrl(urlString: String?): String {
+    if (urlString.isNullOrBlank())
         return ""
-    val url = srcUrl
-    return if (url.startsWith("https://i.pximg.net")) {
-        Logger.d(TAG) { "source url: $srcUrl" }
-        url.replaceFirst("i.pximg.net", "i.pixiv.cat")
-    } else {
-        url
+    if (urlString.startsWith("https://i.pximg.net")) {
+        val regex = """/(\d+)_p\d+\.\w""".toRegex()
+        regex.find(urlString)?.let { result ->
+            val (idStr) = result.destructured
+            Logger.d(TAG) { "pixiv id: $idStr" }
+            return "https://www.pixiv.net/artworks/$idStr"
+        }
+        Logger.d(TAG) { "source url: $urlString" }
+        return urlString.replaceFirst("i.pximg.net", "i.pixiv.cat")
     }
+    return urlString
 }
 
 @SuppressLint("MissingPermission")

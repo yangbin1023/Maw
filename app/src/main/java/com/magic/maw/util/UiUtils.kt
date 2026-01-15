@@ -70,7 +70,7 @@ object UiUtils {
             val windowInsets = window.decorView.rootWindowInsets
             return windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top > 0
         } else {
-            return !window.decorView.systemUiVisibility.hasFlag(View.SYSTEM_UI_FLAG_FULLSCREEN)
+            return window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_FULLSCREEN == 0
         }
     }
 
