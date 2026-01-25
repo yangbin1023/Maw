@@ -28,6 +28,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,7 +39,10 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -68,9 +72,18 @@ fun PoolScreen(
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
     onNegative: (() -> Unit)? = null,
 ) {
-    val dataState by viewModel.loader.uiState.collectAsStateWithLifecycle()
+    val dataState by viewModel.uiState.collectAsStateWithLifecycle()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    LaunchedEffect(lifecycleOwner) {
+        if (lifecycleState == Lifecycle.State.STARTED
+            || lifecycleState == Lifecycle.State.RESUMED) {
+            viewModel.checkAndRefresh()
+        }
+    }
 
     Scaffold(
         modifier = modifier,
@@ -91,7 +104,7 @@ fun PoolScreen(
             lazyState = lazyState,
             onRefresh = { viewModel.refresh() },
             onLoadMore = { viewModel.loadMore() },
-            onItemClick = { index, poolData ->
+            onItemClick = { _, poolData ->
                 Logger.d(TAG) { "onItemClick $poolData" }
                 viewModel.setViewPoolPost(poolData.id)
                 navController.navigate(route = AppRoute.PoolPost(poolId = poolData.id))

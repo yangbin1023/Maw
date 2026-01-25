@@ -19,17 +19,17 @@ fun ReturnedIndexChecker(
     itemHeights: MutableIntIntMap,
     postIndex: Int? = null
 ) {
-    val viewIndex by loader.viewIndex.collectAsStateWithLifecycle()
-    LaunchedEffect(postIndex, viewIndex) {
-        if (viewIndex == null || postIndex == viewIndex || postIndex == null) {
-            return@LaunchedEffect
-        }
-        val index: Int = postIndex
-        val itemHeight = itemHeights.getOrDefault(index, 0)
-        val viewportHeight = lazyState.layoutInfo.viewportSize.height
-        val offset = -(viewportHeight - itemHeight) / 2
-        loader.resetViewIndex()
-        lazyState.scrollToItem(index, offset)
-        Logger.d("ReturnedIndexChecker") { "scroll to postIndex: $index" }
-    }
+//    val viewIndex by loader.viewIndex.collectAsStateWithLifecycle()
+//    LaunchedEffect(postIndex, viewIndex) {
+//        if (viewIndex == null || postIndex == viewIndex || postIndex == null) {
+//            return@LaunchedEffect
+//        }
+//        val index: Int = postIndex
+//        val itemHeight = itemHeights.getOrDefault(index, 0)
+//        val viewportHeight = lazyState.layoutInfo.viewportSize.height
+//        val offset = -(viewportHeight - itemHeight) / 2
+//        loader.resetViewIndex()
+//        lazyState.scrollToItem(index, offset)
+//        Logger.d("ReturnedIndexChecker") { "scroll to postIndex: $index" }
+//    }
 }

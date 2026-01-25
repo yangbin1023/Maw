@@ -27,6 +27,7 @@ data class PostData(
     var rating: Rating = Rating.None,
     var fileType: FileType = FileType.Jpeg,
     var tags: MutableList<TagInfo> = ArrayList(),
+    var tagRefs: List<String> = emptyList(),
     var previewInfo: Info = Info(),
     var sampleInfo: Info? = null,
     var largeInfo: Info? = null,

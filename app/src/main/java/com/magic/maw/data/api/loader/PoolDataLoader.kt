@@ -24,7 +24,9 @@ private const val TAG = "PoolDataLoader"
 
 typealias PoolDataUiState = ListUiState<PoolData>
 
-class PoolDataLoader(val scope: CoroutineScope) : DataLoader<PoolData> {
+typealias PoolDataLoader = DataLoader<PoolData>
+
+class PoolDataLoader2(val scope: CoroutineScope) : DataLoader<PoolData> {
     private var _website: WebsiteOption = SettingsStore.settings.website
     private var parser = BaseParser.get(_website)
     private var scopeJob: Job? = null
@@ -38,26 +40,20 @@ class PoolDataLoader(val scope: CoroutineScope) : DataLoader<PoolData> {
     override val uiState: StateFlow<PoolDataUiState> = _uiState.asStateFlow()
 
     init {
-        requestOption = RequestOption(
-            page = parser.firstPageIndex,
-            ratings = SettingsStore.settings.websiteSettings.ratings
-        )
+        val ratings = SettingsStore.settings.websiteSettings.ratings
+        requestOption = RequestOption(ratings = ratings)
         refresh()
-        scope.launch {
-            SettingsStore.settingsState.collect { settingsState ->
-                if (settingsState.website != _website) {
-                    _website = settingsState.website
-                    parser = BaseParser.get(_website)
-                    requestOption = RequestOption(
-                        page = parser.firstPageIndex,
-                        ratings = settingsState.websiteSettings.ratings
-                    )
-                    refresh(true)
-                } else if (requestOption.ratings.toSet() != settingsState.websiteSettings.ratings.toSet()) {
-                    requestOption = RequestOption(ratings = settingsState.websiteSettings.ratings)
-                    refresh(true)
-                }
-            }
+    }
+
+    override fun checkAndRefresh() {
+        val website = SettingsStore.settings.website
+        val ratings = SettingsStore.settings.websiteSettings.ratings
+        if (this._website != website || requestOption.ratings.toSet() != ratings.toSet()) {
+            this._website = website
+            parser = BaseParser.get(website)
+            requestOption = requestOption.copy(ratings = ratings)
+            clearData()
+            refresh(true)
         }
     }
 

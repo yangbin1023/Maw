@@ -16,14 +16,13 @@ import com.magic.maw.data.model.site.yande.YandeData
 import com.magic.maw.data.model.site.yande.YandePool
 import com.magic.maw.data.model.site.yande.YandeTag
 import com.magic.maw.data.model.site.yande.YandeUser
-import com.magic.maw.util.client
 import com.magic.maw.util.get
 import com.magic.maw.util.toMonday
+import io.ktor.client.HttpClient
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
 
-object YandeParser : BaseParser() {
-    const val SOURCE = "yande"
+class YandeParser(private val client: HttpClient) : BaseParser() {
     override val baseUrl: String get() = "https://yande.re"
     override val website: WebsiteOption = WebsiteOption.Yande
     override val supportedRatings: List<Rating> =

@@ -28,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -47,6 +48,7 @@ import com.magic.maw.ui.features.popular.PopularScreen
 import com.magic.maw.ui.features.popular.PopularViewModel
 import com.magic.maw.ui.features.post.PostScreen
 import com.magic.maw.ui.features.post.PostViewModel
+import com.magic.maw.ui.features.post.getPostIndex
 import com.magic.maw.ui.features.search.SearchScreen
 import com.magic.maw.ui.features.setting.SettingScreen
 import com.magic.maw.ui.features.verify.VerifyScreen
@@ -54,6 +56,7 @@ import com.magic.maw.ui.features.viewer.ViewScreen
 import com.magic.maw.util.VerifyRequester
 import com.magic.maw.util.VerifyResult
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 
 private const val TAG = "MainNavHost"
 
@@ -152,9 +155,7 @@ fun NavGraphBuilder.postGraph(
     onOpenDrawer: (() -> Unit)? = null
 ) {
     navigation<AppRoute.Post>(startDestination = AppRoute.PostList()) {
-        Logger.d(TAG) { "postGraph content recompose" }
         composable<AppRoute.PostList> { backStackEntry ->
-            Logger.d(TAG) { "PostList recompose." }
             PostScreen(
                 backStackEntry = backStackEntry,
                 navController = navController,
@@ -162,21 +163,16 @@ fun NavGraphBuilder.postGraph(
             )
         }
         composable<AppRoute.PostViewer> { backStackEntry ->
-            Logger.d(TAG) { "PostView recompose" }
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry<AppRoute.Post>()
-            }
-            val viewModel: PostViewModel = viewModel(parentEntry)
+            val viewModel = koinViewModel<PostViewModel, AppRoute.Post>(navController, backStackEntry)
             val route: AppRoute.PostViewer = backStackEntry.toRoute()
             ViewScreen(
-                loader = viewModel.loader,
+                loader = viewModel,
                 navController = navController,
                 postIndex = route.postIndex,
                 route = route
             )
         }
         composable<AppRoute.PostSearch> { backStackEntry ->
-            Logger.d(TAG) { "PostSearch recompose" }
             val route: AppRoute.PostSearch = backStackEntry.toRoute()
             SearchScreen(
                 initText = route.text,
@@ -199,11 +195,7 @@ fun NavGraphBuilder.poolGraph(
 ) {
     navigation<AppRoute.Pool>(startDestination = AppRoute.PoolList) {
         composable<AppRoute.PoolList> { backStackEntry ->
-            Logger.d(TAG) { "PoolList recompose" }
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry<AppRoute.Pool>()
-            }
-            val viewModel: PoolViewModel = viewModel(parentEntry)
+            val viewModel = koinViewModel<PoolViewModel, AppRoute.Pool>(navController, backStackEntry)
             Row(modifier = Modifier.fillMaxSize()) {
                 if (useNavRail()) {
                     MainNavRail(navController = navController, topRoute = AppRoute.Pool)
@@ -216,23 +208,11 @@ fun NavGraphBuilder.poolGraph(
             }
         }
         composable<AppRoute.PoolPost> { backStackEntry ->
-            Logger.d(TAG) { "PoolPost recompose" }
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry<AppRoute.Pool>()
-            }
-            val viewModel: PoolViewModel = viewModel(parentEntry)
+            val viewModel = koinViewModel<PoolViewModel, AppRoute.Pool>(navController, backStackEntry)
             val route = backStackEntry.toRoute<AppRoute.PoolPost>()
-            val postIndex = backStackEntry.savedStateHandle.getLiveData<Int>(POST_INDEX).value
-            if (postIndex != null) {
-                backStackEntry.savedStateHandle.remove<String>(POST_INDEX)
-            }
-            val loader by viewModel.postLoader.collectAsStateWithLifecycle()
-            val postLoader = loader ?: PostDataLoader(
-                scope = viewModel.viewModelScope,
-                poolId = route.poolId
-            )
+            val postIndex = backStackEntry.getPostIndex()
             PostScreen(
-                loader = postLoader,
+                loader = viewModel.postLoader,
                 navController = navController,
                 titleText = "#${route.poolId}",
                 postIndex = postIndex,
@@ -240,25 +220,16 @@ fun NavGraphBuilder.poolGraph(
                 negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNegative = { navController.popBackStack() },
                 onItemClick = {
-                    postLoader.setViewIndex(it)
+//                    postLoader.setViewIndex(it)
                     navController.navigate(route = AppRoute.PoolViewer(poolId = route.poolId, postIndex = it))
                 }
             )
         }
         composable<AppRoute.PoolViewer> { backStackEntry ->
-            Logger.d(TAG) { "PoolView recompose" }
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry<AppRoute.Pool>()
-            }
-            val viewModel: PoolViewModel = viewModel(parentEntry)
+            val viewModel = koinViewModel<PoolViewModel, AppRoute.Pool>(navController, backStackEntry)
             val route = backStackEntry.toRoute<AppRoute.PoolViewer>()
-            val loader by viewModel.postLoader.collectAsStateWithLifecycle()
-            val postLoader = loader ?: PostDataLoader(
-                scope = viewModel.viewModelScope,
-                poolId = route.poolId,
-            )
             ViewScreen(
-                loader = postLoader,
+                loader = viewModel.postLoader,
                 navController = navController,
                 postIndex = route.postIndex,
                 route = route
@@ -273,15 +244,8 @@ fun NavGraphBuilder.popularGraph(
 ) {
     navigation<AppRoute.Popular>(startDestination = AppRoute.PopularList) {
         composable<AppRoute.PopularList> { backStackEntry ->
-            Logger.d(TAG) { "PopularList recompose" }
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry<AppRoute.Popular>()
-            }
-            val postIndex = backStackEntry.savedStateHandle.getLiveData<Int>(POST_INDEX).value
-            if (postIndex != null) {
-                backStackEntry.savedStateHandle.remove<String>(POST_INDEX)
-            }
-            val viewModel: PopularViewModel = viewModel(parentEntry)
+            val postIndex = backStackEntry.getPostIndex()
+            val viewModel = koinViewModel<PopularViewModel, AppRoute.Popular>(navController, backStackEntry)
             Row(modifier = Modifier.fillMaxSize()) {
                 if (useNavRail()) {
                     MainNavRail(navController = navController, topRoute = AppRoute.Popular)
@@ -295,11 +259,7 @@ fun NavGraphBuilder.popularGraph(
             }
         }
         composable<AppRoute.PopularViewer> { backStackEntry ->
-            Logger.d(TAG) { "PopularView recompose" }
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry<AppRoute.Popular>()
-            }
-            val viewModel: PopularViewModel = viewModel(parentEntry)
+            val viewModel = koinViewModel<PopularViewModel, AppRoute.Popular>(navController, backStackEntry)
             val route = backStackEntry.toRoute<AppRoute.PopularViewer>()
             val currentData by viewModel.currentData.collectAsStateWithLifecycle()
             ViewScreen(
@@ -359,6 +319,17 @@ private val defaultPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.()
             animationSpec = tween(AnimatedDurationMillis)
         )
     }
+}
+
+@Composable
+inline fun <reified T : ViewModel, reified R : AppRoute> koinViewModel(
+    navController: NavController,
+    entry: NavBackStackEntry? = navController.currentBackStackEntry
+): T {
+    val parentEntry = remember(entry) {
+        navController.getBackStackEntry<R>()
+    }
+    return koinViewModel(viewModelStoreOwner = parentEntry)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

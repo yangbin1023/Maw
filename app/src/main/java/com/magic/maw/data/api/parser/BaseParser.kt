@@ -10,6 +10,7 @@ import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.data.model.entity.UserInfo
 import com.magic.maw.data.model.site.PoolData
 import com.magic.maw.data.model.site.PostData
+import io.ktor.client.HttpClient
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -34,12 +35,17 @@ abstract class BaseParser {
     protected abstract fun getTagUrl(name: String, page: Int, limit: Int): String
     protected abstract fun getUserUrl(userId: String): String
 
+    open suspend fun requestTagsByPostId(postId: String): List<TagInfo>? = null
+
     companion object {
-        fun get(website: WebsiteOption): BaseParser {
+        fun get(
+            website: WebsiteOption,
+            client: HttpClient = com.magic.maw.util.client
+        ): BaseParser {
             return when (website) {
-                WebsiteOption.Yande -> YandeParser
-                WebsiteOption.Konachan -> KonachanParser
-                WebsiteOption.Danbooru -> DanbooruParser
+                WebsiteOption.Yande -> YandeParser(client)
+                WebsiteOption.Konachan -> KonachanParser(client)
+                WebsiteOption.Danbooru -> DanbooruParser(client)
             }
         }
 
@@ -50,5 +56,12 @@ abstract class BaseParser {
         fun String.decode(enc: String = "UTF-8"): String {
             return URLDecoder.decode(this, enc)
         }
+    }
+}
+
+class WebsiteParserProvider(private val lists: List<BaseParser>) {
+    operator fun get(website: WebsiteOption): BaseParser {
+        return lists.find { it.website == website }
+            ?: throw IllegalStateException("Unsupported website: $website")
     }
 }

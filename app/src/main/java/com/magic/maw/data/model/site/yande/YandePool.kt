@@ -104,6 +104,7 @@ class YandePoolItem {
             for (tagName in tagNames) {
                 data.tags.add(TagInfo(website = WebsiteOption.Yande, name = tagName))
             }
+            data.tagRefs = tagNames.mapNotNull { it.ifBlank { null } }
         }
         if (file_url?.endsWith("png") == true)
             data.fileType = FileType.Png

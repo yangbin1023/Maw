@@ -39,7 +39,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -213,7 +216,15 @@ private fun PopularPagerItemBody(
     val itemData = viewModel.getItemData(popularType)
     val loader = itemData.loader
 
-    Logger.d(TAG) { "popularOption: ${loader.popularOption}" }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    LaunchedEffect(lifecycleOwner) {
+        if (lifecycleState == Lifecycle.State.STARTED
+            || lifecycleState == Lifecycle.State.RESUMED) {
+            loader.checkAndRefresh()
+        }
+    }
+
     val uiState by loader.uiState.collectAsStateWithLifecycle()
 
     if (index == pagerState.currentPage) {
@@ -241,7 +252,7 @@ private fun PopularPagerItemBody(
         onGloballyPositioned = { index, height -> itemData.itemHeights[index] = height },
         onItemClick = {
             Logger.d(TAG) { "onItemClick $it" }
-            loader.setViewIndex(it)
+//            loader.setViewIndex(it)
             navController.navigate(route = AppRoute.PopularViewer(postIndex = it))
         }
     )

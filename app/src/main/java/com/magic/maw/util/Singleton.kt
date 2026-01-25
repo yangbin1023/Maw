@@ -26,9 +26,12 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
+import okhttp3.ConnectionPool
+import okhttp3.Dispatcher
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.Date
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 
@@ -75,8 +78,8 @@ private val mySSLSocketFactory by lazy {
     sslCtx.socketFactory
 }
 
-val client by lazy {
-    HttpClient(OkHttp) {
+fun createAppHttpClient(): HttpClient {
+    return HttpClient(OkHttp) {
         install(UserAgent) {
             agent = VerifyViewDefaults.UserAgent
         }
@@ -91,10 +94,21 @@ val client by lazy {
                 hostnameVerifier { _, _ -> true }
                 sslSocketFactory(mySSLSocketFactory, myTrustManager)
                 proxySelector(SwitchProxySelector)
+
+                // 配置最大请求数
+                val dispatcher = Dispatcher()
+                dispatcher.maxRequests = 100
+                dispatcher.maxRequestsPerHost = 50
+                dispatcher(dispatcher)
+
+                // 配置连接池
+                connectionPool(ConnectionPool(50, 5, TimeUnit.MINUTES))
             }
         }
     }
 }
+
+val client by lazy { createAppHttpClient() }
 
 fun HttpRequestBuilder.cookie() = apply {
     CookieManager.getInstance().getCookie(url.toString())?.let {

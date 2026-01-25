@@ -16,10 +16,10 @@ import com.magic.maw.data.model.site.danbooru.DanbooruPool
 import com.magic.maw.data.model.site.danbooru.DanbooruTag
 import com.magic.maw.data.model.site.danbooru.DanbooruUser
 import com.magic.maw.util.TimeUtils
-import com.magic.maw.util.client
 import com.magic.maw.util.get
 import com.magic.maw.util.isHtml
 import com.magic.maw.util.json
+import io.ktor.client.HttpClient
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
 import kotlinx.coroutines.CancellationException
@@ -32,10 +32,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.TimeZone
 
-private const val TAG = "danbooru"
-
-object DanbooruParser : BaseParser() {
-    const val SOURCE = "danbooru"
+class DanbooruParser(private val client: HttpClient) : BaseParser() {
     override val baseUrl: String get() = "https://danbooru.donmai.us"
     override val website: WebsiteOption = WebsiteOption.Danbooru
     override val supportedRatings: List<Rating> =
@@ -257,16 +254,20 @@ object DanbooruParser : BaseParser() {
         return "rating:" + ratingList.joinToString(",")
     }
 
-    private val format by lazy { SimpleDateFormat(TimeUtils.FORMAT_4, Locale.getDefault()) }
+    companion object {
+        private const val TAG = "danbooru"
 
-    fun getUnixTime(timeStr: String?): Long? {
-        timeStr ?: return null
-        try {
-            val zoneStr = timeStr.substring(23)
-            format.timeZone = TimeZone.getTimeZone("GMT$zoneStr")
-            return format.parse(timeStr.substring(0, 23))?.time
-        } catch (_: Exception) {
+        private val format by lazy { SimpleDateFormat(TimeUtils.FORMAT_4, Locale.getDefault()) }
+
+        fun getUnixTime(timeStr: String?): Long? {
+            timeStr ?: return null
+            try {
+                val zoneStr = timeStr.substring(23)
+                format.timeZone = TimeZone.getTimeZone("GMT$zoneStr")
+                return format.parse(timeStr.substring(0, 23))?.time
+            } catch (_: Exception) {
+            }
+            return null
         }
-        return null
     }
 }

@@ -92,6 +92,7 @@ class YandeData {
             for (tagName in tagNames) {
                 data.tags.add(TagInfo(website = WebsiteOption.Yande, name = tagName))
             }
+            data.tagRefs = tagNames.mapNotNull { it.ifBlank { null } }
         }
         file_ext?.let {
             if (it == "png")

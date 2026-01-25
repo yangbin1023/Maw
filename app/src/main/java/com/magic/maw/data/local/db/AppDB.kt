@@ -10,7 +10,10 @@ import com.magic.maw.MyApp
 import com.magic.maw.data.local.db.converters.DBConverters
 import com.magic.maw.data.local.db.dao.DLDao
 import com.magic.maw.data.local.db.dao.TagDao
+import com.magic.maw.data.local.db.dao.TagHistoryDao
+import com.magic.maw.data.local.db.dao.TagInfoDao
 import com.magic.maw.data.local.db.dao.UserDao
+import com.magic.maw.data.local.db.dao.UserInfoDao
 import com.magic.maw.data.model.entity.DLInfo
 import com.magic.maw.data.model.entity.TagHistory
 import com.magic.maw.data.model.entity.TagInfo
@@ -26,8 +29,11 @@ import com.magic.maw.util.dbHandler
 @TypeConverters(DBConverters::class)
 abstract class AppDB : RoomDatabase() {
     abstract fun tagDao(): TagDao
+    abstract fun tagInfoDao(): TagInfoDao
+    abstract fun tagHistoryDao(): TagHistoryDao
     abstract fun dlDao(): DLDao
     abstract fun userDao(): UserDao
+    abstract fun userInfoDao(): UserInfoDao
 
     companion object {
         private val db: AppDB by lazy {
@@ -38,7 +44,7 @@ abstract class AppDB : RoomDatabase() {
         val dlDao get() = db.dlDao()
         val userDao get() = db.userDao()
 
-        private fun build(context: Context): AppDB {
+        fun build(context: Context): AppDB {
             val db = Room.databaseBuilder(context, AppDB::class.java, "app.db")
                 .allowMainThreadQueries()
                 .addMigrations(Migration3To4())

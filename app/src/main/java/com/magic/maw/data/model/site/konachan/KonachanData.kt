@@ -74,6 +74,7 @@ class KonachanData {
             for (tagName in tagNames) {
                 data.tags.add(TagInfo(website = WebsiteOption.Konachan, name = tagName))
             }
+            data.tagRefs = tagNames.mapNotNull { it.ifBlank { null } }
         }
         file_url?.let {
             if (it.endsWith("png"))

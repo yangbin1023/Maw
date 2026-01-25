@@ -15,19 +15,13 @@ import com.magic.maw.data.model.site.konachan.KonachanData
 import com.magic.maw.data.model.site.konachan.KonachanPool
 import com.magic.maw.data.model.site.konachan.KonachanTag
 import com.magic.maw.data.model.site.konachan.KonachanUser
-import com.magic.maw.util.client
 import com.magic.maw.util.get
 import com.magic.maw.util.toMonday
+import io.ktor.client.HttpClient
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
 
-private const val TAG = "konachan"
-
-/**
- * Konachan的API和Yande的API大部分相同
- */
-object KonachanParser : BaseParser() {
-    const val SOURCE = "konachan"
+class KonachanParser(private val client: HttpClient) : BaseParser() {
     override val baseUrl: String get() = "https://konachan.net"
     override val website: WebsiteOption = WebsiteOption.Konachan
     override val supportedRatings: List<Rating> =

@@ -147,7 +147,7 @@ class DanbooruData {
             val metaTagList = tag_string_meta?.split(" ") ?: emptyList()
             val tagList = ArrayList<TagInfo>()
             for (tagName in tagNames) {
-                if (tagName.isEmpty())
+                if (tagName.isBlank())
                     continue
                 val type = if (generalTagList.contains(tagName)) {
                     TagType.General
@@ -166,6 +166,7 @@ class DanbooruData {
             }
             tagList.sort()
             data.tags = tagList
+            data.tagRefs = tagNames.mapNotNull { it.ifBlank { null } }
         }
         data.fileType = fileExtToFileType(file_ext) ?: FileType.Jpeg
         var variant180: Variant? = null

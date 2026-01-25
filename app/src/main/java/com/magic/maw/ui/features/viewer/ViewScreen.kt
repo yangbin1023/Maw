@@ -52,7 +52,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun ViewScreen(
     modifier: Modifier = Modifier,
-    loader: PostDataLoader = viewModel<PostViewModel>().loader,
+    loader: PostDataLoader,
     navController: NavController = rememberNavController(),
     postIndex: Int = 0,
     route: AppRoute = AppRoute.PostViewer(postIndex = postIndex),

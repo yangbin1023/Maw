@@ -41,6 +41,7 @@ import com.magic.maw.ui.common.MultipleChoiceDialog
 import com.magic.maw.ui.common.SettingItem
 import com.magic.maw.ui.common.SingleChoiceDialog
 import com.magic.maw.ui.common.SwitchSettingItem
+import org.koin.compose.viewmodel.koinViewModel
 
 private const val TAG = "SettingScreen"
 
@@ -48,7 +49,6 @@ private const val TAG = "SettingScreen"
 fun SettingScreen(
     modifier: Modifier = Modifier,
     navController: NavController,
-    viewModel: SettingsViewModel = settingsViewModel()
 ) {
     val scrollState = rememberScrollState()
     val showTopBarShadow by remember {
@@ -73,7 +73,6 @@ fun SettingScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
             scrollState = scrollState,
-            viewModel = viewModel
         )
     }
 }
@@ -99,7 +98,6 @@ private fun SettingTopBar(
 private fun SettingsScreenContent(
     modifier: Modifier = Modifier,
     scrollState: ScrollState = rememberScrollState(),
-    viewModel: SettingsViewModel = settingsViewModel()
 ) {
     Box(modifier = modifier) {
         Column(
@@ -109,20 +107,20 @@ private fun SettingsScreenContent(
                 .verticalScroll(state = scrollState)
         ) {
             SettingsGroupTitle(text = stringResource(R.string.website))
-            WebsiteSettingItem(viewModel = viewModel)
-            RatingsSettingItem(viewModel = viewModel)
-            ShowQualitySettingItem(viewModel = viewModel)
-            SaveQualitySettingItem(viewModel = viewModel)
-            UgoiraPlayerFrameRateSettingItem(viewModel = viewModel)
+            WebsiteSettingItem()
+            RatingsSettingItem()
+            ShowQualitySettingItem()
+            SaveQualitySettingItem()
+            UgoiraPlayerFrameRateSettingItem()
 
             SettingsGroupTitle(text = stringResource(R.string.video))
-            VideoAutoPlaySettingItem(viewModel = viewModel)
-            VideoMuteSettingItem(viewModel = viewModel)
-            VideoSpeedMultiplierSettingItem(viewModel = viewModel)
+            VideoAutoPlaySettingItem()
+            VideoMuteSettingItem()
+            VideoSpeedMultiplierSettingItem()
 
             SettingsGroupTitle(text = stringResource(R.string.theme))
-            ThemeModeSettingItem(viewModel = viewModel)
-            DynamicColorSettingItem(viewModel = viewModel)
+            ThemeModeSettingItem()
+            DynamicColorSettingItem()
 
             SettingsGroupTitle(text = stringResource(R.string.others))
             VersionInfoItem()
@@ -146,7 +144,7 @@ private fun SettingsGroupTitle(
 @Composable
 private fun WebsiteSettingItem(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = settingsViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val options = WebsiteOption.entries.toList()
     val settingsState by viewModel.settingsState.collectAsState()
@@ -172,7 +170,7 @@ private fun WebsiteSettingItem(
 @Composable
 private fun RatingsSettingItem(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = settingsViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
     val website by remember { derivedStateOf { settingsState.website } }
@@ -204,7 +202,7 @@ private fun RatingsSettingItem(
 @Composable
 private fun ShowQualitySettingItem(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = settingsViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
     val showQuality by remember { derivedStateOf { settingsState.websiteSettings.showQuality } }
@@ -231,7 +229,7 @@ private fun ShowQualitySettingItem(
 @Composable
 private fun SaveQualitySettingItem(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = settingsViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
     val saveQuality by remember { derivedStateOf { settingsState.websiteSettings.saveQuality } }
@@ -258,7 +256,7 @@ private fun SaveQualitySettingItem(
 @Composable
 private fun UgoiraPlayerFrameRateSettingItem(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = settingsViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
     if (settingsState.website != WebsiteOption.Danbooru)
@@ -286,7 +284,7 @@ private fun UgoiraPlayerFrameRateSettingItem(
 @Composable
 private fun VideoAutoPlaySettingItem(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = settingsViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
     val autoplay by remember { derivedStateOf { settingsState.videoSettings.autoplay } }
@@ -304,7 +302,7 @@ private fun VideoAutoPlaySettingItem(
 @Composable
 private fun VideoMuteSettingItem(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = settingsViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
     val mute by remember { derivedStateOf { settingsState.videoSettings.mute } }
@@ -322,7 +320,7 @@ private fun VideoMuteSettingItem(
 @Composable
 private fun VideoSpeedMultiplierSettingItem(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = settingsViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
     val multiplier by remember { derivedStateOf { settingsState.videoSettings.playbackSpeedMultiplier } }
@@ -347,7 +345,7 @@ private fun VideoSpeedMultiplierSettingItem(
 @Composable
 private fun ThemeModeSettingItem(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = settingsViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
     val themeMode by remember { derivedStateOf { settingsState.themeSettings.themeMode } }
@@ -365,7 +363,7 @@ private fun ThemeModeSettingItem(
 @Composable
 private fun DynamicColorSettingItem(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = settingsViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
     val dynamicColor by remember { derivedStateOf { settingsState.themeSettings.dynamicColor } }

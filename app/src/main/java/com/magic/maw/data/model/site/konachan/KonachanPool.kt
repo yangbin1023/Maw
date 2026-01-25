@@ -104,6 +104,7 @@ class KonachanPoolItem {
             for (tagName in tagNames) {
                 data.tags.add(TagInfo(website = WebsiteOption.Konachan, name = tagName))
             }
+            data.tagRefs = tagNames.mapNotNull { it.ifBlank { null } }
         }
         if (file_url?.endsWith("png") == true)
             data.fileType = FileType.Png

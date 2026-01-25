@@ -34,6 +34,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -52,7 +53,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
@@ -70,6 +74,7 @@ import com.magic.maw.ui.common.ReturnedIndexChecker
 import com.magic.maw.ui.features.main.AppRoute
 import com.magic.maw.ui.features.main.MainNavRail
 import com.magic.maw.ui.features.main.POST_INDEX
+import com.magic.maw.ui.features.main.koinViewModel
 import com.magic.maw.ui.features.main.useNavRail
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.getStatusBarHeight
@@ -88,17 +93,14 @@ fun PostScreen(
     backStackEntry: NavBackStackEntry,
     onOpenDrawer: (() -> Unit)? = null
 ) {
-    val parentEntry = remember(backStackEntry) {
-        navController.getBackStackEntry<AppRoute.Post>()
-    }
-    val viewModel: PostViewModel = viewModel(parentEntry)
+    val viewModel = koinViewModel<PostViewModel, AppRoute.Post>(navController, backStackEntry)
     val postIndex = backStackEntry.getPostIndex()
-    Logger.d(TAG) { "parent entry: ${parentEntry.id}, viewModel: $viewModel, postIndex: $postIndex" }
+    Logger.d(TAG) { "entry: ${backStackEntry.id}, viewModel: $viewModel, postIndex: $postIndex" }
 
-    if (viewModel.loader.hasTags) {
+    if (viewModel.isSearchScreen()) {
         PostScreen(
             modifier = modifier,
-            loader = viewModel.loader,
+            loader = viewModel,
             navController = navController,
             postIndex = postIndex,
             negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
@@ -116,7 +118,7 @@ fun PostScreen(
             }
             PostScreen(
                 modifier = modifier,
-                loader = viewModel.loader,
+                loader = viewModel,
                 navController = navController,
                 postIndex = postIndex,
                 onNegative = onOpenDrawer
@@ -129,7 +131,7 @@ fun PostScreen(
 @Composable
 fun PostScreen(
     modifier: Modifier = Modifier,
-    loader: PostDataLoader = viewModel<PostViewModel>().loader,
+    loader: PostDataLoader,
     navController: NavController = rememberNavController(),
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
@@ -141,7 +143,7 @@ fun PostScreen(
     negativeIcon: ImageVector = Icons.Default.Menu,
     onNegative: (() -> Unit)? = null,
     onItemClick: (Int) -> Unit = {
-        loader.setViewIndex(it)
+//        loader.setViewIndex(it)
         navController.navigate(route = AppRoute.PostViewer(postIndex = it))
     }
 ) {
@@ -155,6 +157,15 @@ fun PostScreen(
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
     val itemHeights = remember { mutableIntIntMapOf() }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    LaunchedEffect(lifecycleOwner) {
+        if (lifecycleState == Lifecycle.State.STARTED
+            || lifecycleState == Lifecycle.State.RESUMED) {
+            loader.checkAndRefresh()
+        }
+    }
 
     ReturnedIndexChecker(
         loader = loader,

@@ -33,6 +33,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
      *
      * @param block AppSettings 对象的更新闭包
      */
+    @Suppress("unused")
     fun updateAppSettings(block: AppSettings.() -> AppSettings) {
         viewModelScope.launch {
             repository.updateAppSettings(block)

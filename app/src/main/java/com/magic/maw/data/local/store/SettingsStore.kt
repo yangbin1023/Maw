@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.InputStream
 import java.io.OutputStream
@@ -53,12 +54,14 @@ object AppSettingsSerializer : Serializer<AppSettings> {
      */
     override suspend fun writeTo(t: AppSettings, output: OutputStream) {
         // 使用 Kotlinx Json 将对象序列化为 JSON 字符串并写入输出流
-        output.write(
-            Json.encodeToString(
-                serializer = AppSettings.serializer(),
-                value = t
-            ).encodeToByteArray()
-        )
+        withContext(Dispatchers.IO) {
+            output.write(
+                Json.encodeToString(
+                    serializer = AppSettings.serializer(),
+                    value = t
+                ).encodeToByteArray()
+            )
+        }
     }
 }
 
@@ -94,6 +97,11 @@ class SettingsRepository(context: Context) {
             started = SharingStarted.Eagerly,
             initialValue = AppSettingsSerializer.defaultValue
         )
+
+    /**
+     * 获取 AppSettings 对象
+     */
+    val settings: AppSettings get() = appSettingsStateFlow.value
 
     /**
      * 更新 AppSettings 对象
@@ -137,6 +145,7 @@ class SettingsRepository(context: Context) {
      * @param website 网站选项
      * @param block WebsiteSettings 对象的更新闭包
      */
+    @Suppress("unused")
     suspend fun updateWebsiteSettings(
         website: WebsiteOption,
         block: WebsiteSettings.() -> WebsiteSettings
