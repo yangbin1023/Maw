@@ -29,6 +29,7 @@ datastore = "1.1.7"
 kotlinxCollectionsImmutableJvm = "0.4.0"
 kotlinxDatetime = "0.6.2"
 koin-bom = "4.1.1"
+paging = "3.3.6"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -84,6 +85,8 @@ jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 androidx-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
 kotlinx-collections-immutable-jvm = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable-jvm", version.ref = "kotlinxCollectionsImmutableJvm" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+androidx-paging-common = { group = "androidx.paging", name = "paging-common", version.ref = "paging" }
+androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

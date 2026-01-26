@@ -47,3 +47,33 @@ fun EmptyView(
         )
     }
 }
+@Composable
+fun EmptyView(
+    modifier: Modifier = Modifier,
+    loadState: androidx.paging.CombinedLoadStates,
+    onRefresh: () -> Unit
+) {
+    Column(
+        modifier = modifier.verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        val text = if (loadState.refresh == androidx.paging.LoadState.Loading) {
+            stringResource(R.string.loading)
+        } else if (loadState.refresh is androidx.paging.LoadState.Error) {
+            stringResource(R.string.loading_failed)
+        } else {
+            stringResource(R.string.no_data)
+        }
+        Text(
+            text = text,
+            modifier = Modifier
+                .padding(15.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onRefresh
+                )
+        )
+    }
+}

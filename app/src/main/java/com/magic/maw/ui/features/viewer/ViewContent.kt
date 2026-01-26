@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.paging.compose.LazyPagingItems
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.data.api.manager.loadDLFile
@@ -86,6 +87,32 @@ fun ViewContent(
             focusOn = pagerState.settledPage == index,
             onTab = onTab
         )
+    }
+}
+
+@Composable
+fun ViewContent(
+    pagerState: PagerState,
+    lazyPagingItems: LazyPagingItems<PostData>,
+    playerState: VideoPlayerState,
+    onTab: () -> Unit = {},
+) {
+    HorizontalPager(
+        state = pagerState,
+        beyondViewportPageCount = 1,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) { index ->
+        val data = lazyPagingItems[index]
+        if (data != null) {
+            ViewScreenItem(
+                data = data,
+                playerState = playerState,
+                focusOn = pagerState.settledPage == index,
+                onTab = onTab
+            )
+        }
     }
 }
 

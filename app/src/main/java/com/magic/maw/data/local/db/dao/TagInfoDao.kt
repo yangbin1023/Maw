@@ -8,11 +8,15 @@ import androidx.room.Update
 import com.magic.maw.data.model.constant.TagType
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
+import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
 @Dao
 interface TagInfoDao {
+    @Query("SELECT * FROM tag_info WHERE website = :website AND name IN (:nameList)")
+    fun getAll(website: WebsiteOption, nameList: List<String>): Flow<List<TagInfo>>
+
     @Insert
     suspend fun insert(tagInfo: TagInfo)
 

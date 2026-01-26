@@ -7,11 +7,15 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.UserInfo
+import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
 @Dao
 interface UserInfoDao {
+    @Query("SELECT * FROM user_info WHERE website = :website AND user_id = :userId")
+    fun getFlow(website: WebsiteOption, userId: String): Flow<UserInfo?>
+
     @Insert
     suspend fun insert(info: UserInfo)
 

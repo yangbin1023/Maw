@@ -2,6 +2,7 @@ package com.magic.maw.ui.features.post
 
 import androidx.activity.compose.BackHandler
 import androidx.collection.mutableIntIntMapOf
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,10 +59,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.currentStateAsState
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.data.api.loader.LoadState
@@ -97,10 +101,10 @@ fun PostScreen(
     val postIndex = backStackEntry.getPostIndex()
     Logger.d(TAG) { "entry: ${backStackEntry.id}, viewModel: $viewModel, postIndex: $postIndex" }
 
-    if (viewModel.isSearchScreen()) {
+    if (viewModel.isSubView) {
         PostScreen(
             modifier = modifier,
-            loader = viewModel,
+            viewModel = viewModel,
             navController = navController,
             postIndex = postIndex,
             negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
@@ -118,7 +122,7 @@ fun PostScreen(
             }
             PostScreen(
                 modifier = modifier,
-                loader = viewModel,
+                viewModel = viewModel,
                 navController = navController,
                 postIndex = postIndex,
                 onNegative = onOpenDrawer
@@ -162,7 +166,8 @@ fun PostScreen(
     val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
     LaunchedEffect(lifecycleOwner) {
         if (lifecycleState == Lifecycle.State.STARTED
-            || lifecycleState == Lifecycle.State.RESUMED) {
+            || lifecycleState == Lifecycle.State.RESUMED
+        ) {
             loader.checkAndRefresh()
         }
     }
@@ -203,6 +208,86 @@ fun PostScreen(
             staggeredState = staggeredState,
             onRefresh = { loader.refresh() },
             onLoadMore = { loader.loadMore() },
+            onGloballyPositioned = { index, height -> itemHeights[index] = height },
+            onItemClick = onItemClick
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PostScreen(
+    modifier: Modifier = Modifier,
+    viewModel: PostViewModel,
+    navController: NavController = rememberNavController(),
+    lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
+    refreshState: PullToRefreshState = rememberPullToRefreshState(),
+    titleText: String = stringResource(R.string.post),
+    postIndex: Int? = null,
+    staggeredEnable: Boolean = true,
+    shadowEnable: Boolean = true,
+    searchEnable: Boolean = true,
+    negativeIcon: ImageVector = Icons.Default.Menu,
+    onNegative: (() -> Unit)? = null,
+    onItemClick: (Int) -> Unit = {
+        navController.navigate(route = AppRoute.PostViewer(postIndex = it))
+    }
+) {
+    val scope = rememberCoroutineScope()
+    val lazyPagingItems = viewModel.postPager.collectAsLazyPagingItems()
+
+    val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
+    val scrollToTop: () -> Unit = {
+        Logger.d(TAG) { "scrollToTop() called" }
+        scope.launch { lazyState.scrollToItem(0, 0) }
+    }
+    val topAppBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
+    val itemHeights = remember { mutableIntIntMapOf() }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    LaunchedEffect(lifecycleOwner) {
+        if (lifecycleState == Lifecycle.State.STARTED
+            || lifecycleState == Lifecycle.State.RESUMED
+        ) {
+            viewModel.checkAndRefresh()
+        }
+    }
+
+//    ReturnedIndexChecker(
+//        loader = loader,
+//        lazyState = lazyState,
+//        itemHeights = itemHeights,
+//        postIndex = postIndex
+//    )
+
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            PostTopBar(
+                titleText = titleText,
+                negativeIcon = negativeIcon,
+                shadowEnable = shadowEnable,
+                searchEnable = searchEnable,
+                staggeredState = staggeredState,
+                scrollToTop = scrollToTop,
+                onNegative = onNegative,
+                onSearch = { navController.navigate(route = AppRoute.PostSearch()) },
+                scrollBehavior = scrollBehavior,
+            )
+        },
+    ) { innerPadding ->
+        PostRefreshBody(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            lazyPagingItems = lazyPagingItems,
+            refreshState = refreshState,
+            lazyState = lazyState,
+            staggeredState = staggeredState,
+            onRefresh = { lazyPagingItems.refresh() },
             onGloballyPositioned = { index, height -> itemHeights[index] = height },
             onItemClick = onItemClick
         )
@@ -319,6 +404,50 @@ fun PostRefreshBody(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PostRefreshBody(
+    modifier: Modifier = Modifier,
+    lazyPagingItems: LazyPagingItems<PostData>,
+    refreshState: PullToRefreshState,
+    lazyState: LazyStaggeredGridState,
+    staggeredState: MutableState<Boolean>? = null,
+    onRefresh: () -> Unit,
+    onGloballyPositioned: (Int, Int) -> Unit,
+    onItemClick: (Int) -> Unit,
+) {
+    val isRefreshing by remember(lazyPagingItems) {
+        derivedStateOf { lazyPagingItems.loadState.refresh is androidx.paging.LoadState.Loading }
+    }
+    PullToRefreshBox(
+        modifier = modifier,
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        state = refreshState
+    ) {
+        val isEmpty by remember(lazyPagingItems) {
+            derivedStateOf { lazyPagingItems.itemCount <= 0 }
+        }
+        if (isEmpty) {
+            EmptyView(
+                modifier = Modifier.fillMaxSize(),
+                loadState = lazyPagingItems.loadState,
+                onRefresh = onRefresh
+            )
+        } else {
+            PostBody(
+                modifier = Modifier.fillMaxSize(),
+                lazyPagingItems = lazyPagingItems,
+                canClick = !isRefreshing,
+                state = lazyState,
+                staggeredState = staggeredState,
+                onGloballyPositioned = onGloballyPositioned,
+                onItemClick = onItemClick,
+            )
+        }
+    }
+}
+
 @Composable
 private fun PostBody(
     modifier: Modifier = Modifier,
@@ -362,6 +491,74 @@ private fun PostBody(
                             .height(PostDefaults.NoMoreItemHeight)
                             .wrapContentSize(Alignment.Center)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PostBody(
+    modifier: Modifier = Modifier,
+    lazyPagingItems: LazyPagingItems<PostData>,
+    canClick: Boolean,
+    state: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
+    staggeredState: MutableState<Boolean>? = null,
+    onGloballyPositioned: (Int, Int) -> Unit,
+    onItemClick: (Int) -> Unit,
+) {
+    val loadState = lazyPagingItems.loadState
+    val hasNoMore by remember(loadState) {
+        derivedStateOf {
+            loadState.append is androidx.paging.LoadState.NotLoading &&
+                    loadState.append.endOfPaginationReached &&
+                    lazyPagingItems.itemCount > 0
+        }
+    }
+    BoxWithConstraints(modifier = modifier) {
+        val columns = max((this.maxWidth / 210.dp).toInt(), 2)
+        val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
+
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Fixed(columns),
+            state = state,
+            contentPadding = PaddingValues(contentPadding)
+        ) {
+            items(
+                count = lazyPagingItems.itemCount,
+                key = lazyPagingItems.itemKey { it.id }
+            ) { index->
+                val item = lazyPagingItems[index]
+                if (item != null) {
+                    PostItem(
+                        modifier = Modifier
+                            .padding(contentPadding)
+                            .onGloballyPositioned { onGloballyPositioned(index, it.size.height) },
+                        canClick = canClick,
+                        onClick = { onItemClick(index) },
+                        postData = item,
+                        staggered = staggeredState?.value == true
+                    )
+                }
+            }
+
+            item(span = StaggeredGridItemSpan.FullLine) {
+                if (hasNoMore) {
+                    Text(
+                        text = stringResource(R.string.no_more_data),
+                        modifier = Modifier
+                            .height(PostDefaults.NoMoreItemHeight)
+                            .wrapContentSize(Alignment.Center)
+                    )
+                } else {
+                    val loadState = lazyPagingItems.loadState.append
+                    if (loadState is androidx.paging.LoadState.Loading) {
+                        CircularProgressIndicator()
+                    } else if (loadState is androidx.paging.LoadState.Error) {
+                        Text(text = "加载失败，请重试", modifier = Modifier.clickable(onClick = {
+                            lazyPagingItems.retry()
+                        }))
+                    }
                 }
             }
         }

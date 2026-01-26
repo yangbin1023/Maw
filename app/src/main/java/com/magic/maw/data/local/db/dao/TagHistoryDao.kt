@@ -6,11 +6,22 @@ import androidx.room.Query
 import androidx.room.Transaction
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagHistory
+import com.magic.maw.data.model.entity.TagInfo
+import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
 @Dao
 interface TagHistoryDao {
+    @Query("SELECT * FROM tag_history WHERE website = :website ORDER BY update_time DESC")
+    fun getAllFlow(website: WebsiteOption): Flow<List<TagHistory>>
+
+    @Query("SELECT * FROM tag_history WHERE website = :website ORDER BY update_time DESC LIMIT :limit")
+    fun getAllFlow(website: WebsiteOption, limit: Int): Flow<List<TagHistory>>
+
+    @Query("SELECT * FROM tag_info WHERE name IN (SELECT name FROM tag_history WHERE website = :website ORDER BY update_time DESC LIMIT :limit)")
+    fun getAllTagFlow(website: WebsiteOption, limit: Int): Flow<List<TagInfo>>
+
     @Insert
     suspend fun insert(tagHistory: TagHistory)
 

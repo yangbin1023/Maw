@@ -37,8 +37,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,28 +58,26 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
-import com.magic.maw.data.api.parser.BaseParser
-import com.magic.maw.data.model.entity.TagInfo
-import com.magic.maw.data.local.store.SettingsStore
 import com.magic.maw.data.model.constant.TagType
 import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.ui.common.TagItem
 import com.magic.maw.ui.theme.PreviewTheme
 import kotlinx.coroutines.delay
+import org.koin.compose.viewmodel.koinViewModel
 
 private const val TAG = "SearchScreen"
 
 @Composable
 fun SearchScreen(
     initText: String = "",
+    viewModel: SearchViewModel = koinViewModel<SearchViewModel>(),
     onFinish: () -> Unit = {},
     onSearch: (String) -> Unit = {}
 ) {
-    val settings by SettingsStore.settingsState.collectAsState()
-    val parser by remember { derivedStateOf { BaseParser.get(settings.website) } }
-    val tagManager = parser.tagManager
     val isSearch = remember { mutableStateOf(false) }
     val (inputText, setInputText) = remember {
         val text = initText.toSearchTagText()
@@ -94,8 +90,9 @@ fun SearchScreen(
                 onValueChange = setInputText,
                 onFinish = onFinish,
                 onSearch = {
-                    if (inputText.text.isNotEmpty()) {
+                    if (inputText.text.isNotBlank()) {
                         isSearch.value = true
+                        Logger.d(TAG) { "search text: ${inputText.text}" }
                         onSearch(inputText.text)
                     }
                 }
@@ -110,20 +107,20 @@ fun SearchScreen(
         ) {
             SearchBody(
                 modifier = Modifier.fillMaxSize(),
-                onGetHistory = { tagManager.getHistoryList() },
                 onTagClick = { tag ->
                     val text = "${inputText.text.trim()} ${tag.name.trim()}".toSearchTagText()
                     setInputText(TextFieldValue(text = text, selection = TextRange(text.length)))
                 },
-                onTagDelete = { tagManager.deleteHistory(it.name) },
-                onAllTagDelete = { tagManager.deleteAllHistory() }
+                onTagDelete = { viewModel.deleteHistory(it.name) },
+                onAllTagDelete = { viewModel.deleteAllHistory() }
             )
             SearchSuggestion(
                 modifier = Modifier.fillMaxWidth(),
                 text = inputText.text,
                 onGetHistory = {
                     delay(500)
-                    parser.requestSuggestTagInfo(it)
+//                    parser.requestSuggestTagInfo(it)
+                    emptyList()
                 },
                 onItemClick = {
                     val old = inputText.text.substring(0, inputText.text.lastIndexOf(" ") + 1)
@@ -244,13 +241,14 @@ private fun SearchTopBarTitle(
 @Composable
 private fun SearchBody(
     modifier: Modifier = Modifier,
-    onGetHistory: () -> List<TagInfo>,
     onTagClick: (TagInfo) -> Unit,
     onTagDelete: (TagInfo) -> Unit,
     onAllTagDelete: () -> Unit,
 ) {
     var deleteEnable by remember { mutableStateOf(false) }
-    val tagList = remember { onGetHistory().toMutableStateList() }
+    val viewModel = koinViewModel<SearchViewModel>()
+    val tagHistoryList by viewModel.tagHistoryFlow.collectAsStateWithLifecycle()
+    val tagList = remember(tagHistoryList) { tagHistoryList.toMutableStateList() }
     Column(modifier = modifier.fillMaxSize()) {
         Row(modifier = Modifier.height(40.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -350,7 +348,6 @@ private fun SearchPreview() {
             ) {
                 SearchBody(
                     modifier = Modifier.fillMaxWidth(),
-                    onGetHistory = { getPreviewTagList() },
                     onTagDelete = {},
                     onAllTagDelete = {},
                     onTagClick = {})
@@ -375,7 +372,6 @@ private fun SearchPreviewDark() {
             ) {
                 SearchBody(
                     modifier = Modifier.fillMaxWidth(),
-                    onGetHistory = { getPreviewTagList() },
                     onTagDelete = {},
                     onAllTagDelete = {},
                     onTagClick = {})

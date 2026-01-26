@@ -30,8 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -41,7 +39,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.toRoute
 import co.touchlab.kermit.Logger
-import com.magic.maw.data.api.loader.PostDataLoader
 import com.magic.maw.ui.features.pool.PoolScreen
 import com.magic.maw.ui.features.pool.PoolViewModel
 import com.magic.maw.ui.features.popular.PopularScreen
@@ -166,7 +163,7 @@ fun NavGraphBuilder.postGraph(
             val viewModel = koinViewModel<PostViewModel, AppRoute.Post>(navController, backStackEntry)
             val route: AppRoute.PostViewer = backStackEntry.toRoute()
             ViewScreen(
-                loader = viewModel,
+                viewModel = viewModel,
                 navController = navController,
                 postIndex = route.postIndex,
                 route = route

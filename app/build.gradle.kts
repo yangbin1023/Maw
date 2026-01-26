@@ -121,6 +121,8 @@ dependencies {
     implementation(libs.androidx.datastore)
     implementation(libs.kotlinx.collections.immutable.jvm)
     implementation(libs.kotlinx.datetime)
+    implementation(libs.androidx.paging.common)
+    implementation(libs.androidx.paging.compose)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)
