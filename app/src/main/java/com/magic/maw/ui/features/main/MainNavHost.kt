@@ -22,7 +22,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,7 +39,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.toRoute
 import co.touchlab.kermit.Logger
-import com.magic.maw.ui.common.LocalDataViewModel
 import com.magic.maw.ui.features.pool.PoolScreen
 import com.magic.maw.ui.features.pool.PoolViewModel
 import com.magic.maw.ui.features.popular.PopularScreen
@@ -208,10 +206,14 @@ fun NavGraphBuilder.poolGraph(
         }
         composable<AppRoute.PoolPost> { backStackEntry ->
             val viewModel = koinViewModel<PoolViewModel, AppRoute.Pool>(navController, backStackEntry)
+            val postFlow = viewModel.postFlow ?: run {
+                navController.popBackStack()
+                return@composable
+            }
             val route = backStackEntry.toRoute<AppRoute.PoolPost>()
             val postIndex = backStackEntry.getPostIndex()
             PostScreen(
-                loader = viewModel.postLoader,
+                postFlow = postFlow,
                 navController = navController,
                 titleText = "#${route.poolId}",
                 postIndex = postIndex,
@@ -219,7 +221,6 @@ fun NavGraphBuilder.poolGraph(
                 negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNegative = { navController.popBackStack() },
                 onItemClick = {
-//                    postLoader.setViewIndex(it)
                     navController.navigate(route = AppRoute.PoolViewer(poolId = route.poolId, postIndex = it))
                 }
             )
@@ -227,8 +228,12 @@ fun NavGraphBuilder.poolGraph(
         composable<AppRoute.PoolViewer> { backStackEntry ->
             val viewModel = koinViewModel<PoolViewModel, AppRoute.Pool>(navController, backStackEntry)
             val route = backStackEntry.toRoute<AppRoute.PoolViewer>()
+            val postFlow = viewModel.postFlow ?: run {
+                navController.popBackStack()
+                return@composable
+            }
             ViewScreen(
-                loader = viewModel.postLoader,
+                postFlow = postFlow,
                 navController = navController,
                 postIndex = route.postIndex,
                 route = route

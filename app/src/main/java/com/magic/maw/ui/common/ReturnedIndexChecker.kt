@@ -5,7 +5,10 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import co.touchlab.kermit.Logger
 import com.magic.maw.data.api.loader.PostDataLoader
 
@@ -32,4 +35,28 @@ fun ReturnedIndexChecker(
 //        lazyState.scrollToItem(index, offset)
 //        Logger.d("ReturnedIndexChecker") { "scroll to postIndex: $index" }
 //    }
+}
+
+@Composable
+fun ReturnedIndexChecker(
+    lazyState: LazyStaggeredGridState,
+    itemHeights: MutableIntIntMap,
+    postIndex: Int? = null
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    LaunchedEffect(lifecycleOwner, postIndex) {
+        if (lifecycleState == Lifecycle.State.STARTED
+            || lifecycleState == Lifecycle.State.RESUMED
+        ) {
+            if (postIndex != null) {
+                val index: Int = postIndex
+                val itemHeight = itemHeights.getOrDefault(index, 0)
+                val viewportHeight = lazyState.layoutInfo.viewportSize.height
+                val offset = -(viewportHeight - itemHeight) / 2
+                lazyState.scrollToItem(index, offset)
+                Logger.d("ReturnedIndexChecker") { "scroll to postIndex: $index" }
+            }
+        }
+    }
 }

@@ -24,7 +24,7 @@ abstract class BaseApiService {
     open suspend fun getTagsByPostId(postId: String): List<TagInfo>? = null
     open suspend fun getTagByName(tagName: String): TagInfo? = null
     open suspend fun getUserInfo(userId: String): UserInfo? = null
-
+    open suspend fun getThumbnailUrl(postId: String): String? = null
     open fun parseSearchQuery(searchQuery: String?): Set<String> {
         if (searchQuery.isNullOrBlank())
             return emptySet()

@@ -13,6 +13,7 @@ import com.magic.maw.data.api.service.YandeApiService
 import com.magic.maw.data.local.db.AppDB
 import com.magic.maw.data.local.store.SettingsRepository
 import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.data.repository.PoolRepository
 import com.magic.maw.data.repository.PostRepository
 import com.magic.maw.data.repository.TagHistoryRepository
 import com.magic.maw.data.repository.TagRepository
@@ -22,7 +23,9 @@ import com.magic.maw.ui.features.popular.PopularViewModel
 import com.magic.maw.ui.features.post.PostViewModel
 import com.magic.maw.ui.features.search.SearchViewModel
 import com.magic.maw.ui.features.setting.SettingsViewModel
+import com.magic.maw.ui.features.viewer.ViewerViewModel
 import com.magic.maw.util.createAppHttpClient
+import com.magic.maw.util.createImageLoader
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
@@ -70,11 +73,16 @@ val appModule = module {
     single { TagHistoryRepository(get(), get()) }
     single { UserRepository(get(), get()) }
     single { PostRepository(get(), get(), get()) }
+    single { PoolRepository(get(), get()) }
+
+    // 配置 ImageLoader
+    single { createImageLoader() }
 
     // ViewModel
-    viewModel { PostViewModel(get(), get(), get(), get(), get(), get()) }
-    viewModel { PoolViewModel(get(), get()) }
+    viewModel { PostViewModel(get(), get(), get(), get(), get()) }
+    viewModel { PoolViewModel(get(), get(), get(), get()) }
     viewModel { PopularViewModel(get(), get()) }
     viewModel { SearchViewModel(get(), get(), get()) }
-    viewModel { SettingsViewModel(get()) }
+    viewModel { ViewerViewModel(get(), get()) }
+    viewModel { SettingsViewModel(get(), get()) }
 }

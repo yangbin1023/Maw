@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.paging.compose.LazyPagingItems
 import co.touchlab.kermit.Logger
+import coil3.ImageLoader
 import com.magic.maw.R
 import com.magic.maw.data.api.manager.loadDLFile
 import com.magic.maw.data.local.store.SettingsStore
@@ -44,12 +45,12 @@ import com.magic.maw.data.model.site.PostData
 import com.magic.maw.ui.common.UgoiraPlayer
 import com.magic.maw.ui.common.throttle
 import com.magic.maw.util.DisableHapticLocalProvider
-import com.magic.maw.util.imageLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
 import me.saket.telephoto.zoomable.rememberZoomableState
+import org.koin.compose.koinInject
 import java.io.File
 import kotlin.math.abs
 
@@ -184,6 +185,7 @@ private fun ViewScreenItem(
                 LaunchedEffect(focusOn) { if (!focusOn) zoomableState.resetZoom() }
                 val file = (model.value as? File) ?: return
                 DisableHapticLocalProvider {
+                    val imageLoader = koinInject<ImageLoader>()
                     ZoomableAsyncImage(
                         model = file.toUri(),
                         contentDescription = null,

@@ -72,6 +72,9 @@ koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel" }
 
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }
+coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
+coil-network-ktor3 = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil" }
+
 zoomable-image-coil = { group = "me.saket.telephoto", name = "zoomable-image-coil3", version.ref = "zoomableImageCoil" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 toaster = { group = "com.github.getActivity", name = "Toaster", version.ref = "toaster" }

@@ -1,5 +1,6 @@
 package com.magic.maw.ui.features.pool
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -15,6 +16,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -46,6 +49,9 @@ import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
 import com.magic.maw.data.api.loader.LoadState
@@ -55,6 +61,7 @@ import com.magic.maw.ui.common.EmptyView
 import com.magic.maw.ui.common.LoadMoreChecker
 import com.magic.maw.ui.features.main.AppRoute
 import com.magic.maw.ui.features.post.PostDefaults
+import com.magic.maw.ui.features.post.PostItem
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import kotlinx.collections.immutable.PersistentList
@@ -72,7 +79,7 @@ fun PoolScreen(
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
     onNegative: (() -> Unit)? = null,
 ) {
-    val dataState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lazyPagingItems = viewModel.poolFlow.collectAsLazyPagingItems()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
 
@@ -80,7 +87,8 @@ fun PoolScreen(
     val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
     LaunchedEffect(lifecycleOwner) {
         if (lifecycleState == Lifecycle.State.STARTED
-            || lifecycleState == Lifecycle.State.RESUMED) {
+            || lifecycleState == Lifecycle.State.RESUMED
+        ) {
             viewModel.checkAndRefresh()
         }
     }
@@ -99,11 +107,10 @@ fun PoolScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            uiState = dataState,
+            lazyPagingItems = lazyPagingItems,
             refreshState = refreshState,
             lazyState = lazyState,
-            onRefresh = { viewModel.refresh() },
-            onLoadMore = { viewModel.loadMore() },
+            onRefresh = { lazyPagingItems.refresh() },
             onItemClick = { _, poolData ->
                 Logger.d(TAG) { "onItemClick $poolData" }
                 viewModel.setViewPoolPost(poolData.id)
@@ -143,16 +150,15 @@ private fun PoolTopBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PoolRefreshBody(
-    uiState: PoolDataUiState,
     modifier: Modifier = Modifier,
+    lazyPagingItems: LazyPagingItems<PoolData>,
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
     onRefresh: () -> Unit = {},
-    onLoadMore: () -> Unit = {},
     onItemClick: (Int, PoolData) -> Unit = { _, _ -> },
 ) {
-    val isRefreshing by remember(uiState.loadState) {
-        derivedStateOf { uiState.loadState == LoadState.Refreshing }
+    val isRefreshing by remember(lazyPagingItems) {
+        derivedStateOf { lazyPagingItems.loadState.refresh is androidx.paging.LoadState.Loading }
     }
     PullToRefreshBox(
         modifier = modifier,
@@ -160,26 +166,20 @@ private fun PoolRefreshBody(
         onRefresh = onRefresh,
         state = refreshState
     ) {
-        val isEmpty by remember(uiState.items) {
-            derivedStateOf { uiState.items.isEmpty() }
+        val isEmpty by remember(lazyPagingItems) {
+            derivedStateOf { lazyPagingItems.itemCount <= 0 }
         }
         if (isEmpty) {
             EmptyView(
                 modifier = Modifier.fillMaxSize(),
-                loadState = uiState.loadState,
+                loadState = lazyPagingItems.loadState,
                 onRefresh = onRefresh
             )
         } else {
-            LoadMoreChecker(
-                uiState = uiState,
-                state = lazyState,
-                onLoadMore = onLoadMore
-            )
             PoolBody(
                 modifier = Modifier.fillMaxSize(),
-                items = uiState.items,
+                lazyPagingItems = lazyPagingItems,
                 canClick = !isRefreshing,
-                hasNoMore = uiState.hasNoMore,
                 lazyState = lazyState,
                 onItemClick = onItemClick,
             )
@@ -190,12 +190,19 @@ private fun PoolRefreshBody(
 @Composable
 private fun PoolBody(
     modifier: Modifier = Modifier,
-    items: PersistentList<PoolData>,
-    hasNoMore: Boolean = false,
+    lazyPagingItems: LazyPagingItems<PoolData>,
     canClick: Boolean = true,
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     onItemClick: (Int, PoolData) -> Unit
 ) {
+    val loadState = lazyPagingItems.loadState
+    val hasNoMore by remember(loadState) {
+        derivedStateOf {
+            loadState.append is androidx.paging.LoadState.NotLoading &&
+                    loadState.append.endOfPaginationReached &&
+                    lazyPagingItems.itemCount > 0
+        }
+    }
     BoxWithConstraints(modifier = modifier) {
         val columns = max((this.maxWidth / 320.dp).toInt(), 1)
         LazyVerticalStaggeredGrid(
@@ -203,27 +210,41 @@ private fun PoolBody(
             state = lazyState,
             contentPadding = PaddingValues(3.dp)
         ) {
-            itemsIndexed(
-                items = items,
-                key = { _, item -> item.id }
-            ) { index, data ->
-                PoolItem(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(3.dp),
-                    poolData = data,
-                    canClick = canClick,
-                    onClick = { onItemClick(index, data) }
-                )
+
+            items(
+                count = lazyPagingItems.itemCount,
+                key = lazyPagingItems.itemKey { it.id }
+            ) { index ->
+                val item = lazyPagingItems[index]
+                if (item != null) {
+                    PoolItem(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(3.dp),
+                        poolData = item,
+                        canClick = canClick,
+                        onClick = { onItemClick(index, item) }
+                    )
+                }
             }
-            if (hasNoMore) {
-                item(span = StaggeredGridItemSpan.FullLine) {
+
+            item(span = StaggeredGridItemSpan.FullLine) {
+                if (hasNoMore) {
                     Text(
                         text = stringResource(R.string.no_more_data),
                         modifier = Modifier
                             .height(PostDefaults.NoMoreItemHeight)
                             .wrapContentSize(Alignment.Center)
                     )
+                } else {
+                    val loadState = lazyPagingItems.loadState.append
+                    if (loadState is androidx.paging.LoadState.Loading) {
+                        CircularProgressIndicator()
+                    } else if (loadState is androidx.paging.LoadState.Error) {
+                        Text(text = "加载失败，请重试", modifier = Modifier.clickable(onClick = {
+                            lazyPagingItems.retry()
+                        }))
+                    }
                 }
             }
         }

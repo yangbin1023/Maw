@@ -175,7 +175,7 @@ private fun RatingsSettingItem(
     val settingsState by viewModel.settingsState.collectAsState()
     val website by remember { derivedStateOf { settingsState.website } }
     val ratings by remember { derivedStateOf { settingsState.websiteSettings.ratings } }
-    val supportRatings = BaseParser.get(website).supportedRatings
+    val supportRatings = viewModel.provider[website].supportedRatings
     val tips = if (ratings.toSet() == supportRatings.toSet()) {
         stringResource(R.string.all)
     } else {
@@ -234,7 +234,7 @@ private fun SaveQualitySettingItem(
     val settingsState by viewModel.settingsState.collectAsState()
     val saveQuality by remember { derivedStateOf { settingsState.websiteSettings.saveQuality } }
     val options = Quality.SaveList
-    Logger.d(TAG) { "ShowQualitySettingItem compose showQuality: $saveQuality" }
+    Logger.d(TAG) { "ShowQualitySettingItem compose saveQuality: $saveQuality" }
     DialogSettingItem(
         modifier = modifier,
         title = stringResource(id = R.string.save),
@@ -247,7 +247,7 @@ private fun SaveQualitySettingItem(
             selectedOption = saveQuality,
             onDismiss = onDismiss,
             onOptionSelected = { option ->
-                viewModel.updateWebSettings { copy(showQuality = option) }
+                viewModel.updateWebSettings { copy(saveQuality = option) }
             }
         )
     }

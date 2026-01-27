@@ -36,7 +36,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -75,7 +74,6 @@ import com.magic.maw.data.api.loader.PostDataUiState
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.ui.common.EmptyView
 import com.magic.maw.ui.common.LoadMoreChecker
-import com.magic.maw.ui.common.LocalDataViewModel
 import com.magic.maw.ui.common.RefreshScrollToTopChecker
 import com.magic.maw.ui.common.ReturnedIndexChecker
 import com.magic.maw.ui.features.main.AppRoute
@@ -115,34 +113,32 @@ fun PostScreen(
         }
     }
 
-    CompositionLocalProvider(LocalDataViewModel provides viewModel) {
-        if (viewModel.isSubView) {
+    if (viewModel.isSubView) {
+        PostScreen(
+            modifier = modifier,
+            postFlow = viewModel.postFlow,
+            navController = navController,
+            postIndex = postIndex,
+            negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
+            onNegative = { navController.popBackStack() },
+        )
+
+        // WARNING:此处需要拦截返回键，如果不拦截会将旧的AppRoute.PostList出栈
+        BackHandler {
+            navController.popBackStack()
+        }
+    } else {
+        Row(modifier = Modifier.fillMaxSize()) {
+            if (useNavRail()) {
+                MainNavRail(navController = navController, topRoute = AppRoute.Post())
+            }
             PostScreen(
                 modifier = modifier,
                 postFlow = viewModel.postFlow,
                 navController = navController,
                 postIndex = postIndex,
-                negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                onNegative = { navController.popBackStack() },
+                onNegative = onOpenDrawer
             )
-
-            // WARNING:此处需要拦截返回键，如果不拦截会将旧的AppRoute.PostList出栈
-            BackHandler {
-                navController.popBackStack()
-            }
-        } else {
-            Row(modifier = Modifier.fillMaxSize()) {
-                if (useNavRail()) {
-                    MainNavRail(navController = navController, topRoute = AppRoute.Post())
-                }
-                PostScreen(
-                    modifier = modifier,
-                    postFlow = viewModel.postFlow,
-                    navController = navController,
-                    postIndex = postIndex,
-                    onNegative = onOpenDrawer
-                )
-            }
         }
     }
 }
@@ -162,10 +158,7 @@ fun PostScreen(
     searchEnable: Boolean = true,
     negativeIcon: ImageVector = Icons.Default.Menu,
     onNegative: (() -> Unit)? = null,
-    onItemClick: (Int) -> Unit = {
-//        loader.setViewIndex(it)
-        navController.navigate(route = AppRoute.PostViewer(postIndex = it))
-    }
+    onItemClick: (Int) -> Unit = { navController.navigate(route = AppRoute.PostViewer(postIndex = it)) }
 ) {
     val scope = rememberCoroutineScope()
     val uiState by loader.uiState.collectAsStateWithLifecycle()
@@ -261,12 +254,11 @@ fun PostScreen(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
     val itemHeights = remember { mutableIntIntMapOf() }
 
-//    ReturnedIndexChecker(
-//        loader = loader,
-//        lazyState = lazyState,
-//        itemHeights = itemHeights,
-//        postIndex = postIndex
-//    )
+    ReturnedIndexChecker(
+        lazyState = lazyState,
+        itemHeights = itemHeights,
+        postIndex = postIndex
+    )
 
     Scaffold(
         modifier = modifier,

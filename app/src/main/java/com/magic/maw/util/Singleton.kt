@@ -8,7 +8,9 @@ import android.webkit.CookieManager
 import coil3.ImageLoader
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
-import com.magic.maw.MyApp.Companion.app
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.request.crossfade
+import coil3.video.VideoFrameDecoder
 import com.magic.maw.ui.features.verify.VerifyViewDefaults
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
@@ -28,6 +30,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import okhttp3.ConnectionPool
 import okhttp3.Dispatcher
+import org.koin.core.scope.Scope
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.Date
@@ -94,6 +97,7 @@ fun createAppHttpClient(): HttpClient {
                 hostnameVerifier { _, _ -> true }
                 sslSocketFactory(mySSLSocketFactory, myTrustManager)
                 proxySelector(SwitchProxySelector)
+                retryOnConnectionFailure(true)
 
                 // 配置最大请求数
                 val dispatcher = Dispatcher()
@@ -125,14 +129,22 @@ val dbHandler by lazy {
     Handler(dbHandlerThread.looper)
 }
 
-val imageLoader by lazy {
-    ImageLoader.Builder(app)
+fun Scope.createImageLoader(): ImageLoader {
+    return ImageLoader.Builder(get())
         .components {
+            // 添加ktor支持
+            add(KtorNetworkFetcherFactory(get<HttpClient>()))
+            // 添加获取略缩图Fetcher
+            add(PostVideoFetcher.Factory(get()))
+            // 添加视频抽帧插件
+            add(VideoFrameDecoder.Factory())
+            // 添加Gif支持
             if (Build.VERSION.SDK_INT >= 28) {
                 add(AnimatedImageDecoder.Factory())
             } else {
                 add(GifDecoder.Factory())
             }
         }
+        .crossfade(true)
         .build()
 }

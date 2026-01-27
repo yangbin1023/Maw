@@ -123,6 +123,8 @@ dependencies {
     implementation(libs.kotlinx.datetime)
     implementation(libs.androidx.paging.common)
     implementation(libs.androidx.paging.compose)
+    implementation(libs.coil.video)
+    implementation(libs.coil.network.ktor3)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)

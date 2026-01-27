@@ -252,7 +252,6 @@ private fun PopularPagerItemBody(
         onGloballyPositioned = { index, height -> itemData.itemHeights[index] = height },
         onItemClick = {
             Logger.d(TAG) { "onItemClick $it" }
-//            loader.setViewIndex(it)
             navController.navigate(route = AppRoute.PopularViewer(postIndex = it))
         }
     )

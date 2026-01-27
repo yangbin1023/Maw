@@ -10,73 +10,72 @@ import androidx.paging.cachedIn
 import com.magic.maw.data.api.entity.RequestFilter
 import com.magic.maw.data.api.service.ApiServiceProvider
 import com.magic.maw.data.local.store.SettingsRepository
+import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.paging.PostPagingSource
+import com.magic.maw.data.repository.PostRepository
 import com.magic.maw.data.repository.TagHistoryRepository
-import com.magic.maw.data.repository.TagRepository
-import com.magic.maw.data.repository.UserRepository
-import com.magic.maw.ui.common.BaseDataViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 
 private const val TAG = "PostViewModel"
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class PostViewModel(
     savedStateHandle: SavedStateHandle,
-    tagRepository: TagRepository,
-    userRepository: UserRepository,
     private val provider: ApiServiceProvider,
     private val settingsRepository: SettingsRepository,
+    private val postRepository: PostRepository,
     private val tagHistoryRepository: TagHistoryRepository,
-) : BaseDataViewModel(tagRepository, userRepository) {
+) : ViewModel() {
     private var website: WebsiteOption
-    private var currentPagingSource: PostPagingSource? = null
-    private val pager: Pager<String, PostData>
+    private var ratings: List<Rating>
+    private val tagNames: Set<String>
+    private val refreshSignal = MutableSharedFlow<Unit>(replay = 1).apply {
+        tryEmit(Unit)
+    }
 
     val postFlow: Flow<PagingData<PostData>>
 
     val isSubView: Boolean
-        get() = currentPagingSource?.filter?.tags?.isNotEmpty() == true
 
     init {
         val settings = settingsRepository.settings
-        website = settings.website
         val searchQuery = savedStateHandle.get<String>("searchQuery")
-        val apiService = provider[website]
-        val tags = apiService.parseSearchQuery(searchQuery)
-        if (tags.isNotEmpty()) {
-            viewModelScope.launch {
-                tagHistoryRepository.updateTagHistory(website, tags)
+        website = settings.website
+        ratings = settings.websiteSettings.ratings
+        tagNames = provider[website].parseSearchQuery(searchQuery)
+        isSubView = tagNames.isNotEmpty()
+        postFlow = refreshSignal
+            .flatMapLatest {
+                postRepository.getPostStream(RequestFilter(tags = tagNames))
+            }
+            .cachedIn(CoroutineScope(Dispatchers.IO))
+        if (tagNames.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                tagHistoryRepository.updateTagHistory(website, tags = tagNames)
             }
         }
-        pager = Pager(
-            config = PagingConfig(pageSize = 40, enablePlaceholders = false),
-            pagingSourceFactory = {
-                val ratings = settingsRepository.settings.danbooruSettings.ratings
-                val filter = RequestFilter(ratings = ratings, tags = tags)
-                PostPagingSource(apiService, filter).also {
-                    currentPagingSource = it
-                }
-            }
-        )
-        postFlow = pager.flow.cachedIn(CoroutineScope(Dispatchers.IO))
     }
 
-    override fun checkAndRefresh() {
+    fun checkAndRefresh() {
         val settings = settingsRepository.settings
         val website = settings.website
         val ratings = settings.websiteSettings.ratings
-        val filterRatings = currentPagingSource?.filter?.ratings
-        if (website != this.website || filterRatings != null && filterRatings.toSet() != ratings.toSet()) {
+        if (website != this.website || ratings.toSet() != this.ratings.toSet()) {
             this.website = website
+            this.ratings = ratings
             clearData()
         }
     }
 
     fun clearData() {
-        currentPagingSource?.invalidate()
+        refreshSignal.tryEmit(Unit)
     }
 }

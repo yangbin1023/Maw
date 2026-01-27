@@ -39,7 +39,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -68,16 +67,12 @@ import co.touchlab.kermit.Logger
 import com.hjq.toast.Toaster
 import com.magic.maw.R
 import com.magic.maw.data.api.manager.loadDLFile
-import com.magic.maw.data.api.parser.BaseParser
 import com.magic.maw.data.local.store.SettingsStore
 import com.magic.maw.data.model.LoadStatus
 import com.magic.maw.data.model.constant.Quality
-import com.magic.maw.data.model.constant.TagType
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
-import com.magic.maw.data.model.entity.UserInfo
 import com.magic.maw.data.model.site.PostData
-import com.magic.maw.ui.common.LocalDataViewModel
 import com.magic.maw.ui.common.MenuSettingItem
 import com.magic.maw.ui.common.ScrollableView
 import com.magic.maw.ui.common.ScrollableViewDefaults
@@ -99,6 +94,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.compose.viewmodel.koinViewModel
 
 private const val TAG = "ViewTAG"
 
@@ -306,9 +302,7 @@ private fun DetailContent(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val viewModel = LocalDataViewModel.current
-    viewModel.refreshTagsForPost(postData)
-    viewModel.refreshUserInfo(postData.website, postData.createId)
+    val viewModel: ViewerViewModel = koinViewModel()
     Column(
         modifier = modifier
             .fillMaxWidth()
