@@ -21,6 +21,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,9 +38,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.paging.PagingData
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.magic.maw.data.api.loader.PostDataLoader
 import com.magic.maw.data.model.site.PostData
+import com.magic.maw.ui.common.LocalDataViewModel
 import com.magic.maw.ui.features.main.AppRoute
 import com.magic.maw.ui.features.main.POST_INDEX
 import com.magic.maw.ui.features.post.PostViewModel
@@ -48,6 +52,8 @@ import com.magic.maw.ui.theme.ViewDetailBarHalfFold
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.showSystemBars
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun ViewScreen(
@@ -153,7 +159,26 @@ fun ViewScreen(
     postIndex: Int = 0,
     route: AppRoute = AppRoute.PostViewer(postIndex = postIndex),
 ) {
-    val lazyPagingItems = viewModel.postPager.collectAsLazyPagingItems()
+    CompositionLocalProvider(LocalDataViewModel provides viewModel) {
+        ViewScreen(
+            modifier = modifier,
+            postFlow = viewModel.postFlow,
+            navController = navController,
+            postIndex = postIndex,
+            route = route
+        )
+    }
+}
+
+@Composable
+fun ViewScreen(
+    modifier: Modifier = Modifier,
+    postFlow: Flow<PagingData<PostData>>,
+    navController: NavController = rememberNavController(),
+    postIndex: Int = 0,
+    route: AppRoute = AppRoute.PostViewer(postIndex = postIndex),
+) {
+    val lazyPagingItems = postFlow.collectAsLazyPagingItems()
     val pagerState = rememberPagerState(initialPage = postIndex) { lazyPagingItems.itemCount }
     val context = LocalContext.current
     val playerState = remember { VideoPlayerState(context = context) }

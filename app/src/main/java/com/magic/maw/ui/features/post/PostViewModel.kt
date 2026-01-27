@@ -14,6 +14,9 @@ import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.paging.PostPagingSource
 import com.magic.maw.data.repository.TagHistoryRepository
+import com.magic.maw.data.repository.TagRepository
+import com.magic.maw.data.repository.UserRepository
+import com.magic.maw.ui.common.BaseDataViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -23,15 +26,17 @@ private const val TAG = "PostViewModel"
 
 class PostViewModel(
     savedStateHandle: SavedStateHandle,
+    tagRepository: TagRepository,
+    userRepository: UserRepository,
     private val provider: ApiServiceProvider,
     private val settingsRepository: SettingsRepository,
-    private val tagHistoryRepository: TagHistoryRepository
-) : ViewModel() {
+    private val tagHistoryRepository: TagHistoryRepository,
+) : BaseDataViewModel(tagRepository, userRepository) {
     private var website: WebsiteOption
     private var currentPagingSource: PostPagingSource? = null
     private val pager: Pager<String, PostData>
 
-    val postPager: Flow<PagingData<PostData>>
+    val postFlow: Flow<PagingData<PostData>>
 
     val isSubView: Boolean
         get() = currentPagingSource?.filter?.tags?.isNotEmpty() == true
@@ -57,10 +62,10 @@ class PostViewModel(
                 }
             }
         )
-        postPager = pager.flow.cachedIn(CoroutineScope(Dispatchers.IO))
+        postFlow = pager.flow.cachedIn(CoroutineScope(Dispatchers.IO))
     }
 
-    fun checkAndRefresh() {
+    override fun checkAndRefresh() {
         val settings = settingsRepository.settings
         val website = settings.website
         val ratings = settings.websiteSettings.ratings

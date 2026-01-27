@@ -117,11 +117,6 @@ fun SearchScreen(
             SearchSuggestion(
                 modifier = Modifier.fillMaxWidth(),
                 text = inputText.text,
-                onGetHistory = {
-                    delay(500)
-//                    parser.requestSuggestTagInfo(it)
-                    emptyList()
-                },
                 onItemClick = {
                     val old = inputText.text.substring(0, inputText.text.lastIndexOf(" ") + 1)
                     val new = "${old.trim()} ${it.trim()}".toSearchTagText()
@@ -293,14 +288,15 @@ private fun SearchBody(
 private fun SearchSuggestion(
     modifier: Modifier = Modifier,
     text: String,
-    onGetHistory: suspend (String) -> List<TagInfo>,
     onItemClick: (String) -> Unit
 ) {
+    val viewModel = koinViewModel<SearchViewModel>()
     var suggestionList: List<TagInfo> by remember { mutableStateOf(emptyList()) }
     LaunchedEffect(text) {
         if (text.isNotEmpty() && !text.endsWith(" ")) {
             val current = text.substring(text.lastIndexOf(" ") + 1).trim()
-            suggestionList = onGetHistory(current)
+            delay(500)
+            suggestionList = viewModel.requestSuggestTagInfo(current)
         } else {
             suggestionList = emptyList()
         }
@@ -354,7 +350,6 @@ private fun SearchPreview() {
                 SearchSuggestion(
                     modifier = Modifier.fillMaxWidth(),
                     text = "test",
-                    onGetHistory = { getPreviewTagList().subList(0, 3) },
                     onItemClick = {})
             }
         }
@@ -378,7 +373,6 @@ private fun SearchPreviewDark() {
                 SearchSuggestion(
                     modifier = Modifier.fillMaxWidth(),
                     text = "test",
-                    onGetHistory = { getPreviewTagList().subList(0, 3) },
                     onItemClick = {})
             }
         }

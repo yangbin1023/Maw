@@ -28,7 +28,7 @@ class TagRepository(
                 async {
                     dao.getByName(data.website, tagName)
                 }
-            }.awaitAll().requireNoNulls()
+            }.awaitAll().filterNotNull()
         }
         // 排除新数据
         val now = Clock.System.now()
@@ -52,7 +52,7 @@ class TagRepository(
                 async {
                     parser.requestTagInfo(tagName)
                 }
-            }.awaitAll().requireNoNulls()
+            }.awaitAll().filterNotNull()
         }
         tagList2.forEach { saveTagInfo(it) }
     }

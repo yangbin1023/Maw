@@ -36,6 +36,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -62,6 +63,7 @@ import androidx.lifecycle.compose.currentStateAsState
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -73,6 +75,7 @@ import com.magic.maw.data.api.loader.PostDataUiState
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.ui.common.EmptyView
 import com.magic.maw.ui.common.LoadMoreChecker
+import com.magic.maw.ui.common.LocalDataViewModel
 import com.magic.maw.ui.common.RefreshScrollToTopChecker
 import com.magic.maw.ui.common.ReturnedIndexChecker
 import com.magic.maw.ui.features.main.AppRoute
@@ -83,6 +86,7 @@ import com.magic.maw.ui.features.main.useNavRail
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import kotlinx.collections.immutable.PersistentList
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
@@ -101,32 +105,44 @@ fun PostScreen(
     val postIndex = backStackEntry.getPostIndex()
     Logger.d(TAG) { "entry: ${backStackEntry.id}, viewModel: $viewModel, postIndex: $postIndex" }
 
-    if (viewModel.isSubView) {
-        PostScreen(
-            modifier = modifier,
-            viewModel = viewModel,
-            navController = navController,
-            postIndex = postIndex,
-            negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
-            onNegative = { navController.popBackStack() },
-        )
-
-        // WARNING:此处需要拦截返回键，如果不拦截会将旧的AppRoute.PostList出栈
-        BackHandler {
-            navController.popBackStack()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    LaunchedEffect(lifecycleOwner) {
+        if (lifecycleState == Lifecycle.State.STARTED
+            || lifecycleState == Lifecycle.State.RESUMED
+        ) {
+            viewModel.checkAndRefresh()
         }
-    } else {
-        Row(modifier = Modifier.fillMaxSize()) {
-            if (useNavRail()) {
-                MainNavRail(navController = navController, topRoute = AppRoute.Post())
-            }
+    }
+
+    CompositionLocalProvider(LocalDataViewModel provides viewModel) {
+        if (viewModel.isSubView) {
             PostScreen(
                 modifier = modifier,
-                viewModel = viewModel,
+                postFlow = viewModel.postFlow,
                 navController = navController,
                 postIndex = postIndex,
-                onNegative = onOpenDrawer
+                negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                onNegative = { navController.popBackStack() },
             )
+
+            // WARNING:此处需要拦截返回键，如果不拦截会将旧的AppRoute.PostList出栈
+            BackHandler {
+                navController.popBackStack()
+            }
+        } else {
+            Row(modifier = Modifier.fillMaxSize()) {
+                if (useNavRail()) {
+                    MainNavRail(navController = navController, topRoute = AppRoute.Post())
+                }
+                PostScreen(
+                    modifier = modifier,
+                    postFlow = viewModel.postFlow,
+                    navController = navController,
+                    postIndex = postIndex,
+                    onNegative = onOpenDrawer
+                )
+            }
         }
     }
 }
@@ -218,7 +234,7 @@ fun PostScreen(
 @Composable
 fun PostScreen(
     modifier: Modifier = Modifier,
-    viewModel: PostViewModel,
+    postFlow: Flow<PagingData<PostData>>,
     navController: NavController = rememberNavController(),
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
@@ -234,7 +250,7 @@ fun PostScreen(
     }
 ) {
     val scope = rememberCoroutineScope()
-    val lazyPagingItems = viewModel.postPager.collectAsLazyPagingItems()
+    val lazyPagingItems = postFlow.collectAsLazyPagingItems()
 
     val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
     val scrollToTop: () -> Unit = {
@@ -244,16 +260,6 @@ fun PostScreen(
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
     val itemHeights = remember { mutableIntIntMapOf() }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
-    LaunchedEffect(lifecycleOwner) {
-        if (lifecycleState == Lifecycle.State.STARTED
-            || lifecycleState == Lifecycle.State.RESUMED
-        ) {
-            viewModel.checkAndRefresh()
-        }
-    }
 
 //    ReturnedIndexChecker(
 //        loader = loader,
@@ -527,7 +533,7 @@ private fun PostBody(
             items(
                 count = lazyPagingItems.itemCount,
                 key = lazyPagingItems.itemKey { it.id }
-            ) { index->
+            ) { index ->
                 val item = lazyPagingItems[index]
                 if (item != null) {
                     PostItem(

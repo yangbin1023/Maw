@@ -1,17 +1,22 @@
 package com.magic.maw.data.api.service
 
 import co.touchlab.kermit.Logger
+import com.magic.maw.data.api.entity.PoolResponse
 import com.magic.maw.data.api.entity.PostResponse
 import com.magic.maw.data.api.entity.RequestFilter
 import com.magic.maw.data.api.entity.RequestMeta
 import com.magic.maw.data.local.store.SettingsStore
+import com.magic.maw.data.model.RequestOption
 import com.magic.maw.data.model.constant.PopularType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.Rating.Companion.join
 import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.data.model.entity.TagInfo
+import com.magic.maw.data.model.site.PoolData
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.model.site.yande.YandeData
 import com.magic.maw.data.model.site.yande.YandePool
+import com.magic.maw.data.model.site.yande.YandeTag
 import com.magic.maw.util.get
 import com.magic.maw.util.toMonday
 import io.ktor.client.HttpClient
@@ -62,6 +67,46 @@ class YandeApiService(private val client: HttpClient) : BaseApiService() {
             next = if (noMore) null else (currentPage + 1).toString()
         )
         return PostResponse(items = list, meta = newMeta)
+    }
+
+    override suspend fun getPoolData(
+        filter: RequestFilter,
+        meta: RequestMeta
+    ): PoolResponse {
+        val url = getPoolUrl(filter, meta)
+        val poolList: ArrayList<YandePool> = client.get(url)
+        val list: ArrayList<PoolData> = ArrayList()
+        for (item in poolList) {
+            val data = item.toPoolData() ?: continue
+            list.add(data)
+        }
+        val currentPage = meta.page
+        val newMeta = RequestMeta(
+            prev = if (currentPage == 1) null else (currentPage - 1).toString(),
+            next = if (poolList.isEmpty()) null else (currentPage + 1).toString()
+        )
+        return PoolResponse(items = list, meta = newMeta)
+    }
+
+    override suspend fun getSuggestTagInfo(
+        name: String,
+        limit: Int
+    ): List<TagInfo> {
+        if (name.isEmpty())
+            return emptyList()
+        val tagMap = HashMap<String, TagInfo>()
+        val tagList = ArrayList<TagInfo>()
+        try {
+            val url = getTagUrl(name, limit)
+            val yandeList: ArrayList<YandeTag> = client.get(url)
+            for (yandeTag in yandeList) {
+                val tag = yandeTag.toTagInfo() ?: continue
+                tagMap[tag.name] = tag
+                tagList.add(tag)
+            }
+        } catch (_: Exception) {
+        }
+        return tagList
     }
 
     private fun getPostUrl(filter: RequestFilter, meta: RequestMeta): String {
@@ -118,6 +163,15 @@ class YandeApiService(private val client: HttpClient) : BaseApiService() {
         return builder.build().toString().apply {
             Logger.d("PostDataLoader") { "url: $this" }
         }
+    }
+
+    private fun getPoolUrl(filter: RequestFilter, meta: RequestMeta): String {
+        return "$baseUrl/pool.json?page=${meta.page}"
+    }
+
+    private fun getTagUrl(name: String, limit: Int): String {
+        val limit = limit.coerceAtLeast(5)
+        return "$baseUrl/tag.json?name=$name&page=1&limit=$limit&order=count"
     }
 
     private fun getRatingTag(ratings: List<Rating>): String {

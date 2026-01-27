@@ -72,9 +72,9 @@ val appModule = module {
     single { PostRepository(get(), get(), get()) }
 
     // ViewModel
-    viewModel { PostViewModel(get(), get(), get(), get()) }
+    viewModel { PostViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { PoolViewModel(get(), get()) }
     viewModel { PopularViewModel(get(), get()) }
-    viewModel { SearchViewModel(get(), get()) }
+    viewModel { SearchViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get()) }
 }

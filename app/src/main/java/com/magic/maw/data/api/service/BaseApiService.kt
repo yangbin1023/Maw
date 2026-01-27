@@ -1,5 +1,6 @@
 package com.magic.maw.data.api.service
 
+import com.magic.maw.data.api.entity.PoolResponse
 import com.magic.maw.data.api.entity.PostResponse
 import com.magic.maw.data.api.entity.RequestFilter
 import com.magic.maw.data.api.entity.RequestMeta
@@ -7,6 +8,7 @@ import com.magic.maw.data.api.parser.BaseParser.Companion.decode
 import com.magic.maw.data.model.constant.PopularType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.data.model.entity.TagInfo
 
 abstract class BaseApiService {
     protected abstract val baseUrl: String
@@ -15,6 +17,8 @@ abstract class BaseApiService {
     open val supportedPopularDateTypes: List<PopularType> = PopularType.defaultSupportedDateTypes
 
     abstract suspend fun getPostData(filter: RequestFilter, meta: RequestMeta): PostResponse
+    abstract suspend fun getPoolData(filter: RequestFilter, meta: RequestMeta): PoolResponse
+    abstract suspend fun getSuggestTagInfo(name: String, limit: Int = 10): List<TagInfo>
 
     open fun parseSearchQuery(searchQuery: String?): Set<String> {
         if (searchQuery.isNullOrBlank())

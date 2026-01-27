@@ -18,7 +18,7 @@ import com.magic.maw.data.local.store.SettingsRepository
 import com.magic.maw.data.model.RequestOption
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.repository.PostRepository
-import com.magic.maw.ui.common.BaseViewModel
+import com.magic.maw.ui.common.BaseViewModel2
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,7 +47,7 @@ data class PopularItemData(
 
 class PopularItem(
     popularOption: PopularOption,
-    private val viewModel: BaseViewModel,
+    private val viewModel: BaseViewModel2,
     private val postRepository: PostRepository,
     private val settingsRepository: SettingsRepository
 ) : PopularDataLoader {
@@ -124,7 +124,7 @@ class PopularItem(
 class PopularViewModel(
     private val postRepository: PostRepository,
     private val settingsRepository: SettingsRepository,
-) : BaseViewModel() {
+) : BaseViewModel2() {
     private var website: WebsiteOption = SettingsStore.settings.website
     private var parser = BaseParser.get(website)
     private val itemDataMap: MutableMap<PopularType, PopularItemData> = mutableMapOf()

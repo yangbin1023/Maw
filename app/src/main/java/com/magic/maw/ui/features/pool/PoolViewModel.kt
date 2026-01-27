@@ -15,7 +15,7 @@ import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.site.PoolData
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.repository.PostRepository
-import com.magic.maw.ui.common.BaseViewModel
+import com.magic.maw.ui.common.BaseViewModel2
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +27,7 @@ class PoolViewModel(
     private val provider: WebsiteParserProvider,
     private val settingsRepository: SettingsRepository,
 //    private val postRepository: PostRepository,
-) : BaseViewModel(), PoolDataLoader {
+) : BaseViewModel2(), PoolDataLoader {
     private var website: WebsiteOption
     private var poolRequestOption: RequestOption
     private var postRequestOption: RequestOption

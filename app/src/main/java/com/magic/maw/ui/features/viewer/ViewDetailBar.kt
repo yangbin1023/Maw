@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import co.touchlab.kermit.Logger
 import com.hjq.toast.Toaster
 import com.magic.maw.R
@@ -76,6 +77,7 @@ import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.data.model.entity.UserInfo
 import com.magic.maw.data.model.site.PostData
+import com.magic.maw.ui.common.LocalDataViewModel
 import com.magic.maw.ui.common.MenuSettingItem
 import com.magic.maw.ui.common.ScrollableView
 import com.magic.maw.ui.common.ScrollableViewDefaults
@@ -303,10 +305,10 @@ private fun DetailContent(
     onTagClick: (TagInfo, Boolean) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    val settings by SettingsStore.settingsState.collectAsState()
-    val parser by remember { derivedStateOf { BaseParser.get(settings.website) } }
-    val tagManager = parser.tagManager
     val context = LocalContext.current
+    val viewModel = LocalDataViewModel.current
+    viewModel.refreshTagsForPost(postData)
+    viewModel.refreshUserInfo(postData.website, postData.createId)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -314,22 +316,8 @@ private fun DetailContent(
     ) {
         ContentHeader(stringResource(R.string.tags))
 
-        var tagChanged = false
-        for (tagInfo in postData.tags) {
-            if (tagInfo.type == TagType.None || tagInfo.count == 0) {
-                val info = tagManager.getInfoStatus(tagInfo.name, scope).collectAsState().value
-                if (info is LoadStatus.Success<TagInfo>) {
-                    if (tagInfo.type != info.result.type) {
-                        tagChanged = true
-                    }
-                    postData.updateTag(info.result)
-                }
-            }
-        }
-        if (tagChanged) {
-            postData.tags.sort()
-        }
-        for (tagInfo in postData.tags) {
+        val tags by viewModel.tagsFlow.collectAsStateWithLifecycle()
+        for (tagInfo in tags) {
             TagInfoItem(info = tagInfo, onTagClick = onTagClick)
         }
 
@@ -350,18 +338,10 @@ private fun DetailContent(
             }
         )
         // Author
-        if (postData.uploader.isNullOrEmpty()) {
-            postData.createId?.let { createId ->
-                val userManager = parser.userManager
-                val status = userManager.getStatus(createId).collectAsState().value
-                if (status is LoadStatus.Success<UserInfo>) {
-                    postData.uploader = status.result.name
-                }
-            }
-        }
+        val user by viewModel.userFlow.collectAsStateWithLifecycle()
         SettingItem(
             title = stringResource(R.string.author),
-            tips = postData.uploader ?: stringResource(R.string.unknown),
+            tips = user?.name ?: stringResource(R.string.unknown),
             showIcon = false
         )
         // Rating
