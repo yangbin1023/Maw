@@ -26,8 +26,6 @@ import io.ktor.http.path
 class KonachanApiService(private val client: HttpClient) : BaseApiService() {
     override val baseUrl: String = "https://konachan.net"
     override val website: WebsiteOption = WebsiteOption.Konachan
-    override val supportedRatings: List<Rating> =
-        listOf(Rating.Safe, Rating.Questionable, Rating.Explicit)
 
     override suspend fun getPostData(
         filter: RequestFilter,

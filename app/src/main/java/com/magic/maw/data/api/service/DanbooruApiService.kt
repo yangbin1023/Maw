@@ -9,8 +9,6 @@ import com.magic.maw.data.api.entity.RequestFilter
 import com.magic.maw.data.api.entity.RequestMeta
 import com.magic.maw.data.api.parser.BaseParser.Companion.decode
 import com.magic.maw.data.api.parser.BaseParser.Companion.encode
-import com.magic.maw.data.api.parser.DanbooruParser
-import com.magic.maw.data.model.RequestOption
 import com.magic.maw.data.model.constant.PopularType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
@@ -28,6 +26,7 @@ import io.ktor.client.HttpClient
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
 import io.ktor.http.takeFrom
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -116,6 +115,7 @@ class DanbooruApiService(
                 tagMap[tag.name] = tag
                 tagList.add(tag)
             }
+        } catch (_: CancellationException) {
         } catch (e: Exception) {
             Logger.e(TAG) { "request suggest tag info failed. name[$name], error: $e" }
         }

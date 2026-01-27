@@ -1,6 +1,6 @@
 package com.magic.maw.data.repository
 
-import com.magic.maw.data.api.parser.WebsiteParserProvider
+import com.magic.maw.data.api.service.ApiServiceProvider
 import com.magic.maw.data.local.db.dao.UserInfoDao
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.UserInfo
@@ -10,9 +10,9 @@ import kotlin.time.Duration.Companion.hours
 
 class UserRepository(
     private val dao: UserInfoDao,
-    private val provider: WebsiteParserProvider
+    private val provider: ApiServiceProvider
 ) {
-    fun getUserInfo(website: WebsiteOption, userId: String): Flow<UserInfo?> {
+    fun getUserInfoFlow(website: WebsiteOption, userId: String): Flow<UserInfo?> {
         return dao.getFlow(website, userId)
     }
 
@@ -23,9 +23,20 @@ class UserRepository(
                 return
             }
         }
-        provider[website].requestUserInfo(userId)?.let {
+        provider[website].getUserInfo(userId)?.let {
             setUserInfo(it)
         }
+    }
+
+    suspend fun getUserInfo(website: WebsiteOption, userId: String): UserInfo? {
+        dao.get(website, userId)?.let {
+            return it
+        }
+        provider[website].getUserInfo(userId)?.let {
+            setUserInfo(it)
+            return it
+        }
+        return null
     }
 
     suspend fun setUserInfo(userInfo: UserInfo) {

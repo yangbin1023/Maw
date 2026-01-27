@@ -26,8 +26,6 @@ import io.ktor.http.path
 class YandeApiService(private val client: HttpClient) : BaseApiService() {
     override val baseUrl: String = "https://yande.re"
     override val website: WebsiteOption = WebsiteOption.Yande
-    override val supportedRatings: List<Rating> =
-        listOf(Rating.Safe, Rating.Questionable, Rating.Explicit)
 
     override suspend fun getPostData(
         filter: RequestFilter,

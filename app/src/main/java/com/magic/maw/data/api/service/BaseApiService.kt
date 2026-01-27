@@ -9,16 +9,21 @@ import com.magic.maw.data.model.constant.PopularType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
+import com.magic.maw.data.model.entity.UserInfo
 
 abstract class BaseApiService {
     protected abstract val baseUrl: String
     abstract val website: WebsiteOption
-    abstract val supportedRatings: List<Rating>
+    open val supportedRatings: List<Rating> = Rating.defaultSupportedRatings
     open val supportedPopularDateTypes: List<PopularType> = PopularType.defaultSupportedDateTypes
 
     abstract suspend fun getPostData(filter: RequestFilter, meta: RequestMeta): PostResponse
     abstract suspend fun getPoolData(filter: RequestFilter, meta: RequestMeta): PoolResponse
     abstract suspend fun getSuggestTagInfo(name: String, limit: Int = 10): List<TagInfo>
+
+    open suspend fun getTagsByPostId(postId: String): List<TagInfo>? = null
+    open suspend fun getTagByName(tagName: String): TagInfo? = null
+    open suspend fun getUserInfo(userId: String): UserInfo? = null
 
     open fun parseSearchQuery(searchQuery: String?): Set<String> {
         if (searchQuery.isNullOrBlank())

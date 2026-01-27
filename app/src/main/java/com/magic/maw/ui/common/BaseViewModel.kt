@@ -3,9 +3,6 @@ package com.magic.maw.ui.common
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.magic.maw.data.api.service.ApiServiceProvider
-import com.magic.maw.data.api.service.BaseApiService
-import com.magic.maw.data.local.store.SettingsRepository
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.data.model.entity.UserInfo
@@ -21,6 +18,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
@@ -49,7 +48,7 @@ abstract class BaseDataViewModel(
     val userFlow: StateFlow<UserInfo?> = _currentUserId
         .flatMapLatest { info ->
             if (info == null) flowOf(null)
-            else userRepository.getUserInfo(info.website, info.userId)
+            else userRepository.getUserInfoFlow(info.website, info.userId)
         }
         .stateIn(
             scope = viewModelScope,
@@ -74,7 +73,12 @@ abstract class BaseDataViewModel(
     val tagsFlow: StateFlow<List<TagInfo>> = _currentPostData
         .flatMapLatest { data ->
             if (data == null) flowOf(emptyList())
-            else tagRepository.getTagsForPost(data)
+            else tagRepository.getTagsFlowForPost(data).map { list ->
+                list.sortedWith(
+                    compareBy<TagInfo> { it.type.priority }
+                        .thenBy { it.name }
+                )
+            }.flowOn(Dispatchers.Default)
         }
         .stateIn(
             scope = viewModelScope,
@@ -88,6 +92,17 @@ abstract class BaseDataViewModel(
         viewModelScope.launch {
             tagRepository.refreshTagsForPost(data)
         }
+    }
+
+    suspend fun getTagsForPost(data: PostData): List<TagInfo> {
+        return tagRepository.getTagsForPost(data)
+    }
+
+    suspend fun getUserInfo(data: PostData): UserInfo? {
+        data.createId?.let { userId ->
+            return userRepository.getUserInfo(data.website, userId)
+        }
+        return null
     }
 
     abstract fun checkAndRefresh()

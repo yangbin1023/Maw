@@ -34,6 +34,8 @@ enum class Rating(val value: Int) {
     }
 
     companion object {
+        val defaultSupportedRatings = listOf<Rating>(Safe, Questionable, Explicit)
+
         fun List<Rating>.join(): Int {
             var value = 0
             for (rating in this) {
