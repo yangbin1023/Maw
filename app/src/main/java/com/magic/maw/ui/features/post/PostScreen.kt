@@ -2,14 +2,26 @@ package com.magic.maw.ui.features.post
 
 import androidx.activity.compose.BackHandler
 import androidx.collection.mutableIntIntMapOf
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
@@ -17,14 +29,15 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -45,6 +58,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -60,6 +74,7 @@ import androidx.lifecycle.compose.currentStateAsState
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -275,7 +290,7 @@ fun PostRefreshBody(
     onItemClick: (Int) -> Unit,
 ) {
     val isRefreshing by remember(lazyPagingItems) {
-        derivedStateOf { lazyPagingItems.loadState.refresh is androidx.paging.LoadState.Loading }
+        derivedStateOf { lazyPagingItems.loadState.refresh is LoadState.Loading }
     }
     PullToRefreshBox(
         modifier = modifier,
@@ -319,7 +334,7 @@ private fun PostBody(
     val loadState = lazyPagingItems.loadState
     val hasNoMore by remember(loadState) {
         derivedStateOf {
-            loadState.append is androidx.paging.LoadState.NotLoading &&
+            loadState.append is LoadState.NotLoading &&
                     loadState.append.endOfPaginationReached &&
                     lazyPagingItems.itemCount > 0
         }
@@ -361,12 +376,17 @@ private fun PostBody(
                     )
                 } else {
                     val loadState = lazyPagingItems.loadState.append
-                    if (loadState is androidx.paging.LoadState.Loading) {
-                        CircularProgressIndicator()
-                    } else if (loadState is androidx.paging.LoadState.Error) {
-                        Text(text = "加载失败，请重试", modifier = Modifier.clickable(onClick = {
-                            lazyPagingItems.retry()
-                        }))
+                    if (loadState is LoadState.Loading) {
+                        DotLoadingProgressIndicator()
+                    } else if (loadState is LoadState.Error) {
+                        Text(
+                            text = stringResource(R.string.loading_failed), modifier = Modifier
+                                .height(PostDefaults.NoMoreItemHeight)
+                                .wrapContentSize(Alignment.Center)
+                                .clickable(onClick = {
+                                    lazyPagingItems.retry()
+                                })
+                        )
                     }
                 }
             }
@@ -394,6 +414,44 @@ private fun getContentPadding(maxWidth: Dp, columns: Int): Dp = with(LocalDensit
         Logger.w(TAG) { "No suitable space found" }
     }
     currentSpace.toDp() / 2
+}
+
+@Composable
+fun DotLoadingProgressIndicator() {
+    val transition = rememberInfiniteTransition(label = "dots")
+
+    // 定义三个点的动画延迟，形成交错感
+    val delayMillis = listOf(0, 200, 400)
+
+    val dots = delayMillis.map { delay ->
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = -20f, // 向上跳动 20dp
+            animationSpec = infiniteRepeatable(
+                animation = tween(600, delayMillis = delay, easing = LinearOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "dot"
+        )
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        dots.forEach { dy ->
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .graphicsLayer { translationY = dy.value } // 应用位移
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+            )
+            Spacer(Modifier.width(8.dp))
+        }
+    }
 }
 
 fun NavBackStackEntry.getPostIndex(): Int? {

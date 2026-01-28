@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,10 +31,12 @@ import androidx.compose.ui.unit.sp
 import co.touchlab.kermit.Logger
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import com.magic.maw.R
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.util.PostVideoModel
 import org.koin.compose.koinInject
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun PostItem(
@@ -54,15 +57,12 @@ fun PostItem(
     ) {
         val info = postData.originalInfo
         val ratio = getPostRatio(staggered, info.width, info.height)
-        val model = postData.previewInfo.url.ifBlank {
-            PostVideoModel(postData.website, postData.id)
-        }
 
         PostItemImage(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(ratio),
-            model = model,
+            postData = postData
         )
 
         HorizontalDivider(thickness = 0.5.dp)
@@ -82,23 +82,26 @@ fun PostItem(
 @Composable
 fun PostItemImage(
     modifier: Modifier = Modifier,
-    model: Any? = null
+    postData: PostData,
 ) {
+    val model = postData.previewInfo.url.ifBlank {
+        PostVideoModel(postData.website, postData.id)
+    }
     val imageLoader = koinInject<ImageLoader>()
     Box(modifier = modifier) {
-        var isLoading by remember { mutableStateOf(true) }
-        var isError by remember { mutableStateOf(false) }
+        var state by remember { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
         Logger.d("PostItem") { "model: $model" }
         AsyncImage(
             modifier = Modifier.fillMaxSize(),
             model = model,
             imageLoader = imageLoader,
             alignment = Alignment.Center,
+            onState = { state = it },
             contentScale = ContentScale.Crop,
             contentDescription = null,
         )
 
-        if (isLoading) {
+        if (state is AsyncImagePainter.State.Loading) {
             Icon(
                 modifier = modifier
                     .align(Alignment.Center)
@@ -107,9 +110,7 @@ fun PostItemImage(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface.copy(0.08f)
             )
-        }
-
-        if (isError) {
+        } else if (state is AsyncImagePainter.State.Error) {
             Icon(
                 modifier = modifier
                     .align(Alignment.Center)
@@ -118,6 +119,30 @@ fun PostItemImage(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface.copy(0.08f)
             )
+        }
+
+        postData.duration?.toInt()?.seconds?.let { duration ->
+            val text = duration.toComponents { hours, minutes, seconds, _ ->
+                if (hours > 0) {
+                    "%02d:%02d:%02d".format(hours, minutes, seconds)
+                } else {
+                    "%02d:%02d".format(minutes, seconds)
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 10.dp, bottom = 10.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onPrimary.copy(0.6f),
+                        shape = RoundedCornerShape(5.dp)
+                    )
+                    .padding(vertical = 2.dp, horizontal = 5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = text)
+            }
         }
     }
 }

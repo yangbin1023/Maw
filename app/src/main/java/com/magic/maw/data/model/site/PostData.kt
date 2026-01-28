@@ -5,12 +5,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.magic.maw.data.api.manager.BaseData
 import com.magic.maw.data.api.manager.DLManager
-import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.data.local.store.SettingsStore
 import com.magic.maw.data.model.constant.FileType
 import com.magic.maw.data.model.constant.Quality
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.util.toSizeString
 import kotlinx.serialization.Serializable
 import java.io.File
@@ -28,6 +28,7 @@ data class PostData(
     var fileType: FileType = FileType.Jpeg,
     var tags: MutableList<TagInfo> = ArrayList(),
     var tagRefs: List<String> = emptyList(),
+    var duration: Float? = null,
     var previewInfo: Info = Info(),
     var sampleInfo: Info? = null,
     var largeInfo: Info? = null,

@@ -1,12 +1,12 @@
 package com.magic.maw.data.model.site.danbooru
 
 import com.magic.maw.data.api.parser.DanbooruParser
-import com.magic.maw.data.model.entity.TagInfo
-import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.model.constant.FileType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.TagType
 import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.data.model.entity.TagInfo
+import com.magic.maw.data.model.site.PostData
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -184,6 +184,7 @@ class DanbooruData {
                 "original" -> variantOriginal = variant
             }
         }
+        data.duration = media_asset?.duration
 //        if (!data.fileType.isPicture()) {
 //            variantSample = null
 //        }

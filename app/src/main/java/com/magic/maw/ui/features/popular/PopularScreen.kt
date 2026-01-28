@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -251,15 +252,17 @@ private fun PopularPagerItemBody(
 }
 
 @Composable
-private fun rememberPopularPagerState(viewModel: PopularViewModel): PagerState {
-    val currentPopularTypes by viewModel.currentPopularTypes.collectAsStateWithLifecycle()
-    return remember(currentPopularTypes) {
-        PagerState(pageCount = { currentPopularTypes.size })
+private fun rememberPopularPagerState(viewModel: PopularViewModel): PagerState = rememberPagerState {
+    viewModel.currentPopularTypes.value.size.apply {
+        Logger.d("TestTAG") { "popular pager state get pager size: $this" }
     }
 }
 
 @Composable
-private fun getCurrentPopularDateType(pagerState: PagerState, viewModel: PopularViewModel): PopularType {
+private fun getCurrentPopularDateType(
+    pagerState: PagerState,
+    viewModel: PopularViewModel
+): PopularType {
     val scope = rememberCoroutineScope()
     val currentPopularTypes by viewModel.currentPopularTypes.collectAsStateWithLifecycle()
     val popularType by remember {

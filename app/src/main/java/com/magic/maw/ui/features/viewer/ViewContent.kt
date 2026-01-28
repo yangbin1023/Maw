@@ -52,44 +52,8 @@ import me.saket.telephoto.zoomable.rememberZoomableImageState
 import me.saket.telephoto.zoomable.rememberZoomableState
 import org.koin.compose.koinInject
 import java.io.File
-import kotlin.math.abs
 
 private const val TAG = "ViewContent"
-
-@Composable
-fun ViewContent(
-    pagerState: PagerState,
-    dataList: List<PostData>,
-    playerState: VideoPlayerState,
-    onLoadMore: () -> Unit,
-    onExit: () -> Unit,
-    onTab: () -> Unit = {},
-) {
-    HorizontalPager(
-        state = pagerState,
-        beyondViewportPageCount = 1,
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-    ) { index ->
-        if (index >= dataList.size || index < 0) {
-            onExit()
-            return@HorizontalPager
-        }
-        if (abs(pagerState.settledPage - index) > 1) {
-            return@HorizontalPager
-        }
-        if (dataList.size - index < 5) {
-            onLoadMore()
-        }
-        ViewScreenItem(
-            data = dataList[index],
-            playerState = playerState,
-            focusOn = pagerState.settledPage == index,
-            onTab = onTab
-        )
-    }
-}
 
 @Composable
 fun ViewContent(
