@@ -37,24 +37,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.magic.maw.data.local.store.SettingsStore
-import com.magic.maw.data.api.parser.BaseParser
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PopularDateTypePicker(
     modifier: Modifier = Modifier,
+    viewModel: PopularViewModel,
     pagerState: PagerState,
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     val scope = rememberCoroutineScope()
-    val settingState by SettingsStore.settingsState.collectAsStateWithLifecycle()
-    val popularDateTypes by remember {
-        derivedStateOf {
-            BaseParser.get(settingState.website).supportedPopularDateTypes
-        }
-    }
+    val popularDateTypes by viewModel.currentPopularTypes.collectAsStateWithLifecycle()
     val colorScheme = MaterialTheme.colorScheme
 
     val targetColor by remember(scrollBehavior) {
@@ -139,7 +133,6 @@ fun PopularDateTypePicker(
                     }
                 }
             }
-
         }
     }
 }

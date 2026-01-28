@@ -4,12 +4,13 @@ import com.magic.maw.data.api.entity.PoolResponse
 import com.magic.maw.data.api.entity.PostResponse
 import com.magic.maw.data.api.entity.RequestFilter
 import com.magic.maw.data.api.entity.RequestMeta
-import com.magic.maw.data.api.parser.BaseParser.Companion.decode
 import com.magic.maw.data.model.constant.PopularType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.data.model.entity.UserInfo
+import java.net.URLDecoder
+import java.net.URLEncoder
 
 abstract class BaseApiService {
     protected abstract val baseUrl: String
@@ -45,6 +46,16 @@ abstract class BaseApiService {
         } catch (_: Exception) {
             1
         }
+
+    companion object {
+        fun String.encode(enc: String = "UTF-8"): String {
+            return URLEncoder.encode(this, enc)
+        }
+
+        fun String.decode(enc: String = "UTF-8"): String {
+            return URLDecoder.decode(this, enc)
+        }
+    }
 }
 
 class ApiServiceProvider(private val lists: List<BaseApiService>) {

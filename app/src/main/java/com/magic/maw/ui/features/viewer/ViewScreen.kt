@@ -34,12 +34,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.magic.maw.data.api.loader.PostDataLoader
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.ui.features.main.AppRoute
 import com.magic.maw.ui.features.main.POST_INDEX
@@ -55,102 +53,6 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun ViewScreen(
     modifier: Modifier = Modifier,
-    loader: PostDataLoader,
-    navController: NavController = rememberNavController(),
-    postIndex: Int = 0,
-    route: AppRoute = AppRoute.PostViewer(postIndex = postIndex),
-) {
-    val uiState by loader.uiState.collectAsStateWithLifecycle()
-    val pagerState = rememberPagerState(initialPage = postIndex) { uiState.items.size }
-    val context = LocalContext.current
-    val playerState = remember { VideoPlayerState(context = context) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val onExit: () -> Unit = {
-        navController.previousBackStackEntry
-            ?.savedStateHandle
-            ?.set(POST_INDEX, pagerState.currentPage)
-        navController.popBackStack()
-    }
-    val topBarMaxHeight = UiUtils.getTopBarHeight2()
-    val shouldShowTopBar = UiUtils.shouldShowSystemBar()
-    var showTopBar by remember { mutableStateOf(true) }
-    val offsetValue = if (showTopBar) topBarMaxHeight else 0.dp
-    val onTap: () -> Unit = { showTopBar = !showTopBar }
-    val topAppBarOffset by animateDpAsState(targetValue = offsetValue - topBarMaxHeight)
-
-    LaunchedEffect(Unit) {
-        delay(1500)
-        showTopBar = false
-    }
-    DisposableEffect(Unit) {
-        onDispose {
-            playerState.release()
-            if (shouldShowTopBar) {
-                context.showSystemBars(true)
-            }
-        }
-    }
-    UiUtils.updateSystemBarStatus(showTopBar)
-
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val postData = try {
-            uiState.items[pagerState.currentPage]
-        } catch (_: Throwable) {
-            onExit()
-            return@BoxWithConstraints
-        }
-        val draggableHeight = this.maxHeight - offsetValue
-
-        ViewContent(
-            pagerState = pagerState,
-            dataList = uiState.items,
-            playerState = playerState,
-            onLoadMore = { loader.loadMore() },
-            onExit = onExit,
-            onTab = onTap
-        )
-
-        ViewTopBar(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .offset {
-                    val y = topAppBarOffset.toPx()
-                    IntOffset(0, y.toInt())
-                },
-            postData = postData,
-            onExit = onExit
-        )
-
-        ViewDetailBar(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            postData = postData,
-            isScrollInProgress = pagerState.isScrollInProgress,
-            playerState = playerState,
-            hostState = snackbarHostState,
-            maxDraggableHeight = draggableHeight,
-            onTagClick = { navController.navigate(route = AppRoute.PostSearch(text = it.name)) },
-            onSearchTag = {
-                navController.navigate(route = AppRoute.Post(searchQuery = it.name)) {
-                    popUpTo(route = route) {
-                        inclusive = route is AppRoute.PostViewer
-                    }
-                }
-            }
-        )
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
-    }
-
-    BackHandler(onBack = onExit)
-}
-
-@Composable
-fun ViewScreen(
-    modifier: Modifier = Modifier,
     viewModel: PostViewModel,
     navController: NavController = rememberNavController(),
     postIndex: Int = 0,
@@ -158,7 +60,7 @@ fun ViewScreen(
 ) {
     ViewScreen(
         modifier = modifier,
-        postFlow = viewModel.postFlow,
+        postFlow = viewModel.dataSource.dataFlow,
         navController = navController,
         postIndex = postIndex,
         route = route

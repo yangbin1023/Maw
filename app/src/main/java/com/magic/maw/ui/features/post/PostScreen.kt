@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
-import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -57,24 +56,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.currentStateAsState
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
-import com.magic.maw.data.api.loader.LoadState
-import com.magic.maw.data.api.loader.PostDataLoader
-import com.magic.maw.data.api.loader.PostDataUiState
 import com.magic.maw.data.model.site.PostData
+import com.magic.maw.data.repository.PostDataSource
 import com.magic.maw.ui.common.EmptyView
-import com.magic.maw.ui.common.LoadMoreChecker
-import com.magic.maw.ui.common.RefreshScrollToTopChecker
 import com.magic.maw.ui.common.ReturnedIndexChecker
 import com.magic.maw.ui.features.main.AppRoute
 import com.magic.maw.ui.features.main.MainNavRail
@@ -83,8 +76,6 @@ import com.magic.maw.ui.features.main.koinViewModel
 import com.magic.maw.ui.features.main.useNavRail
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.getStatusBarHeight
-import kotlinx.collections.immutable.PersistentList
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
@@ -116,7 +107,7 @@ fun PostScreen(
     if (viewModel.isSubView) {
         PostScreen(
             modifier = modifier,
-            postFlow = viewModel.postFlow,
+            dataSource = viewModel.dataSource,
             navController = navController,
             postIndex = postIndex,
             negativeIcon = Icons.AutoMirrored.Filled.ArrowBack,
@@ -134,7 +125,7 @@ fun PostScreen(
             }
             PostScreen(
                 modifier = modifier,
-                postFlow = viewModel.postFlow,
+                dataSource = viewModel.dataSource,
                 navController = navController,
                 postIndex = postIndex,
                 onNegative = onOpenDrawer
@@ -147,87 +138,7 @@ fun PostScreen(
 @Composable
 fun PostScreen(
     modifier: Modifier = Modifier,
-    loader: PostDataLoader,
-    navController: NavController = rememberNavController(),
-    lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
-    refreshState: PullToRefreshState = rememberPullToRefreshState(),
-    titleText: String = stringResource(R.string.post),
-    postIndex: Int? = null,
-    staggeredEnable: Boolean = true,
-    shadowEnable: Boolean = true,
-    searchEnable: Boolean = true,
-    negativeIcon: ImageVector = Icons.Default.Menu,
-    onNegative: (() -> Unit)? = null,
-    onItemClick: (Int) -> Unit = { navController.navigate(route = AppRoute.PostViewer(postIndex = it)) }
-) {
-    val scope = rememberCoroutineScope()
-    val uiState by loader.uiState.collectAsStateWithLifecycle()
-    val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
-    val scrollToTop: () -> Unit = {
-        Logger.d(TAG) { "scrollToTop() called" }
-        scope.launch { lazyState.scrollToItem(0, 0) }
-    }
-    val topAppBarState = rememberTopAppBarState()
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(state = topAppBarState)
-    val itemHeights = remember { mutableIntIntMapOf() }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
-    LaunchedEffect(lifecycleOwner) {
-        if (lifecycleState == Lifecycle.State.STARTED
-            || lifecycleState == Lifecycle.State.RESUMED
-        ) {
-            loader.checkAndRefresh()
-        }
-    }
-
-    ReturnedIndexChecker(
-        loader = loader,
-        lazyState = lazyState,
-        itemHeights = itemHeights,
-        postIndex = postIndex
-    )
-
-    RefreshScrollToTopChecker(items = uiState.items, scrollToTop = scrollToTop)
-
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            PostTopBar(
-                titleText = titleText,
-                negativeIcon = negativeIcon,
-                shadowEnable = shadowEnable,
-                searchEnable = searchEnable,
-                staggeredState = staggeredState,
-                scrollToTop = scrollToTop,
-                onNegative = onNegative,
-                onSearch = { navController.navigate(route = AppRoute.PostSearch()) },
-                scrollBehavior = scrollBehavior,
-            )
-        },
-    ) { innerPadding ->
-        PostRefreshBody(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            uiState = uiState,
-            refreshState = refreshState,
-            lazyState = lazyState,
-            staggeredState = staggeredState,
-            onRefresh = { loader.refresh() },
-            onLoadMore = { loader.loadMore() },
-            onGloballyPositioned = { index, height -> itemHeights[index] = height },
-            onItemClick = onItemClick
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PostScreen(
-    modifier: Modifier = Modifier,
-    postFlow: Flow<PagingData<PostData>>,
+    dataSource: PostDataSource,
     navController: NavController = rememberNavController(),
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     refreshState: PullToRefreshState = rememberPullToRefreshState(),
@@ -243,7 +154,7 @@ fun PostScreen(
     }
 ) {
     val scope = rememberCoroutineScope()
-    val lazyPagingItems = postFlow.collectAsLazyPagingItems()
+    val lazyPagingItems = dataSource.dataFlow.collectAsLazyPagingItems()
 
     val staggeredState = if (staggeredEnable) remember { mutableStateOf(false) } else null
     val scrollToTop: () -> Unit = {
@@ -355,57 +266,6 @@ private fun PostTopBar(
 @Composable
 fun PostRefreshBody(
     modifier: Modifier = Modifier,
-    uiState: PostDataUiState,
-    refreshState: PullToRefreshState,
-    lazyState: LazyStaggeredGridState,
-    staggeredState: MutableState<Boolean>? = null,
-    onRefresh: () -> Unit,
-    onLoadMore: () -> Unit,
-    onGloballyPositioned: (Int, Int) -> Unit,
-    onItemClick: (Int) -> Unit,
-) {
-    val isRefreshing by remember(uiState.loadState) {
-        derivedStateOf { uiState.loadState == LoadState.Refreshing }
-    }
-    PullToRefreshBox(
-        modifier = modifier,
-        isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        state = refreshState
-    ) {
-        val isEmpty by remember(uiState.items) {
-            derivedStateOf { uiState.items.isEmpty() }
-        }
-        if (isEmpty) {
-            EmptyView(
-                modifier = Modifier.fillMaxSize(),
-                loadState = uiState.loadState,
-                onRefresh = onRefresh
-            )
-        } else {
-            LoadMoreChecker(
-                uiState = uiState,
-                state = lazyState,
-                onLoadMore = onLoadMore
-            )
-            PostBody(
-                modifier = Modifier.fillMaxSize(),
-                items = uiState.items,
-                canClick = !isRefreshing,
-                hasNoMore = uiState.hasNoMore,
-                state = lazyState,
-                staggeredState = staggeredState,
-                onGloballyPositioned = onGloballyPositioned,
-                onItemClick = onItemClick,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PostRefreshBody(
-    modifier: Modifier = Modifier,
     lazyPagingItems: LazyPagingItems<PostData>,
     refreshState: PullToRefreshState,
     lazyState: LazyStaggeredGridState,
@@ -442,55 +302,6 @@ fun PostRefreshBody(
                 onGloballyPositioned = onGloballyPositioned,
                 onItemClick = onItemClick,
             )
-        }
-    }
-}
-
-@Composable
-private fun PostBody(
-    modifier: Modifier = Modifier,
-    items: PersistentList<PostData>,
-    hasNoMore: Boolean,
-    canClick: Boolean,
-    state: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
-    staggeredState: MutableState<Boolean>? = null,
-    onGloballyPositioned: (Int, Int) -> Unit,
-    onItemClick: (Int) -> Unit,
-) {
-    BoxWithConstraints(modifier = modifier) {
-        val columns = max((this.maxWidth / 210.dp).toInt(), 2)
-        val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
-
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Fixed(columns),
-            state = state,
-            contentPadding = PaddingValues(contentPadding)
-        ) {
-            itemsIndexed(
-                items = items,
-                key = { _, item -> item.id }
-            ) { index, item ->
-                PostItem(
-                    modifier = Modifier
-                        .padding(contentPadding)
-                        .onGloballyPositioned { onGloballyPositioned(index, it.size.height) },
-                    canClick = canClick,
-                    onClick = { onItemClick(index) },
-                    postData = item,
-                    staggered = staggeredState?.value == true
-                )
-            }
-
-            if (hasNoMore) {
-                item(span = StaggeredGridItemSpan.FullLine) {
-                    Text(
-                        text = stringResource(R.string.no_more_data),
-                        modifier = Modifier
-                            .height(PostDefaults.NoMoreItemHeight)
-                            .wrapContentSize(Alignment.Center)
-                    )
-                }
-            }
         }
     }
 }

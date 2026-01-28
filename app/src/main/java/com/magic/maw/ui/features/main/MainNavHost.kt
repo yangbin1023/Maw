@@ -206,14 +206,14 @@ fun NavGraphBuilder.poolGraph(
         }
         composable<AppRoute.PoolPost> { backStackEntry ->
             val viewModel = koinViewModel<PoolViewModel, AppRoute.Pool>(navController, backStackEntry)
-            val postFlow = viewModel.postFlow ?: run {
+            val postSource = viewModel.postSource ?: run {
                 navController.popBackStack()
                 return@composable
             }
             val route = backStackEntry.toRoute<AppRoute.PoolPost>()
             val postIndex = backStackEntry.getPostIndex()
             PostScreen(
-                postFlow = postFlow,
+                dataSource = postSource,
                 navController = navController,
                 titleText = "#${route.poolId}",
                 postIndex = postIndex,
@@ -228,12 +228,12 @@ fun NavGraphBuilder.poolGraph(
         composable<AppRoute.PoolViewer> { backStackEntry ->
             val viewModel = koinViewModel<PoolViewModel, AppRoute.Pool>(navController, backStackEntry)
             val route = backStackEntry.toRoute<AppRoute.PoolViewer>()
-            val postFlow = viewModel.postFlow ?: run {
+            val postSource = viewModel.postSource ?: run {
                 navController.popBackStack()
                 return@composable
             }
             ViewScreen(
-                postFlow = postFlow,
+                postFlow = postSource.dataFlow,
                 navController = navController,
                 postIndex = route.postIndex,
                 route = route
@@ -267,7 +267,7 @@ fun NavGraphBuilder.popularGraph(
             val route = backStackEntry.toRoute<AppRoute.PopularViewer>()
             val currentData by viewModel.currentData.collectAsStateWithLifecycle()
             ViewScreen(
-                loader = currentData.loader,
+                postFlow = currentData.dataSource.dataFlow,
                 navController = navController,
                 postIndex = route.postIndex,
                 route = route

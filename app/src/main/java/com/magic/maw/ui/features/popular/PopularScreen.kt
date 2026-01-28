@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,12 +45,10 @@ import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.paging.compose.collectAsLazyPagingItems
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
-import com.magic.maw.data.api.parser.BaseParser
-import com.magic.maw.data.local.store.SettingsStore
 import com.magic.maw.data.model.constant.PopularType
-import com.magic.maw.ui.common.RefreshScrollToTopChecker
 import com.magic.maw.ui.common.ReturnedIndexChecker
 import com.magic.maw.ui.features.main.AppRoute
 import com.magic.maw.ui.features.post.PostDefaults
@@ -153,23 +150,37 @@ private fun PopularTopBar(
 private fun PopularBody(
     modifier: Modifier = Modifier,
     viewModel: PopularViewModel,
-    pagerState: PagerState = rememberPopularPagerState(),
+    pagerState: PagerState = rememberPopularPagerState(viewModel),
     navController: NavController = rememberNavController(),
     staggeredState: MutableState<Boolean>? = null,
     postIndex: Int? = null,
 ) {
-    val popularType = getCurrentPopularDateType(pagerState)
+    val popularType = getCurrentPopularDateType(pagerState, viewModel)
     val currentData = viewModel.getItemData(popularType)
     val currentDate by currentData.localDateFlow.collectAsStateWithLifecycle()
 
     LaunchedEffect(popularType) {
         viewModel.setCurrentPopularType(popularType)
     }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    LaunchedEffect(lifecycleOwner) {
+        if (lifecycleState == Lifecycle.State.STARTED
+            || lifecycleState == Lifecycle.State.RESUMED
+        ) {
+            viewModel.checkAndRefresh()
+        }
+    }
+
     Box(
         modifier = modifier
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            PopularDateTypePicker(pagerState = pagerState)
+            PopularDateTypePicker(
+                pagerState = pagerState,
+                viewModel = viewModel
+            )
 
             HorizontalPager(
                 state = pagerState,
@@ -204,7 +215,7 @@ private fun PopularPagerItemBody(
     staggeredState: MutableState<Boolean>? = null,
     postIndex: Int? = null,
 ) {
-    val supportedPopularDateTypes = getSupportedPopularDateTypes()
+    val supportedPopularDateTypes by viewModel.currentPopularTypes.collectAsStateWithLifecycle()
     val popularType = try {
         supportedPopularDateTypes[index]
     } catch (_: ArrayIndexOutOfBoundsException) {
@@ -214,41 +225,23 @@ private fun PopularPagerItemBody(
         return
     }
     val itemData = viewModel.getItemData(popularType)
-    val loader = itemData.loader
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
-    LaunchedEffect(lifecycleOwner) {
-        if (lifecycleState == Lifecycle.State.STARTED
-            || lifecycleState == Lifecycle.State.RESUMED) {
-            loader.checkAndRefresh()
-        }
-    }
-
-    val uiState by loader.uiState.collectAsStateWithLifecycle()
+    val lazyPagingItems = itemData.dataSource.dataFlow.collectAsLazyPagingItems()
 
     if (index == pagerState.currentPage) {
         ReturnedIndexChecker(
-            loader = loader,
             lazyState = itemData.lazyState,
             itemHeights = itemData.itemHeights,
             postIndex = postIndex
         )
     }
 
-    RefreshScrollToTopChecker(items = uiState.items) {
-        Logger.d(TAG) { "RefreshScrollToTopChecker scroll to top!!" }
-        itemData.lazyState.scrollToItem(0, 0)
-    }
-
     PostRefreshBody(
         modifier = Modifier.fillMaxSize(),
-        uiState = uiState,
+        lazyPagingItems = lazyPagingItems,
         refreshState = rememberPullToRefreshState(),
         lazyState = itemData.lazyState,
         staggeredState = staggeredState,
-        onRefresh = { loader.refresh(true) },
-        onLoadMore = { loader.loadMore() },
+        onRefresh = { lazyPagingItems.refresh() },
         onGloballyPositioned = { index, height -> itemData.itemHeights[index] = height },
         onItemClick = {
             Logger.d(TAG) { "onItemClick $it" }
@@ -258,32 +251,24 @@ private fun PopularPagerItemBody(
 }
 
 @Composable
-fun rememberPopularPagerState() = rememberPagerState {
-    BaseParser.get(SettingsStore.settings.website).supportedPopularDateTypes.size
-}
-
-@Composable
-fun getSupportedPopularDateTypes(): List<PopularType> {
-    val settingState by SettingsStore.settingsState.collectAsStateWithLifecycle()
-    val types by remember {
-        derivedStateOf {
-            BaseParser.get(settingState.website).supportedPopularDateTypes
-        }
+private fun rememberPopularPagerState(viewModel: PopularViewModel): PagerState {
+    val currentPopularTypes by viewModel.currentPopularTypes.collectAsStateWithLifecycle()
+    return remember(currentPopularTypes) {
+        PagerState(pageCount = { currentPopularTypes.size })
     }
-    return types
 }
 
 @Composable
-fun getCurrentPopularDateType(pagerState: PagerState): PopularType {
+private fun getCurrentPopularDateType(pagerState: PagerState, viewModel: PopularViewModel): PopularType {
     val scope = rememberCoroutineScope()
-    val supportedPopularDateTypes = getSupportedPopularDateTypes()
+    val currentPopularTypes by viewModel.currentPopularTypes.collectAsStateWithLifecycle()
     val popularType by remember {
         derivedStateOf {
             try {
-                supportedPopularDateTypes[pagerState.currentPage]
+                currentPopularTypes[pagerState.currentPage]
             } catch (_: okio.ArrayIndexOutOfBoundsException) {
                 scope.launch { pagerState.scrollToPage(0) }
-                supportedPopularDateTypes[0]
+                currentPopularTypes[0]
             }
         }
     }

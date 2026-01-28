@@ -80,8 +80,8 @@ val appModule = module {
 
     // ViewModel
     viewModel { PostViewModel(get(), get(), get(), get(), get()) }
-    viewModel { PoolViewModel(get(), get(), get(), get()) }
-    viewModel { PopularViewModel(get(), get()) }
+    viewModel { PoolViewModel(get(), get(), get()) }
+    viewModel { PopularViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get(), get()) }
     viewModel { ViewerViewModel(get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }

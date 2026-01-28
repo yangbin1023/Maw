@@ -7,8 +7,6 @@ import com.magic.maw.data.api.entity.PoolResponse
 import com.magic.maw.data.api.entity.PostResponse
 import com.magic.maw.data.api.entity.RequestFilter
 import com.magic.maw.data.api.entity.RequestMeta
-import com.magic.maw.data.api.parser.BaseParser.Companion.decode
-import com.magic.maw.data.api.parser.BaseParser.Companion.encode
 import com.magic.maw.data.model.constant.PopularType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
