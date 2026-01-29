@@ -23,7 +23,7 @@ abstract class BaseApiService {
     abstract suspend fun getSuggestTagInfo(name: String, limit: Int = 10): List<TagInfo>
 
     open suspend fun getTagsByPostId(postId: String): List<TagInfo>? = null
-    open suspend fun getTagByName(tagName: String): TagInfo? = null
+    open suspend fun getTagByName(tagName: String): List<TagInfo>? = null
     open suspend fun getUserInfo(userId: String): UserInfo? = null
     open suspend fun getThumbnailUrl(postId: String): String? = null
     open fun parseSearchQuery(searchQuery: String?): Set<String> {
@@ -40,12 +40,16 @@ abstract class BaseApiService {
         return tagList
     }
 
+    protected fun getNextMeta(meta: RequestMeta, noMore: Boolean = false): RequestMeta {
+        val currentPage = meta.page
+        return RequestMeta(
+            prev = if (currentPage == 1) null else (currentPage - 1).toString(),
+            next = if (noMore) null else (currentPage + 1).toString()
+        )
+    }
+
     protected val RequestMeta.page: Int
-        get() = try {
-            next?.toInt() ?: 1
-        } catch (_: Exception) {
-            1
-        }
+        get() = next?.toIntOrNull()?.takeIf { it > 0 } ?: 1
 
     companion object {
         fun String.encode(enc: String = "UTF-8"): String {

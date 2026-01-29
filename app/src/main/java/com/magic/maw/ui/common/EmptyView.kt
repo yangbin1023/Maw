@@ -14,12 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.paging.CombinedLoadStates
+import androidx.paging.LoadState
 import com.magic.maw.R
 
 @Composable
 fun EmptyView(
     modifier: Modifier = Modifier,
-    loadState: androidx.paging.CombinedLoadStates,
+    loadState: CombinedLoadStates,
     onRefresh: () -> Unit
 ) {
     Column(
@@ -27,12 +29,10 @@ fun EmptyView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        val text = if (loadState.refresh == androidx.paging.LoadState.Loading) {
-            stringResource(R.string.loading)
-        } else if (loadState.refresh is androidx.paging.LoadState.Error) {
-            stringResource(R.string.loading_failed)
-        } else {
-            stringResource(R.string.no_data)
+        val text = when (loadState.refresh) {
+            LoadState.Loading -> stringResource(R.string.loading)
+            is LoadState.Error -> stringResource(R.string.loading_failed)
+            else -> stringResource(R.string.no_data)
         }
         Text(
             text = text,

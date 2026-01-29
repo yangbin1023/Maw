@@ -1,26 +1,20 @@
 package com.magic.maw.ui.features.pool
 
 import androidx.lifecycle.ViewModel
-import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.magic.maw.data.api.entity.RequestFilter
 import com.magic.maw.data.local.store.SettingsRepository
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
-import com.magic.maw.data.model.site.PoolData
 import com.magic.maw.data.repository.PoolRepository
 import com.magic.maw.data.repository.PostDataSource
 import com.magic.maw.data.repository.PostRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flatMapLatest
 
-private const val TAG = "PoolViewModel"
-
-@OptIn(ExperimentalCoroutinesApi::class)
 class PoolViewModel(
     private val settingsRepository: SettingsRepository,
     private val poolRepository: PoolRepository,
@@ -32,7 +26,10 @@ class PoolViewModel(
         tryEmit(Unit)
     }
 
-    val poolFlow: Flow<PagingData<PoolData>>
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val poolFlow = refreshSignal
+        .flatMapLatest { poolRepository.getPoolStream() }
+        .cachedIn(CoroutineScope(Dispatchers.IO))
 
     var postSource: PostDataSource? = null
         private set
@@ -41,11 +38,6 @@ class PoolViewModel(
         val settings = settingsRepository.settings
         ratings = settings.websiteSettings.ratings
         website = settings.website
-        poolFlow = refreshSignal
-            .flatMapLatest {
-                poolRepository.getPoolStream()
-            }
-            .cachedIn(CoroutineScope(Dispatchers.IO))
     }
 
     fun checkAndRefresh() {

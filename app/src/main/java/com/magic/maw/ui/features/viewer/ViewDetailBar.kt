@@ -66,9 +66,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import co.touchlab.kermit.Logger
 import com.hjq.toast.Toaster
 import com.magic.maw.R
+import com.magic.maw.data.api.manager.LoadStatus
 import com.magic.maw.data.api.manager.loadDLFile
 import com.magic.maw.data.local.store.SettingsStore
-import com.magic.maw.data.model.LoadStatus
 import com.magic.maw.data.model.constant.Quality
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo

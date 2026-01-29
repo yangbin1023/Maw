@@ -57,12 +57,15 @@ class ViewerViewModel(
         )
 
     fun refreshPostData(data: PostData?) {
+        val oldData = _currentPostData.value
         _currentPostData.value = data
         if (data == null) return
-        viewModelScope.launch(Dispatchers.IO) {
-            tagRepository.refreshTagsForPost(data)
-            data.createId?.let { userId ->
-                userRepository.refreshUserInfo(data.website, userId)
+        if (oldData != data) {
+            viewModelScope.launch(Dispatchers.IO) {
+                tagRepository.refreshTagsForPost(data)
+                data.createId?.let { userId ->
+                    userRepository.refreshUserInfo(data.website, userId)
+                }
             }
         }
     }

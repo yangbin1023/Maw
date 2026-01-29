@@ -28,9 +28,9 @@ import org.koin.dsl.module
 val appModule = module {
     // 数据库
     single { AppDB.build(get()) }
-    single { get<AppDB>().tagInfoDao() }
+    single { get<AppDB>().tagDao() }
     single { get<AppDB>().tagHistoryDao() }
-    single { get<AppDB>().userInfoDao() }
+    single { get<AppDB>().userDao() }
     single { get<AppDB>().dlDao() }
 
     // 网络
@@ -64,7 +64,7 @@ val appModule = module {
     viewModel { PostViewModel(get(), get(), get(), get(), get()) }
     viewModel { PoolViewModel(get(), get(), get()) }
     viewModel { PopularViewModel(get(), get(), get()) }
-    viewModel { SearchViewModel(get(), get(), get()) }
+    viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { ViewerViewModel(get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
 }

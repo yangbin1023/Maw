@@ -10,11 +10,12 @@ import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.Rating.Companion.join
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
-import com.magic.maw.data.model.site.PoolData
+import com.magic.maw.data.model.entity.UserInfo
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.model.site.yande.YandeData
 import com.magic.maw.data.model.site.yande.YandePool
 import com.magic.maw.data.model.site.yande.YandeTag
+import com.magic.maw.data.model.site.yande.YandeUser
 import com.magic.maw.util.get
 import com.magic.maw.util.toMonday
 import io.ktor.client.HttpClient
@@ -25,84 +26,84 @@ class YandeApiService(private val client: HttpClient) : BaseApiService() {
     override val baseUrl: String = "https://yande.re"
     override val website: WebsiteOption = WebsiteOption.Yande
 
-    override suspend fun getPostData(
-        filter: RequestFilter,
-        meta: RequestMeta
-    ): PostResponse {
+    override suspend fun getPostData(filter: RequestFilter, meta: RequestMeta): PostResponse {
         // pool.post 和 popular 没有第二页
         if ((filter.poolId != null || filter.popularOption != null) && meta.next != null)
             return PostResponse(items = emptyList(), meta = RequestMeta(prev = "1", next = null))
         val url = getPostUrl(filter, meta)
-        val list: ArrayList<PostData> = ArrayList()
+        val list: List<PostData>
         val ratings = filter.ratings.ifEmpty { supportedRatings }
         val noMore: Boolean
         if (filter.poolId != null) {
             noMore = true
-            client.get<YandePool>(url).posts?.let { posts ->
-                for (item in posts) {
-                    val data = item.toPostData() ?: continue
-                    if (ratings.contains(data.rating)) {
-                        list.add(data)
-                    }
+            list = client.get<YandePool>(url).posts?.let { posts ->
+                posts.mapNotNull { data ->
+                    data.toPostData()?.takeIf { !ratings.contains(it.rating) }
                 }
-            }
+            } ?: emptyList()
         } else {
             val yandeList: ArrayList<YandeData> = client.get(url)
             noMore = yandeList.isEmpty()
-            for (item in yandeList) {
-                val data = item.toPostData() ?: continue
-                if (ratings.contains(data.rating)) {
-                    list.add(data)
-                }
+            list = yandeList.mapNotNull { data ->
+                data.toPostData()?.takeIf { !ratings.contains(it.rating) }
             }
         }
-
-        val currentPage = meta.page
-        val newMeta = RequestMeta(
-            prev = if (currentPage == 1) null else (currentPage - 1).toString(),
-            next = if (noMore) null else (currentPage + 1).toString()
-        )
+        val newMeta = getNextMeta(meta, noMore)
         return PostResponse(items = list, meta = newMeta)
     }
 
-    override suspend fun getPoolData(
-        filter: RequestFilter,
-        meta: RequestMeta
-    ): PoolResponse {
+    override suspend fun getPoolData(filter: RequestFilter, meta: RequestMeta): PoolResponse {
         val url = getPoolUrl(filter, meta)
-        val poolList: ArrayList<YandePool> = client.get(url)
-        val list: ArrayList<PoolData> = ArrayList()
-        for (item in poolList) {
-            val data = item.toPoolData() ?: continue
-            list.add(data)
-        }
-        val currentPage = meta.page
-        val newMeta = RequestMeta(
-            prev = if (currentPage == 1) null else (currentPage - 1).toString(),
-            next = if (poolList.isEmpty()) null else (currentPage + 1).toString()
-        )
+        val poolList: List<YandePool> = client.get(url)
+        val list = poolList.mapNotNull { it.toPoolData() }
+        val newMeta = getNextMeta(meta, poolList.isEmpty())
         return PoolResponse(items = list, meta = newMeta)
     }
 
-    override suspend fun getSuggestTagInfo(
-        name: String,
-        limit: Int
-    ): List<TagInfo> {
-        if (name.isEmpty())
+    override suspend fun getSuggestTagInfo(name: String, limit: Int): List<TagInfo> {
+        if (name.isBlank())
             return emptyList()
-        val tagMap = HashMap<String, TagInfo>()
-        val tagList = ArrayList<TagInfo>()
         try {
-            val url = getTagUrl(name, limit)
-            val yandeList: ArrayList<YandeTag> = client.get(url)
-            for (yandeTag in yandeList) {
-                val tag = yandeTag.toTagInfo() ?: continue
-                tagMap[tag.name] = tag
-                tagList.add(tag)
-            }
+            val url = getTagUrl(name, 1, limit)
+            return client.get<List<YandeTag>>(url).mapNotNull { it.toTagInfo() }
         } catch (_: Exception) {
         }
-        return tagList
+        return emptyList()
+    }
+
+    override suspend fun getTagByName(tagName: String): List<TagInfo>? {
+        if (tagName.isBlank())
+            return null
+        var page = 1
+        val tagMap = HashMap<String, TagInfo>()
+        var retryCount = 0
+        val limit = 20
+        do {
+            try {
+                val url = getTagUrl(tagName, page, limit)
+                val yandeList: List<YandeTag> = client.get(url)
+                var found = false
+                tagMap += yandeList.mapNotNull { tag ->
+                    tag.toTagInfo()?.apply { if (name == tagName) found = true }
+                }.associateBy { it.name }
+                retryCount = 0
+                if (yandeList.isEmpty() || found)
+                    break
+            } catch (_: Exception) {
+                retryCount++
+                if (retryCount >= 3) break else continue
+            }
+            page++
+        } while (true)
+        return tagMap.values.toList()
+    }
+
+    override suspend fun getUserInfo(userId: String): UserInfo? {
+        return try {
+            client.get<List<YandeUser>>(getUserUrl(userId)).firstOrNull()?.toUserInfo()
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun getPostUrl(filter: RequestFilter, meta: RequestMeta): String {
@@ -165,9 +166,13 @@ class YandeApiService(private val client: HttpClient) : BaseApiService() {
         return "$baseUrl/pool.json?page=${meta.page}"
     }
 
-    private fun getTagUrl(name: String, limit: Int): String {
+    private fun getTagUrl(name: String, page: Int, limit: Int): String {
         val limit = limit.coerceAtLeast(5)
-        return "$baseUrl/tag.json?name=$name&page=1&limit=$limit&order=count"
+        return "$baseUrl/tag.json?name=$name&page=$page&limit=$limit&order=count"
+    }
+
+    private fun getUserUrl(userId: String): String {
+        return "$baseUrl/user.json?id=$userId"
     }
 
     private fun getRatingTag(ratings: List<Rating>): String {

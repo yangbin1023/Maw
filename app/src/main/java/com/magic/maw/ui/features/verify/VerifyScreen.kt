@@ -141,7 +141,7 @@ private fun VerifyContent(
                 webViewClient = object : WebViewClient() {
                     var isCloudflareChallenge = false
 
-                    @Suppress("deprecation")
+                    @Deprecated("Deprecated in Java")
                     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                         return url?.let { shouldOverrideUrlLoading(it.toUri()) } != false
                     }

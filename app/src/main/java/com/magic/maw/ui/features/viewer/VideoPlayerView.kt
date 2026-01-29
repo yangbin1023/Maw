@@ -254,7 +254,7 @@ class VideoPlayerState(
     isMuted: Boolean = SettingsStore.settings.videoSettings.mute,
     context: Context
 ) : Player.Listener {
-    val exoPlayer = ExoPlayer.Builder(context).build().apply {
+    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context).build().apply {
         repeatMode = Player.REPEAT_MODE_ALL
         playWhenReady = isPlaying
         volume = if (isMuted) 0f else 1f

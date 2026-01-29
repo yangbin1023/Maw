@@ -6,11 +6,6 @@ import co.touchlab.kermit.Logger
 import com.magic.maw.MyApp
 import com.magic.maw.data.api.manager.DLManager.addTask
 import com.magic.maw.data.api.manager.DLManager.getDLFullPath
-import com.magic.maw.data.model.LoadStatus
-import com.magic.maw.data.model.LoadStatus.Error
-import com.magic.maw.data.model.LoadStatus.Loading
-import com.magic.maw.data.model.LoadStatus.Success
-import com.magic.maw.data.model.LoadStatus.Waiting
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.model.constant.FileType
 import com.magic.maw.data.model.constant.Quality
@@ -41,6 +36,20 @@ import java.io.File
 private const val TAG = "DLManager"
 private val scope by lazy { CoroutineScope(Dispatchers.IO) }
 
+sealed class LoadStatus<out T> {
+    data object Waiting : LoadStatus<Nothing>()
+    data class Loading(val progress: Float) : LoadStatus<Nothing>()
+    data class Error(val exception: Exception) : LoadStatus<Nothing>()
+    data class Success<T>(val result: T) : LoadStatus<T>()
+}
+
+enum class LoadType {
+    Waiting,
+    Loading,
+    Error,
+    Success;
+}
+
 object DLManager {
     private val taskMap = LinkedHashMap<String, DLTask>()
     private val diskPath by lazy { getDiskCachePath(MyApp.app) }
@@ -70,7 +79,7 @@ object DLManager {
             if (file.isTextFile() && !baseData.fileType.isText) {
                 file.delete()
             } else {
-                return MutableStateFlow(Success(file))
+                return MutableStateFlow(LoadStatus.Success(file))
             }
         }
         val task = addTask(baseData, url, path)
@@ -127,7 +136,7 @@ data class DLTask(
     val baseData: BaseData,
     val url: String,
     val path: String = "",
-    val statusFlow: MutableStateFlow<LoadStatus<File>> = MutableStateFlow(Waiting),
+    val statusFlow: MutableStateFlow<LoadStatus<File>> = MutableStateFlow(LoadStatus.Waiting),
 ) {
     private var started: Boolean = false
     private var response: HttpResponse? = null
@@ -145,7 +154,7 @@ data class DLTask(
     }
 
     fun start() = scope.launch {
-        if (statusFlow.value is Success)
+        if (statusFlow.value is LoadStatus.Success)
             return@launch
         synchronized(this) {
             if (started)
@@ -162,10 +171,10 @@ data class DLTask(
                     val progress = contentLen?.let { currentLen.toFloat() / it.toFloat() } ?: 0f
                     val status = statusFlow.value
                     when (status) {
-                        is Error -> cancel()
-                        is Loading -> statusFlow.update { Loading(progress) }
-                        Waiting -> statusFlow.update { Loading(0f) }
-                        is Success<*> -> {}
+                        is LoadStatus.Error -> cancel()
+                        is LoadStatus.Loading -> statusFlow.update { LoadStatus.Loading(progress) }
+                        LoadStatus.Waiting -> statusFlow.update { LoadStatus.Loading(0f) }
+                        is LoadStatus.Success<*> -> {}
                     }
                 }
             }.execute { response ->
@@ -180,15 +189,15 @@ data class DLTask(
                 }
                 if (VerifyRequester.checkDlFile(file, this@DLTask)) {
                     Logger.d(TAG) { "download success, $url" }
-                    statusFlow.update { Success(file) }
+                    statusFlow.update { LoadStatus.Success(file) }
                 } else {
                     Logger.e(TAG) { "file type error. ${file.absolutePath}, $url" }
-                    statusFlow.update { Error(RuntimeException("The request result is not the target file")) }
+                    statusFlow.update { LoadStatus.Error(RuntimeException("The request result is not the target file")) }
                 }
             }
         } catch (e: Exception) {
-            if (statusFlow.value !is Success) {
-                statusFlow.update { Error(e) }
+            if (statusFlow.value !is LoadStatus.Success) {
+                statusFlow.update { LoadStatus.Error(e) }
             }
             try {
                 if (file.exists()) file.delete()
@@ -250,7 +259,7 @@ fun loadDLFileWithTask(
             baseData,
             info.url,
             path,
-            MutableStateFlow(Success(file))
+            MutableStateFlow(LoadStatus.Success(file))
         )
     return addTask(baseData, info.url, path)
 }

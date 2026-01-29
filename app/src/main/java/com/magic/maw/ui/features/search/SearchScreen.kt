@@ -61,8 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
-import com.magic.maw.data.model.constant.TagType
-import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.ui.common.TagItem
 import com.magic.maw.ui.theme.PreviewTheme
@@ -319,19 +317,6 @@ private fun SearchSuggestion(
 }
 
 private fun String.toSearchTagText(): String = trim().run { if (isNotEmpty()) "$this " else "" }
-
-private fun getPreviewTagList(): List<TagInfo> {
-    val baseTag = TagInfo(website = WebsiteOption.Yande, name = "none")
-    return listOf(
-        baseTag.copy(name = "genshin_impact", type = TagType.Copyright),
-        baseTag.copy(name = "ganyu", type = TagType.Character),
-        baseTag.copy(name = "keqing", type = TagType.Character),
-        baseTag.copy(name = "alpha", type = TagType.Artist),
-        baseTag.copy(name = "girl", type = TagType.General),
-        baseTag.copy(name = "2girl", type = TagType.General),
-        baseTag.copy(name = "other", type = TagType.Circle),
-    )
-}
 
 @Composable
 @Preview(name = "SearchBody", widthDp = 360, heightDp = 180, uiMode = UI_MODE_NIGHT_NO)

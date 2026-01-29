@@ -10,7 +10,6 @@ import androidx.compose.runtime.setValue
 import com.magic.maw.data.model.site.PostData
 import kotlinx.collections.immutable.PersistentList
 
-
 /**
  * 用于刷新时，若有新内容，则滚动到顶部
  */

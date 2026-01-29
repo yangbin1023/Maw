@@ -37,10 +37,10 @@ import androidx.paging.compose.LazyPagingItems
 import co.touchlab.kermit.Logger
 import coil3.ImageLoader
 import com.magic.maw.R
+import com.magic.maw.data.api.manager.LoadStatus
+import com.magic.maw.data.api.manager.LoadType
 import com.magic.maw.data.api.manager.loadDLFile
 import com.magic.maw.data.local.store.SettingsStore
-import com.magic.maw.data.model.LoadStatus
-import com.magic.maw.data.model.LoadType
 import com.magic.maw.data.model.site.PostData
 import com.magic.maw.ui.common.UgoiraPlayer
 import com.magic.maw.ui.common.throttle

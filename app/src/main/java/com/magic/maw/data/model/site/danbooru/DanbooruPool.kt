@@ -1,6 +1,5 @@
 package com.magic.maw.data.model.site.danbooru
 
-import com.magic.maw.data.api.parser.DanbooruParser
 import com.magic.maw.data.model.site.PoolData
 import com.magic.maw.data.model.constant.WebsiteOption
 import kotlinx.serialization.Serializable
@@ -28,8 +27,8 @@ class DanbooruPool {
         val data = PoolData(website = WebsiteOption.Danbooru, id = id!!.toString(), name = name!!)
         data.description = description
         data.count = post_count ?: 0
-        data.createTime = DanbooruParser.getUnixTime(created_at)
-        data.updateTime = DanbooruParser.getUnixTime(updated_at)
+        data.createTime = getDanbooruUnixTime(created_at)
+        data.updateTime = getDanbooruUnixTime(updated_at)
         data.category = category
         return data
     }

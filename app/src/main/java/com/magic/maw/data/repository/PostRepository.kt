@@ -1,12 +1,12 @@
 package com.magic.maw.data.repository
 
-import android.content.Context
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.magic.maw.data.api.entity.RequestFilter
 import com.magic.maw.data.api.service.ApiServiceProvider
+import com.magic.maw.data.local.db.dao.TagDao
 import com.magic.maw.data.local.store.SettingsRepository
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
@@ -19,25 +19,14 @@ import kotlinx.coroutines.flow.Flow
 class PostRepository(
     private val apiServiceProvider: ApiServiceProvider,
     private val settingsRepository: SettingsRepository,
-    private val context: Context,//: AppDB,
+    private val tagDao: TagDao,
 ) {
-    fun getPostStream(filter: RequestFilter = RequestFilter()): Flow<PagingData<PostData>> {
-        return Pager(
-            config = PagingConfig(pageSize = 40, enablePlaceholders = false),
-            pagingSourceFactory = {
-                val settings = settingsRepository.settings
-                val apiService = apiServiceProvider[settings.website]
-                val filter = filter.copy(ratings = settings.websiteSettings.ratings)
-                PostPagingSource(apiService, filter)
-            }
-        ).flow
-    }
-
     fun getPostDataSource(filter: RequestFilter = RequestFilter()): PostDataSource {
         return PostDataSource(
             initFilter = filter,
             apiServiceProvider = apiServiceProvider,
-            settingsRepository = settingsRepository
+            settingsRepository = settingsRepository,
+            tagDao = tagDao,
         )
     }
 }
@@ -46,6 +35,7 @@ class PostDataSource(
     initFilter: RequestFilter,
     private val apiServiceProvider: ApiServiceProvider,
     private val settingsRepository: SettingsRepository,
+    private val tagDao: TagDao,
 ) {
     private var postPagingSource: PostPagingSource? = null
     private var website: WebsiteOption = settingsRepository.settings.website
@@ -61,7 +51,7 @@ class PostDataSource(
             val filter = this@PostDataSource.filter.copy(ratings = settings.websiteSettings.ratings)
             website = settings.website
             ratings = settings.websiteSettings.ratings
-            PostPagingSource(apiService, filter).apply {
+            PostPagingSource(apiService, tagDao, filter).apply {
                 postPagingSource = this
             }
         }

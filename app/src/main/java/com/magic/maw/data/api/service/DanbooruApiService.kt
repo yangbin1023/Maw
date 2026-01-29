@@ -1,8 +1,6 @@
 package com.magic.maw.data.api.service
 
 import co.touchlab.kermit.Logger
-import com.hjq.toast.Toaster
-import com.magic.maw.MyApp
 import com.magic.maw.data.api.entity.PoolResponse
 import com.magic.maw.data.api.entity.PostResponse
 import com.magic.maw.data.api.entity.RequestFilter
@@ -11,24 +9,17 @@ import com.magic.maw.data.model.constant.PopularType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
-import com.magic.maw.data.model.site.PoolData
-import com.magic.maw.data.model.site.PostData
+import com.magic.maw.data.model.entity.UserInfo
 import com.magic.maw.data.model.site.danbooru.DanbooruData
 import com.magic.maw.data.model.site.danbooru.DanbooruPool
 import com.magic.maw.data.model.site.danbooru.DanbooruTag
-import com.magic.maw.util.TimeUtils
+import com.magic.maw.data.model.site.danbooru.DanbooruUser
 import com.magic.maw.util.get
-import com.magic.maw.util.isHtml
-import com.magic.maw.util.json
 import io.ktor.client.HttpClient
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
 import io.ktor.http.takeFrom
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileWriter
 import java.time.format.DateTimeFormatter
 
 private const val TAG = "DanbooruApiService"
@@ -45,57 +36,18 @@ class DanbooruApiService(
         PopularType.Year, PopularType.All
     )
 
-    override suspend fun getPostData(
-        filter: RequestFilter,
-        meta: RequestMeta
-    ): PostResponse {
+    override suspend fun getPostData(filter: RequestFilter, meta: RequestMeta): PostResponse {
         val url = getPostUrl(filter, meta)
-        val resultStr: String = client.get(url)
-        val danbooruList: List<DanbooruData> = try {
-            json.decodeFromString(resultStr)
-        } catch (e: Exception) {
-            Logger.e(TAG) { "request failed, url: $url, resultStr: \n$resultStr" }
-            if (resultStr.isHtml()) {
-                try {
-                    val logDir = MyApp.app.getExternalFilesDir("log")
-                    val fileName = TimeUtils.getCurrentTimeStr(TimeUtils.FORMAT_3) + ".log"
-                    withContext(Dispatchers.IO) {
-                        val fWriter = FileWriter(File(logDir, fileName))
-                        fWriter.write(resultStr)
-                        fWriter.close()
-                    }
-                    Toaster.show("写入日志：$fileName")
-                } catch (e: Exception) {
-                    Logger.e(TAG) { """write log failed: ${e.message}""" }
-                }
-            }
-            throw e
-        }
-        val list = ArrayList<PostData>()
-        for (item in danbooruList) {
-            val data = item.toPostData() ?: continue
-            data.tags.sort()
-            list.add(data)
-        }
+        val danbooruList: List<DanbooruData> = client.get(url)
+        val list = danbooruList.mapNotNull { it.toPostData() }
         val nextMeta = getNextMeta(meta, danbooruList.isEmpty())
-        if (list.isEmpty() && danbooruList.isNotEmpty()) {
-            Logger.e(TAG) { "Warning: list is empty, but danbooruList is not empty!" }
-            return getPostData(filter, nextMeta)
-        }
         return PostResponse(items = list, meta = nextMeta)
     }
 
-    override suspend fun getPoolData(
-        filter: RequestFilter,
-        meta: RequestMeta
-    ): PoolResponse {
-        val url = getPoolUrl(filter, meta)
+    override suspend fun getPoolData(filter: RequestFilter, meta: RequestMeta): PoolResponse {
+        val url = getPoolUrl(meta)
         val danbooruList: List<DanbooruPool> = client.get(url)
-        val list: ArrayList<PoolData> = ArrayList()
-        for (item in danbooruList) {
-            val data = item.toPoolData() ?: continue
-            list.add(data)
-        }
+        val list = danbooruList.mapNotNull { it.toPoolData() }
         val nextMeta = getNextMeta(meta, danbooruList.isEmpty())
         return PoolResponse(items = list, meta = nextMeta)
     }
@@ -103,21 +55,38 @@ class DanbooruApiService(
     override suspend fun getSuggestTagInfo(name: String, limit: Int): List<TagInfo> {
         if (name.isEmpty())
             return emptyList()
-        val tagMap = HashMap<String, TagInfo>()
-        val tagList = ArrayList<TagInfo>()
         try {
-            val url = getTagUrl(name, limit)
-            val danbooruList: List<DanbooruTag> = client.get(url)
-            for (item in danbooruList) {
-                val tag = item.toTagInfo() ?: continue
-                tagMap[tag.name] = tag
-                tagList.add(tag)
-            }
+            val url = getTagUrl(name, 1, limit)
+            return client.get<List<DanbooruTag>>(url).mapNotNull { it.toTagInfo() }
         } catch (_: CancellationException) {
         } catch (e: Exception) {
             Logger.e(TAG) { "request suggest tag info failed. name[$name], error: $e" }
         }
-        return tagList
+        return emptyList()
+    }
+
+    override suspend fun getTagByName(tagName: String): List<TagInfo> {
+        if (tagName.isEmpty())
+            return emptyList()
+        try {
+            val url = getTagUrl(tagName, 1, 1)
+            return client.get<List<DanbooruTag>>(url)
+                .mapNotNull { it.toTagInfo() }
+                .distinctBy { it.name }
+        } catch (_: CancellationException) {
+        } catch (e: Exception) {
+            Logger.e(TAG) { "request tag info failed. name[$tagName], error: $e" }
+        }
+        return emptyList()
+    }
+
+    override suspend fun getUserInfo(userId: String): UserInfo? {
+        return try {
+            client.get<List<DanbooruUser>>(getUserUrl(userId)).firstOrNull()?.toUserInfo()
+        } catch (e: Exception) {
+            Logger.e(TAG) { "request user info failed. id[$userId], error: $e" }
+            null
+        }
     }
 
     private fun getPostUrl(filter: RequestFilter, meta: RequestMeta): String {
@@ -164,23 +133,27 @@ class DanbooruApiService(
             .apply { Logger.d(TAG) { "post url: $this, tags: $tags, option: ${filter.tags}" } }
     }
 
-    private fun getPoolUrl(filter: RequestFilter, meta: RequestMeta): String {
+    private fun getPoolUrl(meta: RequestMeta): String {
         return "$baseUrl/pools.json?page=${meta.page}&${"search[order]=created_at".encode()}"
     }
 
-    private fun getTagUrl(name: String, limit: Int): String {
+    private fun getTagUrl(name: String, page: Int, limit: Int = 1): String {
         val searchTag = if (limit <= 1) name.encode() else "*${name.encode()}*"
         val paramMap = mapOf(
             "search[order]" to "count",
             "search[name_or_alias_matches]" to searchTag,
             "limit" to if (limit < 5) "5" else "$limit",
-            "page" to "1",
+            "page" to page,
         )
         val builder = StringBuilder()
         for ((key, value) in paramMap) {
             builder.append("${key.encode()}=$value").append("&")
         }
         return "$baseUrl/tags.json?$builder"
+    }
+
+    private fun getUserUrl(userId: String): String {
+        return "$baseUrl/users.json?${"search[id]=$userId".encode()}"
     }
 
     private fun getRatingTag(ratings: List<Rating>): String {
@@ -199,13 +172,5 @@ class DanbooruApiService(
         if (ratingList.isEmpty())
             ratingList.add("g")
         return "rating:" + ratingList.joinToString(",")
-    }
-
-    private fun getNextMeta(meta: RequestMeta, noMore: Boolean = false): RequestMeta {
-        val currentPage = meta.page
-        return RequestMeta(
-            prev = if (currentPage == 1) null else (currentPage - 1).toString(),
-            next = if (noMore) null else (currentPage + 1).toString()
-        )
     }
 }

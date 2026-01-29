@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -145,7 +146,7 @@ private fun PoolRefreshBody(
     onItemClick: (Int, PoolData) -> Unit = { _, _ -> },
 ) {
     val isRefreshing by remember(lazyPagingItems) {
-        derivedStateOf { lazyPagingItems.loadState.refresh is androidx.paging.LoadState.Loading }
+        derivedStateOf { lazyPagingItems.loadState.refresh is LoadState.Loading }
     }
     PullToRefreshBox(
         modifier = modifier,

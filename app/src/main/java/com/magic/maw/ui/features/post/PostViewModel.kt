@@ -10,12 +10,8 @@ import com.magic.maw.data.repository.PostDataSource
 import com.magic.maw.data.repository.PostRepository
 import com.magic.maw.data.repository.TagHistoryRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 
-private const val TAG = "PostViewModel"
-
-@OptIn(ExperimentalCoroutinesApi::class)
 class PostViewModel(
     savedStateHandle: SavedStateHandle,
     apiServiceProvider: ApiServiceProvider,

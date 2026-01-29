@@ -1,13 +1,29 @@
 package com.magic.maw.data.model.site.danbooru
 
-import com.magic.maw.data.api.parser.DanbooruParser
 import com.magic.maw.data.model.constant.FileType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.TagType
 import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.data.model.site.PostData
+import com.magic.maw.util.TimeUtils
 import kotlinx.serialization.Serializable
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+
+private val format by lazy { SimpleDateFormat(TimeUtils.FORMAT_4, Locale.getDefault()) }
+
+fun getDanbooruUnixTime(timeStr: String?): Long? {
+    timeStr ?: return null
+    try {
+        val zoneStr = timeStr.substring(23)
+        format.timeZone = TimeZone.getTimeZone("GMT$zoneStr")
+        return format.parse(timeStr.substring(0, 23))?.time
+    } catch (_: Exception) {
+    }
+    return null
+}
 
 @Serializable
 class DanbooruData {
@@ -137,7 +153,7 @@ class DanbooruData {
             "e" -> Rating.Explicit
             else -> Rating.None
         }
-        data.uploadTime = DanbooruParser.getUnixTime(updated_at)
+        data.uploadTime = getDanbooruUnixTime(updated_at)
         val tagNames = tag_string?.split(" ")
         if (!tagNames.isNullOrEmpty()) {
             val generalTagList = tag_string_general?.split(" ") ?: emptyList()
