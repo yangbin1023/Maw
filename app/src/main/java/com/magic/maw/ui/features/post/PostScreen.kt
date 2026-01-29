@@ -331,14 +331,6 @@ private fun PostBody(
     onGloballyPositioned: (Int, Int) -> Unit,
     onItemClick: (Int) -> Unit,
 ) {
-    val loadState = lazyPagingItems.loadState
-    val hasNoMore by remember(loadState) {
-        derivedStateOf {
-            loadState.append is LoadState.NotLoading &&
-                    loadState.append.endOfPaginationReached &&
-                    lazyPagingItems.itemCount > 0
-        }
-    }
     BoxWithConstraints(modifier = modifier) {
         val columns = max((this.maxWidth / 210.dp).toInt(), 2)
         val contentPadding = getContentPadding(maxWidth = maxWidth, columns = columns)
@@ -367,30 +359,38 @@ private fun PostBody(
             }
 
             item(span = StaggeredGridItemSpan.FullLine) {
-                if (hasNoMore) {
-                    Text(
-                        text = stringResource(R.string.no_more_data),
-                        modifier = Modifier
-                            .height(PostDefaults.NoMoreItemHeight)
-                            .wrapContentSize(Alignment.Center)
-                    )
-                } else {
-                    val loadState = lazyPagingItems.loadState.append
-                    if (loadState is LoadState.Loading) {
-                        DotLoadingProgressIndicator()
-                    } else if (loadState is LoadState.Error) {
-                        Text(
-                            text = stringResource(R.string.loading_failed), modifier = Modifier
-                                .height(PostDefaults.NoMoreItemHeight)
-                                .wrapContentSize(Alignment.Center)
-                                .clickable(onClick = {
-                                    lazyPagingItems.retry()
-                                })
-                        )
-                    }
-                }
+                LazyVerticalStaggeredGridTail(
+                    loadState = lazyPagingItems.loadState.append,
+                    onRetry = { lazyPagingItems.retry() }
+                )
             }
         }
+    }
+}
+
+@Composable
+fun LazyVerticalStaggeredGridTail(
+    loadState: LoadState,
+    onRetry: () -> Unit,
+) {
+    if (loadState is LoadState.Loading) {
+        DotLoadingProgressIndicator()
+    } else if (loadState is LoadState.Error) {
+        Text(
+            text = stringResource(R.string.loading_failed),
+            modifier = Modifier
+                .height(PostDefaults.NoMoreItemHeight)
+                .wrapContentSize(Alignment.Center)
+                .clickable(onClick = onRetry)
+        )
+    } else if (loadState is LoadState.NotLoading
+        && loadState.endOfPaginationReached) {
+        Text(
+            text = stringResource(R.string.no_more_data),
+            modifier = Modifier
+                .height(PostDefaults.NoMoreItemHeight)
+                .wrapContentSize(Alignment.Center)
+        )
     }
 }
 

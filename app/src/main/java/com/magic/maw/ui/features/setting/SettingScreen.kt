@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import co.touchlab.kermit.Logger
 import com.magic.maw.R
-import com.magic.maw.data.api.parser.BaseParser
 import com.magic.maw.data.model.constant.Quality
 import com.magic.maw.data.model.constant.ThemeMode
 import com.magic.maw.data.model.constant.WebsiteOption

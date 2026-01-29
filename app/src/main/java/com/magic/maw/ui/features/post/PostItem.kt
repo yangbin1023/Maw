@@ -33,8 +33,8 @@ import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import com.magic.maw.R
+import com.magic.maw.data.interceptor.PostThumbnailItem
 import com.magic.maw.data.model.site.PostData
-import com.magic.maw.util.PostVideoModel
 import org.koin.compose.koinInject
 import kotlin.time.Duration.Companion.seconds
 
@@ -85,7 +85,7 @@ fun PostItemImage(
     postData: PostData,
 ) {
     val model = postData.previewInfo.url.ifBlank {
-        PostVideoModel(postData.website, postData.id)
+        PostThumbnailItem(postData.website, postData.id)
     }
     val imageLoader = koinInject<ImageLoader>()
     Box(modifier = modifier) {

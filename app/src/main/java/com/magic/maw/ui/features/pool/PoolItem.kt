@@ -13,34 +13,26 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import coil3.ImageLoader
 import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
+import coil3.compose.AsyncImagePainter
 import com.magic.maw.R
-import com.magic.maw.data.api.manager.loadDLFile
-import com.magic.maw.data.api.parser.BaseParser
-import com.magic.maw.data.local.store.SettingsStore
-import com.magic.maw.data.model.LoadStatus
-import com.magic.maw.data.model.LoadType
 import com.magic.maw.data.model.site.PoolData
-import com.magic.maw.data.model.RequestOption
-import com.magic.maw.data.model.constant.Quality
-import com.magic.maw.data.model.toLoadType
 import com.magic.maw.util.TimeUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 
 @Composable
 fun PoolItem(
@@ -107,56 +99,37 @@ fun PoolItem(
 
 @Composable
 private fun ItemImageView(modifier: Modifier = Modifier, poolData: PoolData) {
-    val scope = rememberCoroutineScope()
-    val type = rememberSaveable { mutableStateOf(LoadType.Waiting) }
-    val noMore = rememberSaveable { mutableStateOf(false) }
-    val model = remember { mutableStateOf<Any?>(null) }
-    val context = LocalContext.current
-    LaunchedEffect(poolData, noMore.value) {
-        if (poolData.posts.isEmpty() && !noMore.value) {
-            val list = withContext(Dispatchers.IO) {
-                try {
-                    val parser = BaseParser.get(poolData.website)
-                    val option = RequestOption(
-                        page = parser.firstPageIndex,
-                        poolId = poolData.id,
-                        ratings = SettingsStore.settings.websiteSettings.ratings
-                    )
-                    parser.requestPostData(option)
-                } catch (_: Exception) {
-                    emptyList()
-                }
-            }
-            poolData.posts = list
-            noMore.value = list.isEmpty()
-        }
-        if (noMore.value && poolData.posts.isEmpty()) {
-            type.value = LoadType.Error
-            return@LaunchedEffect
-        }
-        val postData = try {
-            poolData.posts.first()
-        } catch (_:Throwable) {
-            type.value = LoadType.Error
-            return@LaunchedEffect
-        }
-        withContext(Dispatchers.IO) {
-            loadDLFile(postData, Quality.Sample, scope)
-        }.collect {
-            if (it is LoadStatus.Success) {
-                model.value = ImageRequest.Builder(context).data(it.result).build()
-            }
-            type.value = it.toLoadType()
-        }
-    }
-
-    if (type.value == LoadType.Success) {
+    val imageLoader = koinInject<ImageLoader>()
+    Box(modifier = modifier) {
+        var state by remember { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
         AsyncImage(
-            modifier = modifier,
-            model = model.value,
+            modifier = Modifier.fillMaxSize(),
+            model = poolData,
+            imageLoader = imageLoader,
             alignment = Alignment.Center,
+            onState = { state = it },
             contentScale = ContentScale.Crop,
             contentDescription = null,
         )
+
+        if (state is AsyncImagePainter.State.Loading) {
+            Icon(
+                modifier = modifier
+                    .align(Alignment.Center)
+                    .fillMaxSize(0.6f),
+                imageVector = ImageVector.vectorResource(R.drawable.ic_image),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(0.08f)
+            )
+        } else if (state is AsyncImagePainter.State.Error) {
+            Icon(
+                modifier = modifier
+                    .align(Alignment.Center)
+                    .fillMaxSize(0.6f),
+                imageVector = ImageVector.vectorResource(R.drawable.ic_image_error),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(0.08f)
+            )
+        }
     }
 }

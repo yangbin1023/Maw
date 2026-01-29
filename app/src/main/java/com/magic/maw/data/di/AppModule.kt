@@ -1,10 +1,5 @@
 package com.magic.maw.data.di
 
-import com.magic.maw.data.api.parser.BaseParser
-import com.magic.maw.data.api.parser.DanbooruParser
-import com.magic.maw.data.api.parser.KonachanParser
-import com.magic.maw.data.api.parser.WebsiteParserProvider
-import com.magic.maw.data.api.parser.YandeParser
 import com.magic.maw.data.api.service.ApiServiceProvider
 import com.magic.maw.data.api.service.BaseApiService
 import com.magic.maw.data.api.service.DanbooruApiService
@@ -40,19 +35,6 @@ val appModule = module {
 
     // 网络
     single { createAppHttpClient() }
-
-    // Parser
-    single<BaseParser>(named(WebsiteOption.Yande)) { YandeParser(get()) }
-    single<BaseParser>(named(WebsiteOption.Konachan)) { KonachanParser(get()) }
-    single<BaseParser>(named(WebsiteOption.Danbooru)) { DanbooruParser(get()) }
-    single {
-        val lists = listOf(
-            get<BaseParser>(named(WebsiteOption.Yande)),
-            get<BaseParser>(named(WebsiteOption.Konachan)),
-            get<BaseParser>(named(WebsiteOption.Danbooru)),
-        )
-        WebsiteParserProvider(lists)
-    }
 
     // ApiService
     single<BaseApiService>(named(WebsiteOption.Yande)) { YandeApiService(get()) }

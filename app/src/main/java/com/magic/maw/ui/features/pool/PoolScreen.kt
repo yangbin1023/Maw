@@ -1,13 +1,10 @@
 package com.magic.maw.ui.features.pool
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
@@ -15,7 +12,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -54,7 +49,7 @@ import com.magic.maw.R
 import com.magic.maw.data.model.site.PoolData
 import com.magic.maw.ui.common.EmptyView
 import com.magic.maw.ui.features.main.AppRoute
-import com.magic.maw.ui.features.post.PostDefaults
+import com.magic.maw.ui.features.post.LazyVerticalStaggeredGridTail
 import com.magic.maw.util.UiUtils
 import com.magic.maw.util.UiUtils.getStatusBarHeight
 import kotlin.math.max
@@ -187,14 +182,6 @@ private fun PoolBody(
     lazyState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     onItemClick: (Int, PoolData) -> Unit
 ) {
-    val loadState = lazyPagingItems.loadState
-    val hasNoMore by remember(loadState) {
-        derivedStateOf {
-            loadState.append is androidx.paging.LoadState.NotLoading &&
-                    loadState.append.endOfPaginationReached &&
-                    lazyPagingItems.itemCount > 0
-        }
-    }
     BoxWithConstraints(modifier = modifier) {
         val columns = max((this.maxWidth / 320.dp).toInt(), 1)
         LazyVerticalStaggeredGrid(
@@ -221,23 +208,10 @@ private fun PoolBody(
             }
 
             item(span = StaggeredGridItemSpan.FullLine) {
-                if (hasNoMore) {
-                    Text(
-                        text = stringResource(R.string.no_more_data),
-                        modifier = Modifier
-                            .height(PostDefaults.NoMoreItemHeight)
-                            .wrapContentSize(Alignment.Center)
-                    )
-                } else {
-                    val loadState = lazyPagingItems.loadState.append
-                    if (loadState is androidx.paging.LoadState.Loading) {
-                        CircularProgressIndicator()
-                    } else if (loadState is androidx.paging.LoadState.Error) {
-                        Text(text = "加载失败，请重试", modifier = Modifier.clickable(onClick = {
-                            lazyPagingItems.retry()
-                        }))
-                    }
-                }
+                LazyVerticalStaggeredGridTail(
+                    loadState = lazyPagingItems.loadState.append,
+                    onRetry = { lazyPagingItems.retry() }
+                )
             }
         }
     }

@@ -5,8 +5,6 @@ import com.magic.maw.data.api.entity.PoolResponse
 import com.magic.maw.data.api.entity.PostResponse
 import com.magic.maw.data.api.entity.RequestFilter
 import com.magic.maw.data.api.entity.RequestMeta
-import com.magic.maw.data.local.store.SettingsStore
-import com.magic.maw.data.model.RequestOption
 import com.magic.maw.data.model.constant.PopularType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.Rating.Companion.join
@@ -36,7 +34,7 @@ class YandeApiService(private val client: HttpClient) : BaseApiService() {
             return PostResponse(items = emptyList(), meta = RequestMeta(prev = "1", next = null))
         val url = getPostUrl(filter, meta)
         val list: ArrayList<PostData> = ArrayList()
-        val ratings = SettingsStore.settings.yandeSettings.ratings
+        val ratings = filter.ratings.ifEmpty { supportedRatings }
         val noMore: Boolean
         if (filter.poolId != null) {
             noMore = true

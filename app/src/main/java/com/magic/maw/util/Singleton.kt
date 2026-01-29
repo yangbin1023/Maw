@@ -11,6 +11,7 @@ import coil3.gif.GifDecoder
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
+import com.magic.maw.data.interceptor.DataThumbnailInterceptor
 import com.magic.maw.ui.features.verify.VerifyViewDefaults
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
@@ -134,8 +135,8 @@ fun Scope.createImageLoader(): ImageLoader {
         .components {
             // 添加ktor支持
             add(KtorNetworkFetcherFactory(get<HttpClient>()))
-            // 添加获取略缩图Fetcher
-            add(PostVideoFetcher.Factory(get()))
+            // 添加获取略缩图Interceptor
+            add(DataThumbnailInterceptor(get(), get()))
             // 添加视频抽帧插件
             add(VideoFrameDecoder.Factory())
             // 添加Gif支持
