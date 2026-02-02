@@ -20,7 +20,6 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.path
 import io.ktor.http.takeFrom
 import kotlinx.coroutines.CancellationException
-import java.time.format.DateTimeFormatter
 
 private const val TAG = "DanbooruApiService"
 
@@ -93,7 +92,7 @@ class DanbooruApiService(
         val builder = URLBuilder().takeFrom(baseUrl)
         val tags = ArrayList<String>()
         filter.popularOption?.let {
-            val dateStr = it.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val dateStr = "%04d-%02d-%02d".format(it.date.year, it.date.monthNumber, it.date.dayOfMonth)
             val scale = when (it.type) {
                 PopularType.Day -> "day"
                 PopularType.Week -> "week"

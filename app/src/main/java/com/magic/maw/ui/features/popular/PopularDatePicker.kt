@@ -31,8 +31,13 @@ import com.magic.maw.ui.common.throttle
 import com.magic.maw.ui.theme.PreviewTheme
 import com.magic.maw.util.format
 import com.magic.maw.util.toMonday
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
 
 @Composable
 internal fun PopularDatePicker(
@@ -46,20 +51,20 @@ internal fun PopularDatePicker(
 ) {
     val onDateDown = {
         val newDate = when (popularType) {
-            PopularType.Day -> focusDate.minusDays(1)
-            PopularType.Week -> focusDate.minusWeeks(1)
-            PopularType.Month -> focusDate.minusMonths(1)
-            PopularType.Year -> focusDate.minusYears(1)
+            PopularType.Day -> focusDate.minus(DatePeriod(days = 1))
+            PopularType.Week -> focusDate.minus(DatePeriod(days = 7))
+            PopularType.Month -> focusDate.minus(DatePeriod(months = 1))
+            PopularType.Year -> focusDate.minus(DatePeriod(years = 1))
             else -> focusDate
         }
         onDateChanged(newDate)
     }
     val onDateUp = {
         val newDate = when (popularType) {
-            PopularType.Day -> focusDate.plusDays(1)
-            PopularType.Week -> focusDate.plusWeeks(1)
-            PopularType.Month -> focusDate.plusMonths(1)
-            PopularType.Year -> focusDate.plusYears(1)
+            PopularType.Day -> focusDate.plus(DatePeriod(days = 1))
+            PopularType.Week -> focusDate.plus(DatePeriod(days = 7))
+            PopularType.Month -> focusDate.plus(DatePeriod(months = 1))
+            PopularType.Year -> focusDate.plus(DatePeriod(years = 1))
             else -> focusDate
         }
         onDateChanged(newDate)
@@ -102,17 +107,17 @@ internal fun PopularDatePicker(
     }
 }
 
-private fun getFormatStr(focusDate: LocalDate, popularType: PopularType): String {
+private fun getFormatStr(date: LocalDate, popularType: PopularType): String {
     return when (popularType) {
-        PopularType.Day -> focusDate.format()
+        PopularType.Day -> date.format()
         PopularType.Week -> {
-            val monday = focusDate.toMonday().format()
-            val sunDay = focusDate.plusWeeks(1).toMonday().format()
+            val monday = date.toMonday().format()
+            val sunDay = date.plus(DatePeriod(days = 7)).toMonday().format()
             "$monday - $sunDay"
         }
 
-        PopularType.Month -> focusDate.format(DateTimeFormatter.ofPattern("yyyy/M"))
-        PopularType.Year -> focusDate.format(DateTimeFormatter.ofPattern("yyyy"))
+        PopularType.Month -> "${date.year}/${date.monthNumber}"
+        PopularType.Year -> "${date.year}"
         else -> ""
     }
 }
@@ -126,7 +131,7 @@ private object Defaults {
 @Composable
 @Preview(widthDp = 360, heightDp = 320)
 private fun DatePickerPreview() {
-    val focusDate = remember { mutableStateOf(LocalDate.now()) }
+    val focusDate = remember { mutableStateOf(Clock.System.todayIn(TimeZone.currentSystemDefault())) }
     PreviewTheme {
         Surface {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -145,7 +150,7 @@ private fun DatePickerPreview() {
 @Composable
 @Preview(widthDp = 360, heightDp = 320, uiMode = Configuration.UI_MODE_NIGHT_YES)
 private fun DatePickerPreviewDark() {
-    val focusDate = remember { mutableStateOf(LocalDate.now()) }
+    val focusDate = remember { mutableStateOf(Clock.System.todayIn(TimeZone.currentSystemDefault())) }
     PreviewTheme {
         Surface {
             Box(modifier = Modifier.fillMaxSize()) {

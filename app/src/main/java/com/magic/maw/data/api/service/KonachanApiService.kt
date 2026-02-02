@@ -122,7 +122,7 @@ class KonachanApiService(private val client: HttpClient) : BaseApiService() {
                     builder.path("post/popular_by_day.json")
                     builder.encodedParameters.apply {
                         append("day", date.dayOfMonth.toString())
-                        append("month", date.monthValue.toString())
+                        append("month", date.monthNumber.toString())
                         append("year", date.year.toString())
                     }
                 }
@@ -132,7 +132,7 @@ class KonachanApiService(private val client: HttpClient) : BaseApiService() {
                     date = date.toMonday()
                     builder.encodedParameters.apply {
                         append("day", date.dayOfMonth.toString())
-                        append("month", date.monthValue.toString())
+                        append("month", date.monthNumber.toString())
                         append("year", date.year.toString())
                     }
                 }
@@ -140,7 +140,7 @@ class KonachanApiService(private val client: HttpClient) : BaseApiService() {
                 PopularType.Month -> {
                     builder.path("post/popular_by_month.json")
                     builder.encodedParameters.apply {
-                        append("month", date.monthValue.toString())
+                        append("month", date.monthNumber.toString())
                         append("year", date.year.toString())
                     }
                 }

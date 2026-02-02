@@ -2,8 +2,6 @@ package com.magic.maw.util
 
 import android.annotation.SuppressLint
 import android.os.Build
-import android.os.Handler
-import android.os.HandlerThread
 import android.webkit.CookieManager
 import coil3.ImageLoader
 import coil3.gif.AnimatedImageDecoder
@@ -24,10 +22,15 @@ import io.ktor.client.request.header
 import io.ktor.http.ContentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.modules.SerializersModule
 import okhttp3.ConnectionPool
 import okhttp3.Dispatcher
@@ -38,6 +41,28 @@ import java.util.Date
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
+
+object StringOrIntSerializer : KSerializer<String> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("StringOrInt", PrimitiveKind.STRING)
+
+    override fun deserialize(decoder: Decoder): String {
+        // 将输入视为 JsonElement 处理
+        val input = decoder as? JsonDecoder ?: throw SerializationException("Only JSON supported")
+        val element = input.decodeJsonElement()
+
+        return if (element is JsonPrimitive) {
+            // 无论在 JSON 里有没有引号，content 都会拿到字符串形式
+            element.content
+        } else {
+            element.toString()
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: String) {
+        encoder.encodeString(value)
+    }
+}
 
 object DateSerializer : KSerializer<Date> {
     override val descriptor: SerialDescriptor =
@@ -119,15 +144,6 @@ fun HttpRequestBuilder.cookie() = apply {
     CookieManager.getInstance().getCookie(url.toString())?.let {
         header("Cookie", it)
     }
-}
-
-private val dbHandlerThread: HandlerThread by lazy {
-    HandlerThread("DBHandler")
-}
-
-val dbHandler by lazy {
-    dbHandlerThread.start()
-    Handler(dbHandlerThread.looper)
 }
 
 fun Scope.createImageLoader(): ImageLoader {

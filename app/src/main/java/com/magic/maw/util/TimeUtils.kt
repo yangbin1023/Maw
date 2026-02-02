@@ -1,9 +1,11 @@
 package com.magic.maw.util
 
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import java.text.SimpleDateFormat
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
@@ -79,13 +81,13 @@ object TimeUtils {
 }
 
 fun LocalDate.toMonday(): LocalDate {
-    return minusDays((dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
+    return minus(DatePeriod(days = dayOfWeek.value - DayOfWeek.MONDAY.value))
 }
 
 fun LocalDate.toSunday(): LocalDate {
-    return plusDays((DayOfWeek.SUNDAY.value - dayOfWeek.value).toLong())
+    return plus(DatePeriod(days = DayOfWeek.SUNDAY.value - dayOfWeek.value))
 }
 
 fun LocalDate.format(): String {
-    return format(DateTimeFormatter.ofPattern("yyyy/M/d"))
+    return "${year}/${monthNumber}/${dayOfMonth}"
 }

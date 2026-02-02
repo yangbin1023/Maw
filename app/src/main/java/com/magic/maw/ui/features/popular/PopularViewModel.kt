@@ -20,7 +20,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.todayIn
 
 class PopularDataItem(
     postRepository: PostRepository,
@@ -28,7 +33,11 @@ class PopularDataItem(
     val lazyState: LazyStaggeredGridState = LazyStaggeredGridState(0, 0),
     val itemHeights: MutableIntIntMap = mutableIntIntMapOf(),
 ) {
-    private val _localDateFlow = MutableStateFlow(LocalDate.now().minusDays(1))
+    private val _localDateFlow = MutableStateFlow(
+        Clock.System.todayIn(TimeZone.currentSystemDefault()).minus(
+            DatePeriod(days = 1)
+        )
+    )
 
     val localDateFlow: StateFlow<LocalDate> = _localDateFlow.asStateFlow()
 
