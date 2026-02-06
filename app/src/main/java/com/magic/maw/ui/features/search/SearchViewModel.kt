@@ -24,6 +24,7 @@ class SearchViewModel(
     private val tagRepository: TagRepository,
     private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
+    @Suppress("UnusedFlow")
     @OptIn(ExperimentalCoroutinesApi::class)
     val tagHistoryFlow: StateFlow<List<TagInfo>> = tagHistoryRepository.getAllHistory()
         .flatMapLatest { histories ->
@@ -49,12 +50,12 @@ class SearchViewModel(
 
     fun deleteHistory(name: String) = viewModelScope.launch {
         val website = settingsRepository.settings.website
-        tagHistoryRepository.deleteHistory(website, name)
+        tagHistoryRepository.deleteHistory(website.name, name)
     }
 
     fun deleteAllHistory() = viewModelScope.launch {
         val website = settingsRepository.settings.website
-        tagHistoryRepository.deleteAllHistory(website)
+        tagHistoryRepository.deleteAllHistory(website.name)
     }
 
     suspend fun requestSuggestTagInfo(name: String): List<TagInfo> {

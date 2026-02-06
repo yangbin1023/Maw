@@ -43,5 +43,14 @@ enum class Rating(val value: Int) {
             }
             return value
         }
+
+        fun String?.toRating(): Rating {
+            for (rating in entries) {
+                if (rating.name == this) {
+                    return rating
+                }
+            }
+            return None
+        }
     }
 }

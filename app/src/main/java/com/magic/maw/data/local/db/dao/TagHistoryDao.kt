@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
-import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagHistory
 import com.magic.maw.data.model.entity.TagInfo
 import kotlinx.coroutines.flow.Flow
@@ -14,13 +13,13 @@ import kotlinx.datetime.Instant
 @Dao
 interface TagHistoryDao {
     @Query("SELECT * FROM tag_history WHERE website = :website ORDER BY update_time DESC")
-    fun getAllFlow(website: WebsiteOption): Flow<List<TagHistory>>
+    fun getAllFlow(website: String): Flow<List<TagHistory>>
 
     @Query("SELECT * FROM tag_history WHERE website = :website ORDER BY update_time DESC LIMIT :limit")
-    fun getAllFlow(website: WebsiteOption, limit: Int): Flow<List<TagHistory>>
+    fun getAllFlow(website: String, limit: Int): Flow<List<TagHistory>>
 
     @Query("SELECT * FROM tag_info WHERE name IN (SELECT name FROM tag_history WHERE website = :website ORDER BY update_time DESC LIMIT :limit)")
-    fun getAllTagFlow(website: WebsiteOption, limit: Int): Flow<List<TagInfo>>
+    fun getAllTagFlow(website: String, limit: Int): Flow<List<TagInfo>>
 
     @Insert
     suspend fun insert(tagHistory: TagHistory)
@@ -29,13 +28,13 @@ interface TagHistoryDao {
     suspend fun getAll(): List<TagHistory>
 
     @Query("SELECT * FROM tag_history WHERE website = :website ORDER BY update_time DESC")
-    suspend fun getAll(website: WebsiteOption): List<TagHistory>
+    suspend fun getAll(website: String): List<TagHistory>
 
     @Query("SELECT * FROM tag_history WHERE website = :website ORDER BY update_time DESC LIMIT :limit")
-    suspend fun getAll(website: WebsiteOption, limit: Int): List<TagHistory>
+    suspend fun getAll(website: String, limit: Int): List<TagHistory>
 
     @Query("SELECT * FROM tag_history WHERE website = :website AND name = :name")
-    suspend fun get(website: WebsiteOption, name: String): TagHistory?
+    suspend fun get(website: String, name: String): TagHistory?
 
     @Transaction
     suspend fun upsert(tagHistory: TagHistory) {
@@ -51,8 +50,8 @@ interface TagHistoryDao {
     suspend fun deleteAll()
 
     @Query("DELETE FROM tag_history WHERE website = :website")
-    suspend fun deleteAll(website: WebsiteOption)
+    suspend fun deleteAll(website: String)
 
     @Query("DELETE FROM tag_history WHERE website = :website AND name = :name")
-    suspend fun delete(website: WebsiteOption, name: String)
+    suspend fun delete(website: String, name: String)
 }

@@ -30,7 +30,7 @@ class ViewerViewModel(
         .flatMapLatest { data ->
             val userId = data?.createId
             if (userId == null) flowOf(null)
-            else userRepository.getUserInfoFlow(data.website, userId)
+            else userRepository.getUserInfoFlow(data.website.name, userId)
         }
         .stateIn(
             scope = viewModelScope,
@@ -62,10 +62,10 @@ class ViewerViewModel(
         if (data == null) return
         if (oldData != data) {
             viewModelScope.launch(Dispatchers.IO) {
-                tagRepository.refreshTagsForPost(data)
                 data.createId?.let { userId ->
-                    userRepository.refreshUserInfo(data.website, userId)
+                    userRepository.refreshUserInfo(data.website.name, userId)
                 }
+                tagRepository.refreshTagsForPost(data)
             }
         }
     }

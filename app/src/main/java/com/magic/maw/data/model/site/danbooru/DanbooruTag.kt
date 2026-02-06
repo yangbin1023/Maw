@@ -1,8 +1,8 @@
 package com.magic.maw.data.model.site.danbooru
 
-import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.data.model.constant.TagType.Companion.toTagType
 import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.data.model.entity.TagInfo
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -20,7 +20,7 @@ class DanbooruTag {
         if (id == 0 || name.isEmpty())
             return null
         return TagInfo(
-            website = WebsiteOption.Danbooru,
+            website = WebsiteOption.Danbooru.name,
             tagId = id.toString(),
             name = name,
             type = category.toTagType(),

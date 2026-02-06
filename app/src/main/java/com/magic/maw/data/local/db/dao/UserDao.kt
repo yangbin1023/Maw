@@ -5,7 +5,6 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
-import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.UserInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.Clock
@@ -14,7 +13,7 @@ import kotlinx.datetime.Instant
 @Dao
 interface UserDao {
     @Query("SELECT * FROM user_info WHERE website = :website AND user_id = :userId")
-    fun getFlow(website: WebsiteOption, userId: String): Flow<UserInfo?>
+    fun getFlow(website: String, userId: String): Flow<UserInfo?>
 
     @Insert
     suspend fun insert(info: UserInfo)
@@ -23,13 +22,13 @@ interface UserDao {
     suspend fun getAll(): List<UserInfo>
 
     @Query("SELECT * FROM user_info WHERE website = :website")
-    suspend fun getAll(website: WebsiteOption): List<UserInfo>
+    suspend fun getAll(website: String): List<UserInfo>
 
     @Query("SELECT * FROM user_info WHERE website = :website AND read_time > :readDate")
-    suspend fun getAllByReadDate(website: WebsiteOption, readDate: Instant): List<UserInfo>
+    suspend fun getAllByReadDate(website: String, readDate: Instant): List<UserInfo>
 
     @Query("SELECT * FROM user_info WHERE website = :website AND user_id = :userId")
-    suspend fun get(website: WebsiteOption, userId: String): UserInfo?
+    suspend fun get(website: String, userId: String): UserInfo?
 
     @Transaction
     suspend fun upsert(info: UserInfo) {
@@ -46,7 +45,7 @@ interface UserDao {
 
     @Query("UPDATE user_info SET read_time = :now WHERE website = :website AND user_id = :userId")
     suspend fun updateReadTime(
-        website: WebsiteOption,
+        website: String,
         userId: String,
         now: Instant = Clock.System.now()
     )
@@ -55,8 +54,8 @@ interface UserDao {
     suspend fun deleteAll()
 
     @Query("DELETE FROM user_info WHERE website = :website")
-    suspend fun deleteAll(website: WebsiteOption)
+    suspend fun deleteAll(website: String)
 
     @Query("DELETE FROM user_info WHERE website = :website AND user_id = :userId")
-    suspend fun delete(website: WebsiteOption, userId: String)
+    suspend fun delete(website: String, userId: String)
 }

@@ -4,7 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.magic.maw.data.model.constant.TagType
-import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.util.json
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
@@ -14,7 +14,7 @@ import kotlinx.serialization.Serializable
 data class TagInfo(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val website: WebsiteOption,
+    val website: String,
     val name: String,
     @ColumnInfo("tag_id")
     val tagId: String = "",
@@ -32,5 +32,9 @@ data class TagInfo(
             type.priority compareTo other.type.priority
         else
             name compareTo other.name
+    }
+
+    override fun toString(): String {
+        return json.encodeToString(this)
     }
 }

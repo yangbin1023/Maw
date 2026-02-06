@@ -1,5 +1,8 @@
 package com.magic.maw.util
 
+import android.webkit.MimeTypeMap
+import com.magic.maw.data.model.constant.FileType
+import com.magic.maw.data.model.constant.FileType.Companion.toFileType
 import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -82,4 +85,10 @@ fun Long.toSizeString(): String {
         }
     }
     return String.format(Locale.getDefault(), "%.2f%s", value, unitList[count])
+}
+
+fun getFileTypeFromUrl(url: String): FileType? {
+    // 提取文件扩展名（不含点）
+    val extension = MimeTypeMap.getFileExtensionFromUrl(url)
+    return extension.ifEmpty { null }.toFileType()
 }

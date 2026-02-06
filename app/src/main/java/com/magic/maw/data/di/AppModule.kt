@@ -2,9 +2,10 @@ package com.magic.maw.data.di
 
 import com.magic.maw.data.api.service.ApiServiceProvider
 import com.magic.maw.data.api.service.BaseApiService
-import com.magic.maw.data.api.service.DanbooruApiService
-import com.magic.maw.data.api.service.KonachanApiService
-import com.magic.maw.data.api.service.YandeApiService
+import com.magic.maw.data.api.service.JsonPathApiService
+import com.magic.maw.data.api.service.danbooruJsonPathRule
+import com.magic.maw.data.api.service.konachanJsonPathRule
+import com.magic.maw.data.api.service.yandeJsonPathRule
 import com.magic.maw.data.local.db.AppDB
 import com.magic.maw.data.local.store.SettingsRepository
 import com.magic.maw.data.model.constant.WebsiteOption
@@ -37,9 +38,28 @@ val appModule = module {
     single { createAppHttpClient() }
 
     // ApiService
-    single<BaseApiService>(named(WebsiteOption.Yande)) { YandeApiService(get()) }
-    single<BaseApiService>(named(WebsiteOption.Konachan)) { KonachanApiService(get()) }
-    single<BaseApiService>(named(WebsiteOption.Danbooru)) { DanbooruApiService(get()) }
+    single<BaseApiService>(named(WebsiteOption.Yande)) {
+        JsonPathApiService(
+            website = WebsiteOption.Yande,
+            client = get(),
+            jsonRuleSettings = yandeJsonPathRule
+        )
+//        YandeApiService(get())
+    }
+    single<BaseApiService>(named(WebsiteOption.Konachan)) {
+        JsonPathApiService(
+            website = WebsiteOption.Konachan,
+            client = get(),
+            jsonRuleSettings = konachanJsonPathRule
+        )
+    }
+    single<BaseApiService>(named(WebsiteOption.Danbooru)) {
+        JsonPathApiService(
+            website = WebsiteOption.Danbooru,
+            client = get(),
+            jsonRuleSettings = danbooruJsonPathRule
+        )
+    }
     single {
         val lists = listOf(
             get<BaseApiService>(named(WebsiteOption.Yande)),

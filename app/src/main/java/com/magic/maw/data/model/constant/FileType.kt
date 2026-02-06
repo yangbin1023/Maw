@@ -50,4 +50,17 @@ enum class FileType(val value: Int) {
             Ugoira -> "*/*"
         }
     }
+
+    companion object {
+        fun String?.toFileType(): FileType? {
+            if (this == null) {
+                return null
+            }
+            for (item in entries) {
+                if (item.name == this || item.getPrefixName() == this)
+                    return item
+            }
+            return null
+        }
+    }
 }

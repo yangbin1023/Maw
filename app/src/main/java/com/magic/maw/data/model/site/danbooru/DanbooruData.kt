@@ -178,7 +178,7 @@ class DanbooruData {
                 } else {
                     TagType.None
                 }
-                tagList.add(TagInfo(website = WebsiteOption.Danbooru, name = tagName, type = type))
+                tagList.add(TagInfo(website = WebsiteOption.Danbooru.name, name = tagName, type = type))
             }
             tagList.sort()
             data.tags = tagList

@@ -1,10 +1,10 @@
 package com.magic.maw.data.model.site.yande
 
-import com.magic.maw.data.model.entity.TagInfo
-import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.model.constant.FileType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.data.model.entity.TagInfo
+import com.magic.maw.data.model.site.PostData
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -90,7 +90,7 @@ class YandeData {
         data.uploadTime = updated_at?.let { it * 1000 }
         tags?.split(" ")?.toSet()?.let { tagNames ->
             for (tagName in tagNames) {
-                data.tags.add(TagInfo(website = WebsiteOption.Yande, name = tagName))
+                data.tags.add(TagInfo(website = WebsiteOption.Yande.name, name = tagName))
             }
             data.tagRefs = tagNames.mapNotNull { it.ifBlank { null } }
         }

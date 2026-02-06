@@ -67,4 +67,9 @@ class ApiServiceProvider(private val lists: List<BaseApiService>) {
         return lists.find { it.website == website }
             ?: throw IllegalStateException("Unsupported website: $website")
     }
+
+    operator fun get(website: String): BaseApiService {
+        return lists.find { it.website.name == website }
+            ?: throw IllegalStateException("Unsupported website: $website")
+    }
 }

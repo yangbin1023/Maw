@@ -10,6 +10,7 @@ activityCompose = "1.11.0"
 composeBom = "2025.10.01"
 ksp = "2.2.20-2.0.4"
 # 自2.8.0之后，room支持的最低SDK版本从API 21 升到了API 23
+#noinspection GradleDependency
 room = "2.7.1"
 navigationCompose = "2.9.5"
 coroutines = "1.10.2"
@@ -25,11 +26,13 @@ kermit = "2.0.8"
 media3 = "1.8.0"
 jsoup = "1.21.2"
 # 自1.2.0之后，datastore支持的最低SDK版本从API 21 升到了API 23
+#noinspection GradleDependency
 datastore = "1.1.7"
 kotlinxCollectionsImmutableJvm = "0.4.0"
 kotlinxDatetime = "0.6.2"
 koin-bom = "4.1.1"
 paging = "3.3.6"
+jsonPath = "2.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -90,6 +93,7 @@ kotlinx-collections-immutable-jvm = { group = "org.jetbrains.kotlinx", name = "k
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
 androidx-paging-common = { group = "androidx.paging", name = "paging-common", version.ref = "paging" }
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
+json-path = { group = "com.jayway.jsonpath", name = "json-path", version.ref = "jsonPath" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

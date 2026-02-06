@@ -3,7 +3,6 @@ package com.magic.maw.data.model.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.magic.maw.data.model.constant.WebsiteOption
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
@@ -11,7 +10,7 @@ import kotlinx.datetime.Instant
 data class UserInfo(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val website: WebsiteOption,
+    val website: String,
     @ColumnInfo("user_id")
     val userId: String,
     val name: String = "",

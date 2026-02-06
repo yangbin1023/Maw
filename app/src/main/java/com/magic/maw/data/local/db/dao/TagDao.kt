@@ -6,7 +6,6 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.magic.maw.data.model.constant.TagType
-import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.Clock
@@ -15,7 +14,7 @@ import kotlinx.datetime.Instant
 @Dao
 interface TagDao {
     @Query("SELECT * FROM tag_info WHERE website = :website AND name IN (:nameList)")
-    fun getAllFlow(website: WebsiteOption, nameList: List<String>): Flow<List<TagInfo>>
+    fun getAllFlow(website: String, nameList: List<String>): Flow<List<TagInfo>>
 
     @Insert
     suspend fun insert(tagInfo: TagInfo)
@@ -24,19 +23,19 @@ interface TagDao {
     suspend fun getAll(): List<TagInfo>
 
     @Query("SELECT * FROM tag_info WHERE website = :website")
-    suspend fun getAll(website: WebsiteOption): List<TagInfo>
+    suspend fun getAll(website: String): List<TagInfo>
 
     @Query("SELECT * FROM tag_info WHERE website = :website AND name IN (:nameList)")
-    suspend fun getAll(website: WebsiteOption, nameList: Set<String>): List<TagInfo>
+    suspend fun getAll(website: String, nameList: Set<String>): List<TagInfo>
 
     @Query("SELECT * FROM tag_info WHERE website = :website AND read_time > :readDate")
-    suspend fun getAllByReadDate(website: WebsiteOption, readDate: Instant): List<TagInfo>
+    suspend fun getAllByReadDate(website: String, readDate: Instant): List<TagInfo>
 
     @Query("SELECT * FROM tag_info WHERE website = :website AND name = :name")
-    suspend fun getByName(website: WebsiteOption, name: String): TagInfo?
+    suspend fun getByName(website: String, name: String): TagInfo?
 
     @Query("SELECT * FROM tag_info WHERE website = :website AND tag_id = :tagId")
-    suspend fun getTagId(website: WebsiteOption, tagId: String): TagInfo?
+    suspend fun getTagId(website: String, tagId: String): TagInfo?
 
     @Update
     suspend fun update(info: TagInfo)
@@ -66,21 +65,17 @@ interface TagDao {
     suspend fun updateReadTime(id: Int, now: Instant = Clock.System.now())
 
     @Query("UPDATE tag_info SET read_time = :now WHERE website = :website AND tag_id = :tagId")
-    suspend fun updateReadTime(
-        website: WebsiteOption,
-        tagId: String,
-        now: Instant = Clock.System.now()
-    )
+    suspend fun updateReadTime(website: String, tagId: String, now: Instant = Clock.System.now())
 
     @Query("DELETE FROM tag_info")
     suspend fun deleteAll(): Int
 
     @Query("DELETE FROM tag_info WHERE website = :website")
-    suspend fun deleteAll(website: WebsiteOption): Int
+    suspend fun deleteAll(website: String): Int
 
     @Query("DELETE FROM tag_info WHERE id = :id")
     suspend fun delete(id: Int)
 
     @Query("DELETE FROM tag_info WHERE website = :website AND tag_id = :tagId")
-    suspend fun delete(website: WebsiteOption, tagId: String)
+    suspend fun delete(website: String, tagId: String)
 }

@@ -104,8 +104,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.exifinterface)
-    implementation(libs.coil.compose)
-    implementation(libs.coil.gif)
     implementation(libs.zoomable.image.coil)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
@@ -123,8 +121,7 @@ dependencies {
     implementation(libs.kotlinx.datetime)
     implementation(libs.androidx.paging.common)
     implementation(libs.androidx.paging.compose)
-    implementation(libs.coil.video)
-    implementation(libs.coil.network.ktor3)
+    implementation(libs.json.path)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)
@@ -155,6 +152,11 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
     implementation(libs.koin.compose.viewmodel)
+
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
+    implementation(libs.coil.video)
+    implementation(libs.coil.network.ktor3)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

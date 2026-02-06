@@ -1,11 +1,11 @@
 package com.magic.maw.data.model.site.konachan
 
-import com.magic.maw.data.model.entity.TagInfo
-import com.magic.maw.data.model.site.PoolData
-import com.magic.maw.data.model.site.PostData
 import com.magic.maw.data.model.constant.FileType
 import com.magic.maw.data.model.constant.Rating
 import com.magic.maw.data.model.constant.WebsiteOption
+import com.magic.maw.data.model.entity.TagInfo
+import com.magic.maw.data.model.site.PoolData
+import com.magic.maw.data.model.site.PostData
 import com.magic.maw.util.TimeUtils
 import kotlinx.serialization.Serializable
 
@@ -102,7 +102,7 @@ class KonachanPoolItem {
         data.uploadTime = created_at?.let { TimeUtils.getUnixTime(TimeUtils.FORMAT_5, it) }
         tags?.split(" ")?.toSet()?.let { tagNames ->
             for (tagName in tagNames) {
-                data.tags.add(TagInfo(website = WebsiteOption.Konachan, name = tagName))
+                data.tags.add(TagInfo(website = WebsiteOption.Konachan.name, name = tagName))
             }
             data.tagRefs = tagNames.mapNotNull { it.ifBlank { null } }
         }

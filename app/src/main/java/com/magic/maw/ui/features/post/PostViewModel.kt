@@ -33,7 +33,7 @@ class PostViewModel(
         dataSource = postRepository.getPostDataSource(RequestFilter(tags = tagNames))
         if (tagNames.isNotEmpty()) {
             viewModelScope.launch(Dispatchers.IO) {
-                tagHistoryRepository.updateTagHistory(settings.website, tags = tagNames)
+                tagHistoryRepository.updateTagHistory(settings.website.name, tags = tagNames)
             }
         }
     }

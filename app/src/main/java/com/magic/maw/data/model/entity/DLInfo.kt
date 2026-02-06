@@ -6,7 +6,6 @@ import androidx.room.PrimaryKey
 import com.magic.maw.data.model.constant.DLState
 import com.magic.maw.data.model.constant.FileType
 import com.magic.maw.data.model.constant.Quality
-import com.magic.maw.data.model.constant.WebsiteOption
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
@@ -16,7 +15,7 @@ import kotlinx.serialization.Serializable
 data class DLInfo(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val website: WebsiteOption,
+    val website: String,
     val uid: String,
     val quality: Quality,
     val url: String,

@@ -21,6 +21,6 @@ class DanbooruUser {
     fun toUserInfo(): UserInfo? {
         val id = id ?: return null
         val name = name ?: return null
-        return UserInfo(website = WebsiteOption.Danbooru, userId = id.toString(), name = name)
+        return UserInfo(website = WebsiteOption.Danbooru.name, userId = id.toString(), name = name)
     }
 }

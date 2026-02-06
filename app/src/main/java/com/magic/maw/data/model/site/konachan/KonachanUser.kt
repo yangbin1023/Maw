@@ -13,6 +13,6 @@ class KonachanUser {
     fun toUserInfo(): UserInfo? {
         val id = id ?: return null
         val name = name ?: return null
-        return UserInfo(website = WebsiteOption.Konachan, name = name, userId = id.toString())
+        return UserInfo(website = WebsiteOption.Konachan.name, name = name, userId = id.toString())
     }
 }

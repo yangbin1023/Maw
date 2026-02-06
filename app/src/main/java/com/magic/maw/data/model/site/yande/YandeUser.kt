@@ -12,6 +12,6 @@ class YandeUser {
     fun toUserInfo(): UserInfo? {
         val id = id ?: return null
         val name = name ?: return null
-        return UserInfo(website = WebsiteOption.Yande, name = name, userId = id.toString())
+        return UserInfo(website = WebsiteOption.Yande.name, name = name, userId = id.toString())
     }
 }

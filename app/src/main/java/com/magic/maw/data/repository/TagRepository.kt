@@ -2,7 +2,6 @@ package com.magic.maw.data.repository
 
 import com.magic.maw.data.api.service.ApiServiceProvider
 import com.magic.maw.data.local.db.dao.TagDao
-import com.magic.maw.data.model.constant.WebsiteOption
 import com.magic.maw.data.model.entity.TagInfo
 import com.magic.maw.data.model.site.PostData
 import kotlinx.coroutines.Dispatchers
@@ -16,10 +15,10 @@ class TagRepository(
     private val apiServiceProvider: ApiServiceProvider
 ) {
     fun getTagsFlowForPost(data: PostData): Flow<List<TagInfo>> {
-        return dao.getAllFlow(data.website, data.tagRefs)
+        return dao.getAllFlow(data.website.name, data.tagRefs)
     }
 
-    fun getTagsByNamesFlow(website: WebsiteOption, names: List<String>): Flow<List<TagInfo>> {
+    fun getTagsByNamesFlow(website: String, names: List<String>): Flow<List<TagInfo>> {
         return dao.getAllFlow(website, names)
     }
 
@@ -27,7 +26,7 @@ class TagRepository(
         // 查询数据库
         val tagNames = data.tagRefs.toMutableSet()
         val dbTagList = withContext(Dispatchers.IO) {
-            dao.getAll(data.website, tagNames)
+            dao.getAll(data.website.name, tagNames)
         }
         // 排除新数据
         val now = Clock.System.now()
@@ -54,7 +53,7 @@ class TagRepository(
         // 单个单个的请求标签
         withContext(Dispatchers.IO) {
             tagNames.forEach { tagName ->
-                val tagInfo = dao.getByName(data.website, tagName)
+                val tagInfo = dao.getByName(data.website.name, tagName)
                 if (tagInfo == null || tagInfo.count <= 0) {
                     try {
                         apiService.getTagByName(tagName)?.forEach {
